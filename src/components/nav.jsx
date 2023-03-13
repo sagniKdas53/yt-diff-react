@@ -1,6 +1,6 @@
 import React from "react";
 import navBrand from "/light.png";
-export default function Navbar() {
+export default function Navbar({ updateState, state }) {
   return (
     <nav className="mt-0 pt-0 mb-0 pb-0 navbar navbar-dark bg-dark nav-size">
       <div className="container-fluid">
@@ -18,8 +18,8 @@ export default function Navbar() {
           <button type="button" className="btn btn-link link-warning m-0 p-0 no-underline">
             Unlisted
           </button>
-          <button type="button" className="btn btn-link link-warning m-0 p-0 no-underline">
-            Database
+          <button type="button" className="btn btn-link link-warning m-0 p-0 no-underline" onClick={() => updateState(!state)}>
+            {state ? "Back" : "Database"}
           </button>
         </div>
       </div>
