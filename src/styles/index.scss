@@ -1,7 +1,8 @@
 @import "/node_modules/bootstrap/scss/bootstrap.scss";
 
 html,
-body #root {
+body,
+#root {
   width: 100%;
   height: 100%;
   margin: 0px;
@@ -10,7 +11,19 @@ body #root {
 }
 
 .no-underline {
-  text-decoration: none!important;
+  text-decoration: none !important;
+}
+
+nav {
+  height: auto;
+  max-height: 10vh;
+}
+
+.container-table {
+  height: 90vh;
+  max-height: 90vh;
+  overflow-y: scroll;
+  padding-bottom: 15px;
 }
 
 .emoji {
@@ -22,20 +35,9 @@ body #root {
   width: 75%;
 }
 
-.container-table {
-  height: 90vh;
-  max-height: 90vh;
-  overflow-y: scroll;
-  padding-bottom: 15px;
-}
-
 .container-table table thead th {
   position: sticky;
   top: 0;
-}
-
-.nav-size {
-  max-height: 10vh;
 }
 
 .search {
