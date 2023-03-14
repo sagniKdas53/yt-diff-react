@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
-import Navbar from "./components/nav";
-import Controls from "./components/contols";
+import Navbar from "./components/navbar";
+import InputCol from "./components/inputcol";
 import Sublist from "./components/sublist";
 import Mainlist from "./components/mainlist";
 
@@ -16,8 +16,8 @@ function App() {
       <Navbar updateState={toggleCompHandler} state={showMainList} />
       <div className="container-fluid">
         <div className="row">
-          {showMainList ? <Mainlist /> : <Controls />}
-          <Sublist />
+          {showMainList ? <Mainlist /> : <InputCol />}
+          <Sublist showControls={showMainList}/>
         </div>
       </div>
     </React.StrictMode>

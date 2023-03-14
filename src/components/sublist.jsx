@@ -1,6 +1,7 @@
 import React from "react";
-import SublistControls from "./sublistControls";
-export default function Sublist() {
+import Controls from "./controls";
+import LCD from "./buttongroups";
+export default function Sublist(props) {
     return (<div className="col-sm-12 col-md-12 col-lg-6 col-xl-6 p-0 m-0">
         <div className="container-table">
             <table className="table table-responsive">
@@ -16,6 +17,6 @@ export default function Sublist() {
                 <tbody id="listing"></tbody>
             </table>
         </div>
-        <SublistControls />
+        {props.showConrols ? <><Controls/><LCD /></> : <></>}
     </div>);
 }

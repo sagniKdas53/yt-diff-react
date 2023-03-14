@@ -15,11 +15,11 @@ export default function Navbar({ updateState, state }) {
           <span className="align-middle">-diff</span>
         </a>
         <div>
+          <button type="button" className="btn btn-link link-warning m-0 mx-2 p-0 no-underline" onClick={() => updateState(!state)}>
+            {state ? "Back" : "Database"}
+          </button>
           <button type="button" className="btn btn-link link-warning m-0 p-0 no-underline">
             Unlisted
-          </button>
-          <button type="button" className="btn btn-link link-warning m-0 p-0 no-underline" onClick={() => updateState(!state)}>
-            {state ? "Back" : "Database"}
           </button>
         </div>
       </div>
