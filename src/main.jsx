@@ -1,10 +1,14 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
+
+import Row from 'react-bootstrap/Row';
+import Container from "react-bootstrap/Container";
+
 import Navbar from "./components/navbar";
 import InputCol from "./components/inputcol";
-import Sublist from "./components/sublist";
-import Mainlist from "./components/mainlist";
+import MainSection from "./components/mainlist";
+import SubSection from "./components/sublist";
 
 function App() {
   const [showMainList, toggleComp] = useState(false);
@@ -14,12 +18,12 @@ function App() {
   return (
     <React.StrictMode>
       <Navbar updateState={toggleCompHandler} state={showMainList} />
-      <div className="container-fluid">
-        <div className="row">
-          {showMainList ? <Mainlist /> : <InputCol />}
-          <Sublist showControls={showMainList}/>
-        </div>
-      </div>
+      <Container fluid>
+        <Row>
+          {showMainList ? <MainSection /> : <InputCol />}
+          <SubSection showControls={showMainList} />
+        </Row>
+      </Container>
     </React.StrictMode>
   );
 }

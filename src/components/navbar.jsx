@@ -16,7 +16,7 @@ export default function Navbar({ updateState, state }) {
         </a>
         <div>
           <button type="button" className="btn btn-link link-warning m-0 mx-2 p-0 no-underline" onClick={() => updateState(!state)}>
-            {state ? "Back" : "Database"}
+            {state ? "Back" : "List"}
           </button>
           <button type="button" className="btn btn-link link-warning m-0 p-0 no-underline">
             Unlisted
