@@ -98,16 +98,27 @@ export default function PlayLists() {
     };
     // Query needs to be debounced, but I don't know how
     useEffect(() => {
-        console.log(
-            JSON.stringify({
+        fetch("http://localhost:8888/ytdiff/dbi", {
+            method: "post",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            mode: "cors",
+            body: JSON.stringify({
                 start: limits[0],
                 stop: limits[1],
                 sort: sort[0],
                 order: sort[1],
                 query: query,
             })
-        );
+        }).then((response) => response.text())
+            .then((data) => JSON.parse(data))
+            .then((json_data) => getItems(json_data["rows"]));
     }, [query, limits, sort]);
+    useEffect(() => {
+        console.log(items);
+    }, [items]);
     return (
         <Col xs={12} sm={12} md={12} lg={6} xl={6} className="p-0 m-0">
             <PlayListTable getQuery={queryHandler} />

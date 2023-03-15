@@ -15,7 +15,7 @@ export default function InputForm() {
                     <input type="text" className="form-control" placeholder="url" id="url" data-bs-toggle="tooltip" data-bs-placement="top" title="Url" />}
             </Row>
             <Row className="mt-3">
-                <Controls getLimits={console.log}/>
+                <Controls getLimits={console.debug}/>
             </Row>
             <Row className="mt-3">
                 <Col>

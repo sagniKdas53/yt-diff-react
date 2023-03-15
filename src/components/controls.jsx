@@ -51,7 +51,7 @@ export default function Controls({ getLimits }) {
 
     useEffect(() => {
         // Perform any side effects here that depend on the currentPage state variable
-        console.log(`Current page: ${currentPage}`);
+        //console.log(`Current page: ${currentPage}`);
         getLimits([start, stop]);
     }, [currentPage]);
 

@@ -10,7 +10,7 @@ import ListClearDownload from "./buttongroups";
 function ControlGroup() {
     return (<Container fluid className="m-0 p-0 cont-group">
         <Row className="p-1 mx-2">
-            <Controls getLimits={console.log}/>
+            <Controls getLimits={console.debug}/>
         </Row>
         <Row className="p-1 mx-2">
             <ListClearDownload noList/>
