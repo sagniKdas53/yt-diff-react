@@ -5,7 +5,7 @@ import Button from 'react-bootstrap/Button';
 export default function ListClearDownload() {
     return (
         <>
-            <Col className="mb-3 p-0">
+            <Col className="m-0 p-0">
                 <div className="btn-group" role="group" aria-label="controls">
                     <Button variant="primary">List</Button>
                     <Button variant="primary">Clear</Button>

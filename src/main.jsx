@@ -4,23 +4,23 @@ import "./styles/index.scss";
 
 import { Row, Container } from "react-bootstrap";
 
-import NavbarApp from "./components/navBar";
-import MainSection from "./components/mainSection";
-import InputCol from "./components/inputcol";
-import SubSection from "./components/subSection";
+import Nav from "./components/navBar";
+import PlayLists from "./components/playlists";
+import InputForm from "./components/inputform";
+import SubLists from "./components/sublists";
 
 function App() {
-  const [showMainList, toggleComp] = useState(false);
-  const toggleCompHandler = (state) => {
-    toggleComp(state);
+  const [showPlaylist, toggleView] = useState(false);
+  const toggleViewHandler = (state) => {
+    toggleView(state);
   };
   return (
     <>
-      <NavbarApp updateState={toggleCompHandler} state={showMainList} />
+      <Nav state={showPlaylist} updateState={toggleViewHandler} />
       <Container fluid>
         <Row>
-          {showMainList ? <MainSection /> : <InputCol />}
-          <SubSection showControls={showMainList} />
+          {showPlaylist ? <PlayLists /> : <InputForm />}
+          <SubLists showControls={showPlaylist} />
         </Row>
       </Container>
     </>

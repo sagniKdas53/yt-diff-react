@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Col, InputGroup, FormControl, Button } from "react-bootstrap";
 
-export default function Controls() {
+export default function Controls({ getLimits }) {
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-
     const next = () => {
         setStart(start + chunk);
         setStop(stop + chunk);
@@ -37,6 +36,7 @@ export default function Controls() {
     useEffect(() => {
         // Perform any side effects here that depend on the currentPage state variable
         console.log(`Current page: ${currentPage}`);
+        getLimits([start, stop]);
     }, [currentPage]);
 
     return (

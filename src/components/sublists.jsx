@@ -10,7 +10,7 @@ import ListClearDownload from "./buttongroups";
 function ControlGroup() {
     return (<Container fluid className="m-0 p-0 cont-group">
         <Row className="p-1 mx-2">
-            <Controls />
+            <Controls getLimits={console.log}/>
         </Row>
         <Row className="p-1 mx-2">
             <ListClearDownload />
@@ -42,7 +42,7 @@ function SubTable() {
     );
 }
 
-export default function SubSection(props) {
+export default function SubLists(props) {
     return (<Col xs={12} sm={12} md={12} lg={6} xl={6} className="m-0 p-0">
         <SubTable />
         {props.showControls ? <ControlGroup /> : <></>}
