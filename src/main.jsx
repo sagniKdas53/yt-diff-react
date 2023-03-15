@@ -9,23 +9,21 @@ import MainSection from "./components/mainSection";
 import InputCol from "./components/inputcol";
 import SubSection from "./components/subSection";
 
-const url = "http://localhost:8888/ytdiff";
-
 function App() {
   const [showMainList, toggleComp] = useState(false);
   const toggleCompHandler = (state) => {
     toggleComp(state);
-  }
+  };
   return (
-    <React.StrictMode>
+    <>
       <NavbarApp updateState={toggleCompHandler} state={showMainList} />
       <Container fluid>
         <Row>
-          {showMainList ? <MainSection url={url}/> : <InputCol />}
+          {showMainList ? <MainSection /> : <InputCol />}
           <SubSection showControls={showMainList} />
         </Row>
       </Container>
-    </React.StrictMode>
+    </>
   );
 }
 

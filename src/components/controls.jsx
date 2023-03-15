@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Col, InputGroup, FormControl, Button } from 'react-bootstrap';
+import { Col, InputGroup, FormControl, Button } from "react-bootstrap";
 
 export default function Controls() {
     const [start, setStart] = useState(0);
@@ -13,10 +13,25 @@ export default function Controls() {
         setCurrentPage(currentPage + 1);
     };
 
+    const startHandler = (event) => {
+        setStart(+event.target.value);
+        setStop(chunk + +event.target.value);
+    };
+    const stopHandler = (event) => {
+        setStop(+event.target.value);
+        setChunk(start + +event.target.value);
+    };
+    const chunkHandler = (event) => {
+        setChunk(+event.target.value);
+        setStop(start + +event.target.value);
+    };
+
     const back = () => {
-        setStart(start - chunk);
-        setStop(stop - chunk);
-        setCurrentPage(currentPage - 1);
+        if (currentPage - 1 >= 1) {
+            setStart(start - chunk);
+            setStop(stop - chunk);
+            setCurrentPage(currentPage - 1);
+        }
     };
 
     useEffect(() => {
@@ -27,21 +42,61 @@ export default function Controls() {
     return (
         <Col className="m-0 p-0">
             <div className="input-group m-0 p-0">
-                <input type="number" className="form-control" placeholder="0" min="0" name="start_sublist"
-                    onChange={(event) => setStart(+event.target.value)}
-                    id="start_sublist" data-bs-toggle="tooltip" data-bs-placement="top" title="Start" value={start} />
+                <input
+                    type="number"
+                    className="form-control"
+                    placeholder="0"
+                    min="0"
+                    name="start_sublist"
+                    onChange={startHandler}
+                    id="start_sublist"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="Start"
+                    value={start}
+                />
                 <span className="input-group-text">-</span>
-                <input type="number" className="form-control" placeholder="10" min="1" name="stop_sublist"
-                    onChange={(event) => setStop(+event.target.value)}
-                    id="stop_sublist" data-bs-toggle="tooltip" data-bs-placement="top" title="Stop" value={stop} />
+                <input
+                    type="number"
+                    className="form-control"
+                    placeholder="10"
+                    min="1"
+                    name="stop_sublist"
+                    onChange={stopHandler}
+                    id="stop_sublist"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="Stop"
+                    value={stop}
+                />
                 <span className="input-group-text">-</span>
-                <input type="number" className="form-control" placeholder="10" min="1" name="chunk_sublist"
-                    onChange={(event) => setChunk(+event.target.value)}
-                    id="chunk_sublist" data-bs-toggle="tooltip" data-bs-placement="top" title="Chunk" value={chunk} />
-                <button id="next-sub" type="button" onClick={next} className="btn btn-primary">
+                <input
+                    type="number"
+                    className="form-control"
+                    placeholder="10"
+                    min="1"
+                    name="chunk_sublist"
+                    onChange={chunkHandler}
+                    id="chunk_sublist"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="Chunk"
+                    value={chunk}
+                />
+                <button
+                    id="next-sub"
+                    type="button"
+                    onClick={next}
+                    className="btn btn-primary"
+                >
                     Next
                 </button>
-                <button id="back-sub" type="button" onClick={back} className="btn btn-primary">
+                <button
+                    id="back-sub"
+                    type="button"
+                    onClick={back}
+                    className="btn btn-primary"
+                >
                     Back
                 </button>
             </div>
