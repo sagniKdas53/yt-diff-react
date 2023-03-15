@@ -13,6 +13,7 @@ body,
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+  //background-color: deeppink;
 }
 
 .no-underline {
@@ -20,19 +21,13 @@ body,
 }
 
 nav {
-  min-height: 5vh;
-  max-height: 10vh;
-  height:fit-content;
+  height: fit-content;
 }
 
 .container-table {
-  min-height: 75vh;
-  max-height: 85vh;
-  height: auto;
-  background-color: rgb(145, 255, 160);
-  tbody {
-    background-color: rgb(177, 247, 247);
-  }
+  height: 85vh;
+  //background-color: rgb(145, 255, 160);
+  //tbody {background-color: rgb(177, 247, 247);}
   overflow-y: scroll;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
@@ -45,11 +40,9 @@ nav {
   }
 }
 
-.cont-group{
-  background-color: rgb(255, 195, 207);
+.cont-group {
+  //background-color: rgb(255, 195, 207);
   height: fit-content;
-  min-height: 10vh;
-  max-height: 15vh;
 }
 
 .emoji {

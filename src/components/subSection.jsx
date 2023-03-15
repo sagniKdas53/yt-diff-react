@@ -23,7 +23,7 @@ function SubTable() {
     }
 
     return (
-        <Container className="container-table m-0 p-0">
+        <Container fluid className="container-table m-0 p-0">
             <Table responsive>
                 <thead>
                     <tr>

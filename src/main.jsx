@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
 
-import Row from 'react-bootstrap/Row';
-import Container from "react-bootstrap/Container";
+import { Row, Container } from "react-bootstrap";
 
-import Navbar from "./components/navbar";
+import NavbarApp from "./components/navBar";
+import MainSection from "./components/mainSection";
 import InputCol from "./components/inputcol";
-import MainSection from "./components/mainlist";
-import SubSection from "./components/sublist";
+import SubSection from "./components/subSection";
+
+const url = "http://localhost:8888/ytdiff";
 
 function App() {
   const [showMainList, toggleComp] = useState(false);
@@ -17,10 +18,10 @@ function App() {
   }
   return (
     <React.StrictMode>
-      <Navbar updateState={toggleCompHandler} state={showMainList} />
+      <NavbarApp updateState={toggleCompHandler} state={showMainList} />
       <Container fluid>
         <Row>
-          {showMainList ? <MainSection /> : <InputCol />}
+          {showMainList ? <MainSection url={url}/> : <InputCol />}
           <SubSection showControls={showMainList} />
         </Row>
       </Container>
