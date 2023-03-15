@@ -13,7 +13,7 @@ function ControlGroup() {
             <Controls getLimits={console.log}/>
         </Row>
         <Row className="p-1 mx-2">
-            <ListClearDownload />
+            <ListClearDownload noList/>
         </Row>
     </Container>)
 }

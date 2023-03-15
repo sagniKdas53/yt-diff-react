@@ -15,21 +15,37 @@ export default function Controls({ getLimits }) {
     const startHandler = (event) => {
         setStart(+event.target.value);
         setStop(chunk + +event.target.value);
+        setCurrentPage((chunk + +event.target.value) / chunk);
     };
     const stopHandler = (event) => {
         setStop(+event.target.value);
         setChunk(start + +event.target.value);
+        setCurrentPage(+event.target.value / chunk);
     };
     const chunkHandler = (event) => {
         setChunk(+event.target.value);
         setStop(start + +event.target.value);
+        setCurrentPage(stop / +event.target.value);
     };
 
     const back = () => {
-        if (currentPage - 1 >= 1) {
-            setStart(start - chunk);
+        if (Math.floor(currentPage) - 1 >= 1) {
+            if ((start - chunk) >= 0) {
+                setStart(start - chunk);
+            } else {
+                setStart(0);
+            }
+            if ((stop - chunk) >= 1) {
+                setStop(stop - chunk);
+            } else {
+                setStart(chunk);
+            }
             setStop(stop - chunk);
             setCurrentPage(currentPage - 1);
+        } else {
+            setStart(0);
+            setStop(chunk);
+            setCurrentPage(1);
         }
     };
 

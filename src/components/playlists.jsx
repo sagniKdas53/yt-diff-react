@@ -10,17 +10,8 @@ import {
 } from "react-bootstrap";
 import Controls from "./controls";
 
-const debounce = function (fn, d) {
-    var timer;
-    return function () {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-            fn.apply();
-        }, d);
-    };
-};
-
-function PlayListTable({ onFinishTyping }) {
+function PlayListTable({ getQuery }) {
+    const queryHandler = (event) => getQuery(event.target.value);
     return (
         <Container fluid className="m-0 p-0 container-table">
             <Table responsive>
@@ -38,7 +29,7 @@ function PlayListTable({ onFinishTyping }) {
                                 className="search m-0 p-0"
                                 id="query_main_list"
                                 placeholder="List Title"
-                                onKeyUp={onFinishTyping}
+                                onKeyUp={queryHandler}
                             />
                         </th>
                         <th scope="col" className="table-dark text-center">
@@ -55,21 +46,32 @@ function PlayListTable({ onFinishTyping }) {
     );
 }
 
-function SortTable() {
-
+function SortTable({ getSort }) {
+    const [sort, setSort] = useState("1");
+    const [order, setOrder] = useState("1");
+    const typeHandler = (event) => {
+        setSort(event.target.value);
+    };
+    const orderHandler = (event) => {
+        setOrder(event.target.value);
+    };
     return (
         <Container fluid className="m-0 p-0">
             <InputGroup>
-                <FormControl as="select" id="sort_by_playlist" aria-label="sorting" defaultValue={"1"}>
+                <FormControl as="select" defaultValue={sort} onChange={typeHandler}>
                     <option value="1">ID</option>
                     <option value="2">CreatedAt</option>
                     <option value="3">UpdatedAt</option>
                 </FormControl>
-                <FormControl as="select" id="order_by_playlist" aria-label="ordering" defaultValue={"1"}>
+                <FormControl as="select" defaultValue={order} onChange={orderHandler}>
                     <option value="1">Ascending</option>
                     <option value="2">Descending</option>
                 </FormControl>
-                <Button variant="primary" type="button" onClick={() => { console.log("Nothing"); }}>
+                <Button
+                    variant="primary"
+                    type="button"
+                    onClick={() => getSort([sort, order])}
+                >
                     Sort
                 </Button>
             </InputGroup>
@@ -79,63 +81,44 @@ function SortTable() {
 
 export default function PlayLists() {
     const [query, updateQuery] = useState("");
-    const [sort, updatesort] = useState([1, 1]);
+    const [sort, updateSort] = useState([1, 1]);
     const [limits, updateLimits] = useState([0, 10]);
     const [items, getItems] = useState([]);
-    const onFinishTyping = (event) => debounce(updateQuery(event.target.value), 800);
+    const queryHandler = (state) => {
+        //console.log(state);
+        updateQuery(state);
+    };
     const limitsGetter = (state) => {
-        console.log(state);
+        //console.log(state);
         updateLimits(state);
     };
+    const sortGetter = (state) => {
+        //console.log(state);
+        updateSort(state);
+    };
+    // Query needs to be debounced, but I don't know how
     useEffect(() => {
-        console.log(JSON.stringify({
-            start: limits[0],
-            stop: limits[1],
-            sort: sort[0],
-            order: sort[1],
-            query: query,
-        }));
+        console.log(
+            JSON.stringify({
+                start: limits[0],
+                stop: limits[1],
+                sort: sort[0],
+                order: sort[1],
+                query: query,
+            })
+        );
     }, [query, limits, sort]);
     return (
         <Col xs={12} sm={12} md={12} lg={6} xl={6} className="p-0 m-0">
-            <PlayListTable onFinishTyping={onFinishTyping} />
+            <PlayListTable getQuery={queryHandler} />
             <Container fluid className="m-0 p-0 cont-group">
                 <Row className="p-1 mx-2">
                     <Controls getLimits={limitsGetter} />
                 </Row>
                 <Row className="p-1 mx-2">
-                    <SortTable getSort={updatesort} />
+                    <SortTable getSort={sortGetter} />
                 </Row>
             </Container>
         </Col>
     );
 }
-
-
-
-
-
-
-
-
-
-
-/*useEffect(() => {
-    fetch("http://localhost:8888/ytdiff/dbi", {
-        method: "post",
-        mode: "cors",
-        headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            start: limits[0],
-            stop: limits[1],
-            sort: sort[0],
-            order: sort[1],
-            query: query,
-        }),
-    })
-        .then((response) => response.text())
-        .then(console.log);
-}, [query,limits,sort]);*/
