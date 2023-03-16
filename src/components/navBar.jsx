@@ -1,6 +1,7 @@
 import React from "react";
 import { Button, Navbar, Container } from "react-bootstrap";
 import navBrand from "/light.png";
+
 export default function Nav({ state, updateState }) {
   return (
     <Navbar bg="dark" variant="dark" className="mt-0 pt-0 mb-0 pb-0 nav-size">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
 
@@ -10,22 +10,23 @@ import InputForm from "./components/inputform";
 import SubLists from "./components/sublists";
 
 function App() {
-  const [showPlaylist, toggleView] = useState(false);
-  const [subUrl, setSubUrl] = useState("");
-  const toggleViewHandler = (state) => {
-    toggleView(state);
-  };
+  const [show, toggleView] = useState(false);
+  const [globalUrl, setGlobalUrl] = useState("");
+  useEffect(() => {
+    console.log("global_url", globalUrl);
+  }, [globalUrl]);
   return (
     <>
-      <Nav state={showPlaylist} updateState={toggleViewHandler} />
+      <Nav state={show} updateState={toggleView} />
       <Container fluid>
         <Row>
-          {showPlaylist ? <PlayLists setSubUrl={setSubUrl} /> : <InputForm setSubUrl={setSubUrl} />}
-          <SubLists showControls={showPlaylist} setSubUrl={setSubUrl} subUrl={subUrl} />
+          {show ? <PlayLists setGlobalUrl={setGlobalUrl} /> : <InputForm setGlobalUrl={setGlobalUrl} />}
+          <SubLists showControls={show} SubUrl={globalUrl} />
         </Row>
       </Container>
     </>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
