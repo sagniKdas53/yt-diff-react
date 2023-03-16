@@ -11,6 +11,7 @@ import SubLists from "./components/sublists";
 
 function App() {
   const [showPlaylist, toggleView] = useState(false);
+  const [subUrl, setSubUrl] = useState("");
   const toggleViewHandler = (state) => {
     toggleView(state);
   };
@@ -19,8 +20,8 @@ function App() {
       <Nav state={showPlaylist} updateState={toggleViewHandler} />
       <Container fluid>
         <Row>
-          {showPlaylist ? <PlayLists /> : <InputForm />}
-          <SubLists showControls={showPlaylist} />
+          {showPlaylist ? <PlayLists setSubUrl={setSubUrl} /> : <InputForm setSubUrl={setSubUrl} />}
+          <SubLists showControls={showPlaylist} setSubUrl={setSubUrl} subUrl={subUrl} />
         </Row>
       </Container>
     </>

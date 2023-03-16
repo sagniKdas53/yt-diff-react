@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Col, InputGroup, FormControl, Button } from "react-bootstrap";
+import { Col } from "react-bootstrap";
 
+// Find out how to reset from the parent component
 export default function Controls({ getLimits }) {
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(10);
@@ -52,7 +53,7 @@ export default function Controls({ getLimits }) {
     useEffect(() => {
         // Perform any side effects here that depend on the currentPage state variable
         //console.log(`Current page: ${currentPage}`);
-        getLimits([start, stop]);
+        getLimits([start, stop, chunk]);
     }, [currentPage]);
 
     return (

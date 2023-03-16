@@ -10,14 +10,14 @@ import ListClearDownload from "./buttongroups";
 function ControlGroup() {
     return (<Container fluid className="m-0 p-0 cont-group">
         <Row className="p-1 mx-2">
-            <Controls getLimits={console.debug}/>
+            <Controls getLimits={console.debug} />
         </Row>
         <Row className="p-1 mx-2">
-            <ListClearDownload noList/>
+            <ListClearDownload noList />
         </Row>
     </Container>)
 }
-function SubTable() {
+function SubTable({ SubUrl, setSubUrl }) {
     function onFinishTyping() {
         console.log('Test');
     }
@@ -42,9 +42,9 @@ function SubTable() {
     );
 }
 
-export default function SubLists(props) {
+export default function SubLists({ showControls, SubUrl, setSubUrl }) {
     return (<Col xs={12} sm={12} md={12} lg={6} xl={6} className="m-0 p-0">
-        <SubTable />
-        {props.showControls ? <ControlGroup /> : <></>}
+        <SubTable setSubUrl={setSubUrl} subUrl={SubUrl} />
+        {showControls ? <ControlGroup /> : <></>}
     </Col>)
 }
