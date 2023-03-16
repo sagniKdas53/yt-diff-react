@@ -9,7 +9,7 @@ export default function PlayLists({ setGlobalUrl }) {
     const [items, getItems] = useState([]);
     // Query needs to be debounced, but I don't know how
     useEffect(() => {
-        fetch("http://192.168.0.25:8888/ytdiff/dbi", {
+        fetch("http://localhost:8888/ytdiff/dbi", {
             method: "post",
             headers: {
                 "Accept": "application/json",
