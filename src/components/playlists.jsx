@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Container, Row, Col, Table, InputGroup, Button, FormControl } from "react-bootstrap";
 import Controls from "./controls";
 
@@ -29,7 +29,7 @@ export default function PlayLists({ setGlobalUrl }) {
     }, [query, limits, sort]);
     return (
         <Col xs={12} sm={12} md={12} lg={6} xl={6} className="p-0 m-0">
-            <PlayListTable getQuery={updateQuery} rows={items} setGlobalUrl={setGlobalUrl} />
+            <PlayListTable query={query} getQuery={updateQuery} rows={items} setGlobalUrl={setGlobalUrl} />
             <Container fluid className="m-0 p-0 cont-group">
                 <Row className="p-1 mx-2">
                     <Controls getLimits={updateLimits} />
@@ -42,8 +42,8 @@ export default function PlayLists({ setGlobalUrl }) {
     );
 }
 
-function PlayListTable({ getQuery, rows, setGlobalUrl }) {
-    const queryHandler = (event) => getQuery(event.target.value.trim());
+function PlayListTable({ query, getQuery, rows, setGlobalUrl }) {
+    const getQueryHandler = (event) => { getQuery(event.target.value.trim()); }
     return (
         <Container fluid className="m-0 p-0 container-table">
             <Table responsive>
@@ -61,7 +61,8 @@ function PlayListTable({ getQuery, rows, setGlobalUrl }) {
                                 className="search m-0 p-0"
                                 id="query_main_list"
                                 placeholder="List Title"
-                                onKeyUp={queryHandler}
+                                value={query}
+                                onChange={getQueryHandler}
                             />
                         </th>
                         <th scope="col" className="table-dark text-center">
@@ -93,7 +94,7 @@ function PlayListTableBody({ rows, setGlobalUrl }) {
                             <a href={element.url} className="play-title">{element.title}</a>
                         </td>
                         <td className="text-center">
-                            <FormControl className="form-select-sm" id={element.order_added} as="select" defaultValue={element.watch ? "3" : "1"} onChange={watchToggler}>
+                            <FormControl className="form-select-sm" id={element.order_added} as="select" defaultValue={element.watch} onChange={watchToggler}>
                                 <option value="1">NA</option>
                                 <option value="2">Full</option>
                                 <option value="3">Quick</option>

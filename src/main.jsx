@@ -4,7 +4,7 @@ import "./styles/index.scss";
 
 import { Row, Container } from "react-bootstrap";
 
-import Nav from "./components/navBar";
+import Nav from "./components/nav";
 import PlayLists from "./components/playlists";
 import InputForm from "./components/inputform";
 import SubLists from "./components/sublists";
@@ -20,7 +20,9 @@ function App() {
       <Nav state={show} updateState={toggleView} />
       <Container fluid>
         <Row>
-          {show ? <PlayLists setGlobalUrl={setGlobalUrl} /> : <InputForm setGlobalUrl={setGlobalUrl} />}
+          {show ?
+            <PlayLists setGlobalUrl={setGlobalUrl} /> :
+            <InputForm setGlobalUrl={setGlobalUrl} />}
           <SubLists showControls={show} SubUrl={globalUrl} />
         </Row>
       </Container>

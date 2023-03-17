@@ -34,10 +34,11 @@ nav {
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
-  table thead th {
-    position: sticky;
-    top: 0;
-  }
+}
+table thead tr td {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
 }
 .play-title {
   width: 70%;
