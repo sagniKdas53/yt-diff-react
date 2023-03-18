@@ -1,8 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Container,
-    Row,
-    Col,
     Table,
     InputGroup,
     Button,
@@ -10,10 +7,14 @@ import {
 } from "react-bootstrap";
 import Controls from "./controls";
 
-export default function PlayLists({ setGlobalUrl }) {
+export default function PlayLists({ setParentUrl }) {
+    // all of the states are here
     const [query, updateQuery] = useState("");
-    const [sort, updateSort] = useState([1, 1]);
-    const [limits, updateLimits] = useState([0, 10, 10]);
+    const [sort, updateSort] = useState(1);
+    const [order, updateOrder] = useState(1);
+    const [start, setStart] = useState(0);
+    const [stop, setStop] = useState(10);
+    const [chunk, setChunk] = useState(10);
     const [items, getItems] = useState([]);
     // Query needs to be debounced, but I don't know how
     useEffect(() => {
@@ -25,43 +26,43 @@ export default function PlayLists({ setGlobalUrl }) {
             },
             mode: "cors",
             body: JSON.stringify({
-                start: limits[0],
-                stop: limits[1],
-                sort: sort[0],
-                order: sort[1],
+                start: start,
+                stop: stop,
+                sort: sort,
+                order: order,
                 query: query,
             }),
         })
             .then((response) => response.text())
             .then((data) => JSON.parse(data))
             .then((json_data) => getItems(json_data["rows"]));
-    }, [query, limits, sort]);
+    }, [query, start, stop, sort, order, chunk]);
     return (
-        <Col xs={12} sm={12} md={12} lg={6} xl={6} className="p-0 m-0">
+        <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
             <PlayListTable
                 query={query}
                 getQuery={updateQuery}
-                rows={items}
-                setGlobalUrl={setGlobalUrl}
+                tableData={items}
+                setParentUrl={setParentUrl}
             />
-            <Container fluid className="m-0 p-0 cont-group">
-                <Row className="p-1 mx-2">
-                    <Controls getLimits={updateLimits} />
-                </Row>
-                <Row className="p-1 mx-2">
-                    <SortTable getSort={updateSort} />
-                </Row>
-            </Container>
-        </Col>
+            <div className="m-0 p-0 cont-group container-fluid">
+                <div className="p-1 mx-2 row">
+                    <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
+                </div>
+                <div className="p-1 mx-2 row">
+                    <SortTable sort={sort} order={order} getSort={updateSort} getOrder={updateOrder} />
+                </div>
+            </div>
+        </div>
     );
 }
 
-function PlayListTable({ query, getQuery, rows, setGlobalUrl }) {
+function PlayListTable({ query, getQuery, tableData, setParentUrl }) {
     const getQueryHandler = (event) => {
         getQuery(event.target.value.trim());
     };
     return (
-        <Container fluid className="m-0 p-0 container-table">
+        <div className="m-0 p-0 container-table container-fluid">
             <Table responsive>
                 <thead>
                     <tr className="bg-dark">
@@ -90,24 +91,21 @@ function PlayListTable({ query, getQuery, rows, setGlobalUrl }) {
                     </tr>
                 </thead>
                 <tbody id="placeholder">
-                    <PlayListTableBody rows={rows} setGlobalUrl={setGlobalUrl} />
+                    <PlayListTableBody tableData={tableData} setParentUrl={setParentUrl} />
                 </tbody>
             </Table>
-        </Container>
+        </div>
     );
 }
 
-function PlayListTableBody({ rows, setGlobalUrl }) {
+function PlayListTableBody({ tableData, setParentUrl }) {
     // implement this later
     const watchToggler = (event) => {
-        console.log(
-            event.target.value,
-            event.target.parentElement.parentElement.children[1].children[0].href
-        );
+        console.log(`Toggling\n\turl:${event.target.parentElement.parentElement.children[1].children[0].href}\n\tTO:${event.target.value}`);
     };
     return (
         <>
-            {rows.map((element, index) => (
+            {tableData.map((element, index) => (
                 <tr key={index}>
                     <td className="text-center">{element.order_added}</td>
                     <td className="mx-0 px-0">
@@ -132,7 +130,7 @@ function PlayListTableBody({ rows, setGlobalUrl }) {
                         <Button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            onClick={() => setGlobalUrl(element.url)}
+                            onClick={() => setParentUrl(element.url)}
                         >
                             Load
                         </Button>
@@ -143,17 +141,15 @@ function PlayListTableBody({ rows, setGlobalUrl }) {
     );
 }
 
-function SortTable({ getSort }) {
-    const [sort, setSort] = useState("1");
-    const [order, setOrder] = useState("1");
+function SortTable({ sort, order, getSort, getOrder }) {
     const typeHandler = (event) => {
-        setSort(event.target.value);
+        getSort(event.target.value);
     };
     const orderHandler = (event) => {
-        setOrder(event.target.value);
+        getOrder(event.target.value);
     };
     return (
-        <Container fluid className="m-0 p-0">
+        <div className="m-0 p-0 container-fluid">
             <InputGroup>
                 <FormControl as="select" defaultValue={sort} onChange={typeHandler}>
                     <option value="1">ID</option>
@@ -164,14 +160,8 @@ function SortTable({ getSort }) {
                     <option value="1">Ascending</option>
                     <option value="2">Descending</option>
                 </FormControl>
-                <Button
-                    variant="primary"
-                    type="button"
-                    onClick={() => getSort([sort, order])}
-                >
-                    Sort
-                </Button>
             </InputGroup>
-        </Container>
+        </div>
     );
+    /*<Button variant="primary" type="button" onClick={() => {getSort(sort),getOrder(order)}}>Sort</Button>*/
 }

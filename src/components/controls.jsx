@@ -47,11 +47,10 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
         }
     };
 
-    /*useEffect(() => {
-        // Perform any side effects here that depend on the currentPage state variable
-        //console.log(`Current page: ${currentPage}`);
-        getLimits([start, stop, chunk]);
-    }, [currentPage]);*/
+    useEffect(() => {
+        // useful for debugging
+        console.log(`Current page: ${currentPage}`);
+    }, [currentPage]);
 
     return (
         <Col className="m-0 p-0">

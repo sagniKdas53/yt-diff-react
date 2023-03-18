@@ -4,11 +4,11 @@ import PlayLists from "./playlists";
 import SubLists from "./sublists";
 
 export default function DataView() {
-    const [listUrl, setListUrl] = useState("");
+    const [url, setUrl] = useState("");
     return (
         <>
-            <PlayLists setGlobalUrl={setListUrl} />
-            <SubLists controls={true} url={listUrl} />
+            <PlayLists setParentUrl={setUrl} />
+            <SubLists controls={true} listUrl={url} />
         </>
     )
 }

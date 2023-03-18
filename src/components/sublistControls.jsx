@@ -2,8 +2,8 @@ import React from "react";
 export default function SublistControls() {
     return (
         <>
-            <div class="container-fluid m-0 p-0 container-counters">
-                <div class="row">
+            <div className="container-fluid m-0 p-0 container-counters">
+                <div className="row">
                     
                 </div>
             </div>

@@ -39,30 +39,33 @@ function SubListTable({ tableData, sendQuery }) {
     );
 }
 
-export default function SubLists({ controls, url }) {
+export default function SubLists({ controls, listUrl }) {
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
     const [query, getQuery] = useState("");
     const [data, setData] = useState({ count: 0, rows: [] });
     useEffect(() => {
-        console.log("Sub Query", query, "\nSub Query Url", url, "\nData", data);
-        fetch("http://localhost:8888/ytdiff/getsub", {
-            method: "post",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            }, mode: "cors",
-            body: JSON.stringify({
-                url: url,
-                start: start,
-                stop: stop,
-                query: query
-            })
-        }).then((response) => response.text())
-            .then((data) => JSON.parse(data))
-            .then((json_data) => setData(json_data));
-    }, [query, url, start, stop, chunk])
+        console.log(`SubList\n\tUrl: ${listUrl}\n\tQuery: ${query}\n\tStart: ${start}\n\tStop: ${stop}\n\tData: ${JSON.stringify(data)}`)
+        // this will prevent unecessary calls
+        if (listUrl !== "") {
+            fetch("http://localhost:8888/ytdiff/getsub", {
+                method: "post",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                }, mode: "cors",
+                body: JSON.stringify({
+                    url: listUrl,
+                    start: start,
+                    stop: stop,
+                    query: query,
+                })
+            }).then((response) => response.text())
+                .then((data) => JSON.parse(data))
+                .then((json_data) => setData(json_data));
+        }
+    }, [query, listUrl, start, stop, chunk])
 
 
     return (

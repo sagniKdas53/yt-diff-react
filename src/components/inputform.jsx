@@ -53,7 +53,7 @@ export default function InputForm({ setGlobalUrl }) {
 
     }
     useEffect(() => {
-        console.log(bulk, url, urlList, limits, watch, items);
+        console.log(`MainList:\n\tbulk: ${bulk}\n\turl: ${url}\n\turlList: ${urlList}\n\tlimits: ${limits}\n\twatch: ${watch}\n\titems: ${items}`);
     }, [bulk, url, urlList, limits, watch, items])
     return (
         <Col xs={12} sm={12} md={12} lg={6} xl={6}>
