@@ -6,23 +6,23 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
     const next = () => {
         setStart(start + chunk);
         setStop(stop + chunk);
-        setCurrentPage(currentPage + 1);
+        //setCurrentPage(currentPage + 1);
     };
 
     const startHandler = (event) => {
         setStart(+event.target.value);
         setStop(chunk + +event.target.value);
-        setCurrentPage((chunk + +event.target.value) / chunk);
+        //setCurrentPage((chunk + +event.target.value) / chunk);
     };
     const stopHandler = (event) => {
         setStop(+event.target.value);
         setChunk(start + +event.target.value);
-        setCurrentPage(+event.target.value / chunk);
+        //setCurrentPage(+event.target.value / chunk);
     };
     const chunkHandler = (event) => {
         setChunk(+event.target.value);
         setStop(start + +event.target.value);
-        setCurrentPage(stop / +event.target.value);
+        //setCurrentPage(stop / +event.target.value);
     };
 
     const back = () => {
@@ -38,17 +38,26 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
                 setStart(chunk);
             }
             setStop(stop - chunk);
-            setCurrentPage(currentPage - 1);
+            //setCurrentPage(currentPage - 1);
         } else {
             setStart(0);
             setStop(chunk);
-            setCurrentPage(1);
+            //setCurrentPage(1);
         }
     };
 
     useEffect(() => {
-        // useful for debugging
-        console.log(`Current page: ${currentPage}`);
+        /*if (start >= stop) {
+            console.log("caught a error");
+            setStart(0);
+            setStop(chunk);
+        }*/
+        console.log(`Start: ${start}\nStop: ${stop}\nChunk: ${chunk}`);
+        setCurrentPage((stop - start) / chunk);
+    }, [start, stop, chunk]);;
+
+    useEffect(() => {
+        console.log(`Current page: ${currentPage}\nStart: ${start}\nStop: ${stop}\nChunk: ${chunk}`);
     }, [currentPage]);
 
     return (

@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 
 import Table from 'react-bootstrap/Table';
+import debouce from "lodash.debounce";
 
 import Controls from "./controls";
 import ListClearDownload from "./buttongroups";
 
 function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSelected }) {
     const queryHandler = (event) => sendQuery(event.target.value.trim());
+    const debouncedQuery = useMemo(() => {
+        return debouce(queryHandler, 1000);
+    }, []);
     const [selectAll, toggleAll] = useState(false);
     // this is just for debugging
     useEffect(() => {
@@ -45,7 +49,7 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
                             <input className="form-check-input" type="checkbox" onChange={bulkAction} checked={selectAll} id="selector" aria-label="..." />
                         </th>
                         <th className="table-dark large-title m-0 p-0 text-center align-middle">
-                            <input type="text" className="search m-0 p-0" id="query_sublist" placeholder="Title" onKeyUp={queryHandler} />
+                            <input type="text" className="search m-0 p-0" id="query_sublist" placeholder="Title" onKeyUp={debouncedQuery} />
                         </th>
                         <th className="table-dark text-center">Saved</th>
                     </tr>

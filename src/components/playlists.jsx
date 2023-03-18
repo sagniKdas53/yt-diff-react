@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Table,
     InputGroup,
     Button,
     FormControl,
 } from "react-bootstrap";
+import debouce from "lodash.debounce";
 import Controls from "./controls";
 
 export default function PlayLists({ setParentUrl }) {
@@ -16,7 +17,7 @@ export default function PlayLists({ setParentUrl }) {
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
     const [items, getItems] = useState([]);
-    // Query needs to be debounced, but I don't know how
+    //
     useEffect(() => {
         fetch("http://localhost:8888/ytdiff/dbi", {
             method: "post",
@@ -40,7 +41,6 @@ export default function PlayLists({ setParentUrl }) {
     return (
         <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
             <PlayListTable
-                query={query}
                 getQuery={updateQuery}
                 tableData={items}
                 setParentUrl={setParentUrl}
@@ -57,10 +57,11 @@ export default function PlayLists({ setParentUrl }) {
     );
 }
 
-function PlayListTable({ query, getQuery, tableData, setParentUrl }) {
-    const getQueryHandler = (event) => {
-        getQuery(event.target.value.trim());
-    };
+function PlayListTable({ getQuery, tableData, setParentUrl }) {
+    const queryHandler = (event) => getQuery(event.target.value.trim());
+    const debouncedQuery = useMemo(() => {
+        return debouce(queryHandler, 1000);
+    }, []);
     return (
         <div className="m-0 p-0 container-table container-fluid">
             <Table responsive className="m-0 p-0">
@@ -71,15 +72,14 @@ function PlayListTable({ query, getQuery, tableData, setParentUrl }) {
                         </th>
                         <th
                             scope="col"
-                            className="table-dark play-title m-0 p-0 text-center align-middle"
+                            className="table-darEk play-title m-0 p-0 text-center align-middle"
                         >
                             <input
                                 type="text"
                                 className="search m-0 p-0"
                                 id="query_main_list"
                                 placeholder="List Title"
-                                value={query}
-                                onChange={getQueryHandler}
+                                onKeyUp={debouncedQuery}
                             />
                         </th>
                         <th scope="col" className="table-dark text-center">
