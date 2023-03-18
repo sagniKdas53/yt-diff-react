@@ -2,10 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Col } from "react-bootstrap";
 
 // Find out how to reset from the parent component
-export default function Controls({ getLimits }) {
-    const [start, setStart] = useState(0);
-    const [stop, setStop] = useState(10);
-    const [chunk, setChunk] = useState(10);
+export default function Controls({ start, stop, chunk, setStart, setStop, setChunk }) {
     const [currentPage, setCurrentPage] = useState(1);
     const next = () => {
         setStart(start + chunk);
@@ -50,11 +47,11 @@ export default function Controls({ getLimits }) {
         }
     };
 
-    useEffect(() => {
+    /*useEffect(() => {
         // Perform any side effects here that depend on the currentPage state variable
         //console.log(`Current page: ${currentPage}`);
         getLimits([start, stop, chunk]);
-    }, [currentPage]);
+    }, [currentPage]);*/
 
     return (
         <Col className="m-0 p-0">

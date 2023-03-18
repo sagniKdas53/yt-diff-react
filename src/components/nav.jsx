@@ -1,11 +1,11 @@
 import React from "react";
-import { Button, Navbar, Container } from "react-bootstrap";
+import { Button, Navbar } from "react-bootstrap";
 import navBrand from "/light.png";
 
-export default function Nav({ state, updateState }) {
+export default function NavBar({ state, updateState }) {
   return (
     <Navbar bg="dark" variant="dark" className="mt-0 pt-0 mb-0 pb-0 nav-size">
-      <Container fluid>
+      <div className="container-fluid">
         <Navbar.Brand className="pt-0" href="#">
           <img
             src={navBrand}
@@ -24,7 +24,7 @@ export default function Nav({ state, updateState }) {
             Unlisted
           </Button>
         </div>
-      </Container>
+      </div>
     </Navbar >
   );
 }

@@ -8,7 +8,7 @@ export default function DataView() {
     return (
         <>
             <PlayLists setGlobalUrl={setListUrl} />
-            <SubLists showControls={true} SubUrl={setListUrl} />
+            <SubLists controls={true} url={listUrl} />
         </>
     )
 }

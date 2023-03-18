@@ -8,7 +8,7 @@ export default function InputView() {
     return (
         <>
             <InputForm setGlobalUrl={setListUrl} />
-            <SubLists showControls={false} SubUrl={setListUrl} />
+            <SubLists showControls={false} url={listUrl} />
         </>
     )
 }

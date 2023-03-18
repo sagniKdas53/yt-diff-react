@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
 
-import Container from 'react-bootstrap/Container';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
 import Table from 'react-bootstrap/Table';
 
 import Controls from "./controls";
 import ListClearDownload from "./buttongroups";
 
-function SubTable({ data, getQuery }) {
-    const queryHandler = (event) => getQuery(event.target.value.trim());
+function SubListTable({ tableData, sendQuery }) {
+    const queryHandler = (event) => sendQuery(event.target.value.trim());
     return (
-        <Container fluid className="container-table m-0 p-0">
+        <div className="container-table m-0 p-0 container-fluid">
             <Table responsive>
                 <thead>
                     <tr>
@@ -25,7 +22,7 @@ function SubTable({ data, getQuery }) {
                     </tr>
                 </thead>
                 <tbody id="listing">
-                    {data.rows.map((element, index) => (
+                    {tableData.rows.map((element, index) => (
                         <tr key={index} className={element.downloaded ? "table-info" : !element.available ? (element.title === "[Deleted video]" ? "table-danger" : element.title === "[Private video]" ? "table-warning" : "table-secondary") : ""}>
                             <td className="text-center">
                                 <input type="checkbox" className="form-check-input me-1 video-item" value="" id={element.id} />
@@ -38,16 +35,18 @@ function SubTable({ data, getQuery }) {
                     ))}
                 </tbody>
             </Table>
-        </Container>
+        </div>
     );
 }
 
-export default function SubLists({ showControls, SubUrl }) {
-    const [limits, updateLimits] = useState([0, 10, 10]);
+export default function SubLists({ controls, url }) {
+    const [start, setStart] = useState(0);
+    const [stop, setStop] = useState(10);
+    const [chunk, setChunk] = useState(10);
     const [query, getQuery] = useState("");
     const [data, setData] = useState({ count: 0, rows: [] });
     useEffect(() => {
-        console.log("Sub Query", query, "\nSub Query Url", SubUrl, "\nlimits", limits, "\nData", data);
+        console.log("Sub Query", query, "\nSub Query Url", url, "\nData", data);
         fetch("http://localhost:8888/ytdiff/getsub", {
             method: "post",
             headers: {
@@ -55,24 +54,27 @@ export default function SubLists({ showControls, SubUrl }) {
                 "Content-Type": "application/json"
             }, mode: "cors",
             body: JSON.stringify({
-                url: SubUrl,
-                start: limits[0],
-                stop: limits[1],
+                url: url,
+                start: start,
+                stop: stop,
                 query: query
             })
         }).then((response) => response.text())
             .then((data) => JSON.parse(data))
             .then((json_data) => setData(json_data));
-    }, [query, SubUrl, limits])
-    return (<Col xs={12} sm={12} md={12} lg={6} xl={6} className="m-0 p-0">
-        <SubTable SubUrl={SubUrl} limits={limits} getQuery={getQuery} data={data} />
-        {showControls ? (<Container fluid className="m-0 p-0 cont-group">
-            <Row className="p-1 mx-2">
-                <Controls getLimits={updateLimits} />
-            </Row>
-            <Row className="p-1 mx-2">
-                <ListClearDownload noList />
-            </Row>
-        </Container>) : <></>}
-    </Col>)
+    }, [query, url, start, stop, chunk])
+
+
+    return (
+        <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
+            <SubListTable sendQuery={getQuery} tableData={data} />
+            {controls ? <div className="m-0 p-0 cont-group container-fluid">
+                <div className="row p-1 mx-2">
+                    <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
+                </div>
+                <div className="row p-1 mx-2">
+                    <ListClearDownload noList />
+                </div>
+            </div> : <></>}
+        </div>)
 }

@@ -1,5 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Container, Row, Col, Table, InputGroup, Button, FormControl } from "react-bootstrap";
+import {
+    Container,
+    Row,
+    Col,
+    Table,
+    InputGroup,
+    Button,
+    FormControl,
+} from "react-bootstrap";
 import Controls from "./controls";
 
 export default function PlayLists({ setGlobalUrl }) {
@@ -12,8 +20,8 @@ export default function PlayLists({ setGlobalUrl }) {
         fetch("http://localhost:8888/ytdiff/dbi", {
             method: "post",
             headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
+                Accept: "application/json",
+                "Content-Type": "application/json",
             },
             mode: "cors",
             body: JSON.stringify({
@@ -22,14 +30,20 @@ export default function PlayLists({ setGlobalUrl }) {
                 sort: sort[0],
                 order: sort[1],
                 query: query,
-            })
-        }).then((response) => response.text())
+            }),
+        })
+            .then((response) => response.text())
             .then((data) => JSON.parse(data))
             .then((json_data) => getItems(json_data["rows"]));
     }, [query, limits, sort]);
     return (
         <Col xs={12} sm={12} md={12} lg={6} xl={6} className="p-0 m-0">
-            <PlayListTable query={query} getQuery={updateQuery} rows={items} setGlobalUrl={setGlobalUrl} />
+            <PlayListTable
+                query={query}
+                getQuery={updateQuery}
+                rows={items}
+                setGlobalUrl={setGlobalUrl}
+            />
             <Container fluid className="m-0 p-0 cont-group">
                 <Row className="p-1 mx-2">
                     <Controls getLimits={updateLimits} />
@@ -43,7 +57,9 @@ export default function PlayLists({ setGlobalUrl }) {
 }
 
 function PlayListTable({ query, getQuery, rows, setGlobalUrl }) {
-    const getQueryHandler = (event) => { getQuery(event.target.value.trim()); }
+    const getQueryHandler = (event) => {
+        getQuery(event.target.value.trim());
+    };
     return (
         <Container fluid className="m-0 p-0 container-table">
             <Table responsive>
@@ -83,32 +99,48 @@ function PlayListTable({ query, getQuery, rows, setGlobalUrl }) {
 
 function PlayListTableBody({ rows, setGlobalUrl }) {
     // implement this later
-    const watchToggler = (event) => { console.log(event.target.value, event.target.parentElement.parentElement.children[1].children[0].href) };
+    const watchToggler = (event) => {
+        console.log(
+            event.target.value,
+            event.target.parentElement.parentElement.children[1].children[0].href
+        );
+    };
     return (
         <>
-            {
-                rows.map((element, index) => (
-                    <tr key={index}>
-                        <td className="text-center">{element.order_added}</td>
-                        <td className="mx-0 px-0">
-                            <a href={element.url} className="play-title">{element.title}</a>
-                        </td>
-                        <td className="text-center">
-                            <FormControl className="form-select-sm" id={element.order_added} as="select" defaultValue={element.watch} onChange={watchToggler}>
-                                <option value="1">NA</option>
-                                <option value="2">Full</option>
-                                <option value="3">Quick</option>
-                            </FormControl>
-                        </td>
-                        <td className="text-center">
-                            <Button type="button" className="btn btn-secondary btn-sm" onClick={() => setGlobalUrl(element.url)}>Load</Button>
-                        </td>
-
-                    </tr>
-                ))
-            }
+            {rows.map((element, index) => (
+                <tr key={index}>
+                    <td className="text-center">{element.order_added}</td>
+                    <td className="mx-0 px-0">
+                        <a href={element.url} className="play-title">
+                            {element.title}
+                        </a>
+                    </td>
+                    <td className="text-center">
+                        <FormControl
+                            className="form-select-sm"
+                            id={element.order_added}
+                            as="select"
+                            defaultValue={element.watch}
+                            onChange={watchToggler}
+                        >
+                            <option value="1">NA</option>
+                            <option value="2">Full</option>
+                            <option value="3">Quick</option>
+                        </FormControl>
+                    </td>
+                    <td className="text-center">
+                        <Button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setGlobalUrl(element.url)}
+                        >
+                            Load
+                        </Button>
+                    </td>
+                </tr>
+            ))}
         </>
-    )
+    );
 }
 
 function SortTable({ getSort }) {
