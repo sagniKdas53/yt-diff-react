@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Col } from "react-bootstrap";
 
 // Find out how to reset from the parent component
 export default function Controls({ start, stop, chunk, setStart, setStop, setChunk }) {
@@ -53,7 +52,7 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
     }, [currentPage]);
 
     return (
-        <Col className="m-0 p-0">
+        <div className="col m-0 p-0">
             <div className="input-group m-0 p-0">
                 <input
                     type="number"
@@ -113,6 +112,6 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
                     Back
                 </button>
             </div>
-        </Col>
+        </div>
     );
 }

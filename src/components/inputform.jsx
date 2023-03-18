@@ -5,7 +5,7 @@ import Col from 'react-bootstrap/Col';
 import ListClearDownload from "./buttongroups"
 import Controls from "./controls";
 
-export default function InputForm({ setGlobalUrl }) {
+export default function InputForm({ setListUrl }) {
     const [bulk, setBulk] = useState(false);
     const [url, setUrl] = useState("");
     const [urlList, setUrlList] = useState("");
@@ -53,7 +53,7 @@ export default function InputForm({ setGlobalUrl }) {
 
     }
     useEffect(() => {
-        console.log(`MainList:\n\tbulk: ${bulk}\n\turl: ${url}\n\turlList: ${urlList}\n\tlimits: ${limits}\n\twatch: ${watch}\n\titems: ${items}`);
+        console.log(`MainList:\n\tbulk: ${bulk}\n\turl: "${url}"\n\turlList: "${urlList}"\n\tlimits: ${limits}\n\twatch: ${watch}\n\titems: ${JSON.stringify(items)}`);
     }, [bulk, url, urlList, limits, watch, items])
     return (
         <Col xs={12} sm={12} md={12} lg={6} xl={6}>

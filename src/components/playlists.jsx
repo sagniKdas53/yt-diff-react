@@ -63,8 +63,8 @@ function PlayListTable({ query, getQuery, tableData, setParentUrl }) {
     };
     return (
         <div className="m-0 p-0 container-table container-fluid">
-            <Table responsive>
-                <thead>
+            <Table responsive className="m-0 p-0">
+                <thead className="sticky-top">
                     <tr className="bg-dark">
                         <th scope="col" className="table-dark text-center">
                             ID
@@ -109,7 +109,7 @@ function PlayListTableBody({ tableData, setParentUrl }) {
                 <tr key={index}>
                     <td className="text-center">{element.order_added}</td>
                     <td className="mx-0 px-0">
-                        <a href={element.url} className="play-title">
+                        <a href={element.url} className="play-title" target="_blank" rel="noreferrer">
                             {element.title}
                         </a>
                     </td>
@@ -163,5 +163,4 @@ function SortTable({ sort, order, getSort, getOrder }) {
             </InputGroup>
         </div>
     );
-    /*<Button variant="primary" type="button" onClick={() => {getSort(sort),getOrder(order)}}>Sort</Button>*/
 }

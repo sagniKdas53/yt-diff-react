@@ -4,11 +4,11 @@ import InputForm from "./inputform";
 import SubLists from "./sublists";
 
 export default function InputView() {
-    const [listUrl, setListUrl] = useState("");
+    const [url, setUrl] = useState("");
     return (
         <>
-            <InputForm setGlobalUrl={setListUrl} />
-            <SubLists showControls={false} url={listUrl} />
+            <InputForm setListUrl={setUrl} />
+            <SubLists showControls={false} listUrl={url} />
         </>
     )
 }

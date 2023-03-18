@@ -4,7 +4,7 @@ export default function SublistControls() {
         <>
             <div className="container-fluid m-0 p-0 container-counters">
                 <div className="row">
-                    
+
                 </div>
             </div>
 
@@ -28,7 +28,3 @@ export default function SublistControls() {
             </div>
         </>);
 }
-
-/*
-
-*/
