@@ -9,14 +9,14 @@ import InputView from "./components/input";
 function App() {
   const [show, toggleView] = useState(false);
   return (
-    <>
+    <React.StrictMode>
       <NavBar state={show} updateState={toggleView} />
       <div className="container-fluid">
         <div className="row">
           {show ? <DataView /> : <InputView />}
         </div>
       </div>
-    </>
+    </React.StrictMode>
   );
 }
 

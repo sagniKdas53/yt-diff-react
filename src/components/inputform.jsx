@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from "react";
-import Container from 'react-bootstrap/Container';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
+
 import ListClearDownload from "./buttongroups"
 import Controls from "./controls";
-
-export default function InputForm({ setListUrl }) {
-    const [bulk, setBulk] = useState(false);
+import {
+    FormControl,
+} from "react-bootstrap";
+export default function InputForm({ setParentUrl }) {
+    // all of the states are here
+    //const [sort, updateSort] = useState(1);
+    //const [order, updateOrder] = useState(1);
+    const [start, setStart] = useState(0);
+    const [stop, setStop] = useState(10);
+    const [chunk, setChunk] = useState(10);
+    //const [items, getItems] = useState([]);
+    const [bulkListing, toggleBulk] = useState(false);
     const [url, setUrl] = useState("");
     const [urlList, setUrlList] = useState("");
-    const [limits, updateLimits] = useState([0, 10, 10]);
-    const [watch, setWatch] = useState(false);
-    const [items, getItems] = useState([]);
-    const limitsGetter = (state) => {
-        updateLimits(state);
-    };
+    const [watchMode, setWatch] = useState("1");
+
     const updateUrls = (event) => {
-        if (bulk) {
+        if (bulkListing) {
             setUrlList(event.target.value);
         } else {
             setUrl(event.target.value);
@@ -31,64 +34,64 @@ export default function InputForm({ setListUrl }) {
             },
             mode: "cors",
             body: JSON.stringify({
-                url: bulk ? urlList : url,
-                start: limits[0],
-                stop: limits[1],
-                chunk: limits[2],
-                watch: watch,
-                continuous: bulk
+                url: bulkListing ? urlList.trim().split("\n") : url,
+                start: start,
+                stop: stop,
+                chunk: chunk,
+                watchMode: watchMode,
+                continuous: bulkListing
             })
         }).then((response) => response.text())
-            .then((data) => JSON.parse(data))
-            .then((json_data) => getItems(json_data));
+            .then(() => { console.log("setting parent url"); setParentUrl(bulkListing ? "None" : url) });
     };
-    const clearThis = () => {
-        setBulk(false);
-        setUrl("");
-        setUrlList("");
-        updateLimits([0, 10]);
-        setWatch(false);
-    };
-    const downloadThese = () => {
 
-    }
     useEffect(() => {
-        console.log(`MainList:\n\tbulk: ${bulk}\n\turl: "${url}"\n\turlList: "${urlList}"\n\tlimits: ${limits}\n\twatch: ${watch}\n\titems: ${JSON.stringify(items)}`);
-    }, [bulk, url, urlList, limits, watch, items])
+        console.log(`MainList:\n\tbulk: ${bulkListing}\n\turl: "${url}"\n\turlList: "${urlList}"\n\tstart: ${start}\n\tstop: ${stop}\n\tchunk: ${chunk}\n\twatch: ${watchMode}`);
+        //\n\titems: ${JSON.stringify(items)}
+    }, [bulkListing, url, urlList, watchMode, chunk, start, stop])
+
     return (
-        <Col xs={12} sm={12} md={12} lg={6} xl={6}>
-            <Container fluid>
-                <Row className="mb-3">
+        <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
+            <div className="container-fluid">
+                <div className="row mb3">
                     <h3>URL:</h3>
-                    {bulk ?
+                    {bulkListing ?
                         <textarea className="form-control" placeholder="url list" id="url_list" rows="5" title="Url List" hidden="" value={urlList} onChange={updateUrls} /> :
                         <input type="text" className="form-control" placeholder="url" id="url" data-bs-toggle="tooltip" data-bs-placement="top" title="Url" value={url} onChange={updateUrls} />}
-                </Row>
-                <Row className="mt-3">
-                    <Controls getLimits={limitsGetter} setLimits={limits} />
-                </Row>
-                <Row className="mt-3">
-                    <Col>
-                        <div className="m-0 p-0 d-flex">
+                </div>
+                <div className="row mt-3">
+                    <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
+                </div>
+                <div className="row mt-3 align-items-center">
+                    <div className="col align-items-center">
+                        <div className="m-0 p-0 d-flex align-items-center">
                             <label className="form-check-label">Bulk Listing: </label>
                             <div className="form-check form-switch mx-2">
-                                <input className="form-check-input" type="checkbox" checked={bulk} role="switch" id="bulk-listing" onChange={() => setBulk(!bulk)} />
+                                <input className="form-check-input" type="checkbox" checked={bulkListing} role="switch" id="bulkListing-listing" onChange={() => toggleBulk(!bulkListing)} />
                             </div>
                         </div>
-                    </Col>
-                    <Col>
-                        <div className="m-0 p-0 d-flex">
-                            <label className="form-check-label">Watch for changes: </label>
-                            <div className="form-check form-switch mx-2">
-                                <input className="form-check-input" type="checkbox" checked={watch} role="switch" id="watch-list" onChange={() => setWatch(!watch)} />
-                            </div>
+                    </div>
+                    <div className="col align-items-center">
+                        <div className="m-0 p-0 d-flex flex-row align-items-center">
+                            <label className="form-check-label emoji align-items-center">Watch mode: </label>
+                            <FormControl
+                                className="form-select-sm mx-3 align-items-center"
+                                id="watch-change"
+                                as="select"
+                                defaultValue={watchMode}
+                                onChange={(event) => setWatch(event.target.value)}
+                            >
+                                <option value="1">NA</option>
+                                <option value="2">Full</option>
+                                <option value="3">Quick</option>
+                            </FormControl>
                         </div>
-                    </Col>
-                </Row>
-                <Row className="my-2">
-                    <ListClearDownload listFunc={listThis} clearFunc={clearThis} downloadFunc={downloadThese} />
-                </Row>
-            </Container>
-        </Col>
+                    </div>
+                </div>
+                <div className="row my-2">
+                    <ListClearDownload listFunc={listThis} clearFunc={() => console.log("TODO")} downloadFunc={() => console.log("TODO")} />
+                </div>
+            </div>
+        </div>
     );
 }

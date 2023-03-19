@@ -7,8 +7,8 @@ export default function InputView() {
     const [url, setUrl] = useState("");
     return (
         <>
-            <InputForm setListUrl={setUrl} />
-            <SubLists showControls={false} listUrl={url} />
+            <InputForm setParentUrl={setUrl} />
+            <SubLists controls={true} listUrl={url} />
         </>
     )
 }
