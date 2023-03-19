@@ -25,6 +25,9 @@ export default function InputForm({ setParentUrl }) {
         }
     };
     const listThis = () => {
+        /*
+            urlList need to be be processed in a forEach loop, then the fetch will be done.
+        */
         fetch("http://localhost:8888/ytdiff/list", {
             method: "post",
             headers: {
@@ -40,8 +43,8 @@ export default function InputForm({ setParentUrl }) {
                 watch: watchMode,
                 continuous: bulkListing
             })
-        }).then((response) => response.text())
-            .then(() => { console.log("setting parent url"); setParentUrl(bulkListing ? "None" : url) });
+        }).then((response) => response.text()).then((data) => JSON.parse(data))
+            .then((data) => { console.log("setting parent url"); setParentUrl(bulkListing ? "None" : data.rows[0]["reference"]) });
     };
 
     useEffect(() => {
