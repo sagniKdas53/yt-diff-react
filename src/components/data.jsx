@@ -1,13 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 
-import PlayLists from "./playlists";
+import PlayListController from "./playlists";
 import SubLists from "./sublists";
 
-export default function DataView() {
-    const [url, setUrl] = useState("");
+export default function DataView({ url, setUrl }) {
     return (
         <>
-            <PlayLists setParentUrl={setUrl} />
+            <PlayListController setParentUrl={setUrl} />
             <SubLists controls={true} listUrl={url} />
         </>
     )

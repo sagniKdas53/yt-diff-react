@@ -8,12 +8,13 @@ import InputView from "./components/input";
 
 function App() {
   const [show, toggleView] = useState(false);
+  const [url, setUrl] = useState("");
   return (
     <React.StrictMode>
-      <NavBar state={show} updateState={toggleView} />
+      <NavBar state={show} updateState={toggleView} setUrl={setUrl} />
       <div className="container-fluid">
         <div className="row">
-          {show ? <DataView /> : <InputView />}
+          {show ? <DataView url={url} setUrl={setUrl} /> : <InputView url={url} setUrl={setUrl} />}
         </div>
       </div>
     </React.StrictMode>

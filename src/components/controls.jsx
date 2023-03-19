@@ -1,64 +1,42 @@
 import React, { useEffect, useState } from "react";
 
-// Find out how to reset from the parent component
 export default function Controls({ start, stop, chunk, setStart, setStop, setChunk }) {
-    const [currentPage, setCurrentPage] = useState(1);
     const next = () => {
         setStart(start + chunk);
         setStop(stop + chunk);
-        //setCurrentPage(currentPage + 1);
+    };
+
+    const back = () => {
+        // Setting start value
+        if ((start - chunk) <= 0) {
+            setStart(0);
+        } else {
+            setStart(start - chunk);
+        }
+        // Setting stop value
+        if ((stop - chunk) <= chunk) {
+            setStop(chunk);
+        } else {
+            setStop(stop - chunk);
+        }
     };
 
     const startHandler = (event) => {
         setStart(+event.target.value);
         setStop(chunk + +event.target.value);
-        //setCurrentPage((chunk + +event.target.value) / chunk);
     };
     const stopHandler = (event) => {
         setStop(+event.target.value);
         setChunk(start + +event.target.value);
-        //setCurrentPage(+event.target.value / chunk);
     };
     const chunkHandler = (event) => {
         setChunk(+event.target.value);
         setStop(start + +event.target.value);
-        //setCurrentPage(stop / +event.target.value);
-    };
-
-    const back = () => {
-        if (Math.floor(currentPage) - 1 >= 1) {
-            if ((start - chunk) >= 0) {
-                setStart(start - chunk);
-            } else {
-                setStart(0);
-            }
-            if ((stop - chunk) >= 1) {
-                setStop(stop - chunk);
-            } else {
-                setStart(chunk);
-            }
-            setStop(stop - chunk);
-            //setCurrentPage(currentPage - 1);
-        } else {
-            setStart(0);
-            setStop(chunk);
-            //setCurrentPage(1);
-        }
     };
 
     useEffect(() => {
-        /*if (start >= stop) {
-            console.log("caught a error");
-            setStart(0);
-            setStop(chunk);
-        }*/
         console.log(`Start: ${start}\nStop: ${stop}\nChunk: ${chunk}`);
-        setCurrentPage((stop - start) / chunk);
     }, [start, stop, chunk]);;
-
-    useEffect(() => {
-        console.log(`Current page: ${currentPage}\nStart: ${start}\nStop: ${stop}\nChunk: ${chunk}`);
-    }, [currentPage]);
 
     return (
         <div className="col m-0 p-0">
@@ -76,7 +54,7 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
                     title="Start"
                     value={start}
                 />
-                <span className="input-group-text">-</span>
+                <span className="input-group-text d-none d-sm-block">-</span>
                 <input
                     type="number"
                     className="form-control"
@@ -90,7 +68,7 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
                     title="Stop"
                     value={stop}
                 />
-                <span className="input-group-text">-</span>
+                <span className="input-group-text d-none d-sm-block">-</span>
                 <input
                     type="number"
                     className="form-control"

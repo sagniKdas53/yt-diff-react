@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 
 import InputForm from "./inputform";
 import SubLists from "./sublists";
 
-export default function InputView() {
-    const [url, setUrl] = useState("");
+export default function InputView({ url, setUrl }) {
     return (
         <>
             <InputForm setParentUrl={setUrl} />

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 
-import ListClearDownload from "./buttongroups"
 import Controls from "./controls";
 import {
     FormControl,
@@ -38,7 +37,7 @@ export default function InputForm({ setParentUrl }) {
                 start: start,
                 stop: stop,
                 chunk: chunk,
-                watchMode: watchMode,
+                watch: watchMode,
                 continuous: bulkListing
             })
         }).then((response) => response.text())
@@ -53,8 +52,7 @@ export default function InputForm({ setParentUrl }) {
     return (
         <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
             <div className="container-fluid">
-                <div className="row mb3">
-                    <h3>URL:</h3>
+                <div className="row my-3">
                     {bulkListing ?
                         <textarea className="form-control" placeholder="url list" id="url_list" rows="5" title="Url List" hidden="" value={urlList} onChange={updateUrls} /> :
                         <input type="text" className="form-control" placeholder="url" id="url" data-bs-toggle="tooltip" data-bs-placement="top" title="Url" value={url} onChange={updateUrls} />}
@@ -89,7 +87,10 @@ export default function InputForm({ setParentUrl }) {
                     </div>
                 </div>
                 <div className="row my-2">
-                    <ListClearDownload listFunc={listThis} clearFunc={() => console.log("TODO")} downloadFunc={() => console.log("TODO")} />
+                    <div className="col m-0 p-0">
+                        <button id="list_btn" type="button" onClick={listThis} className="btn btn-primary">List</button>
+                    </div>
+                    <div className="col m-0 p-0"></div>
                 </div>
             </div>
         </div>

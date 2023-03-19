@@ -8,7 +8,7 @@ import {
 import debouce from "lodash.debounce";
 import Controls from "./controls";
 
-export default function PlayLists({ setParentUrl }) {
+export default function PlayListController({ setParentUrl }) {
     // all of the states are here
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(1);
@@ -17,7 +17,7 @@ export default function PlayLists({ setParentUrl }) {
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
     const [items, getItems] = useState([]);
-    //
+    // main fetcher that loads everything
     useEffect(() => {
         fetch("http://localhost:8888/ytdiff/dbi", {
             method: "post",
@@ -37,7 +37,7 @@ export default function PlayLists({ setParentUrl }) {
             .then((response) => response.text())
             .then((data) => JSON.parse(data))
             .then((json_data) => getItems(json_data["rows"]));
-    }, [query, start, stop, sort, order, chunk]);
+    }, [query, start, stop, sort, chunk, order]);
     return (
         <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
             <PlayListTable
@@ -59,6 +59,7 @@ export default function PlayLists({ setParentUrl }) {
 
 function PlayListTable({ getQuery, tableData, setParentUrl }) {
     const queryHandler = (event) => getQuery(event.target.value.trim());
+    // I give up lodash works good enough
     const debouncedQuery = useMemo(() => {
         return debouce(queryHandler, 1000);
     }, []);
@@ -91,14 +92,14 @@ function PlayListTable({ getQuery, tableData, setParentUrl }) {
                     </tr>
                 </thead>
                 <tbody id="placeholder">
-                    <PlayListTableBody tableData={tableData} setParentUrl={setParentUrl} />
+                    <BodyGenerator tableData={tableData} setParentUrl={setParentUrl} />
                 </tbody>
             </Table>
         </div>
     );
 }
 
-function PlayListTableBody({ tableData, setParentUrl }) {
+function BodyGenerator({ tableData, setParentUrl }) {
     // implement this later
     const watchToggler = (event) => {
         console.log(`Toggling\n\turl:${event.target.parentElement.parentElement.children[1].children[0].href}\n\tTO:${event.target.value}`);
@@ -118,7 +119,7 @@ function PlayListTableBody({ tableData, setParentUrl }) {
                             className="form-select-sm"
                             id={element.order_added}
                             as="select"
-                            defaultValue={element.watch}
+                            value={element.watch}
                             onChange={watchToggler}
                         >
                             <option value="1">NA</option>
