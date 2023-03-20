@@ -17,9 +17,10 @@ export default function PlayListController({ setParentUrl, listUrl }) {
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
     const [items, getItems] = useState([]);
-    // main fetcher that loads everything
-    useEffect(() => {
-        fetch("http://localhost:8888/ytdiff/dbi", {
+
+    // memoize the fetch result using useMemo
+    const memoizedFetch = useMemo(async () => {
+        const response = await fetch("http://localhost:8888/ytdiff/dbi", {
             method: "post",
             headers: {
                 Accept: "application/json",
@@ -33,11 +34,17 @@ export default function PlayListController({ setParentUrl, listUrl }) {
                 order: order,
                 query: query,
             }),
-        })
-            .then((response) => response.text())
-            .then((data) => JSON.parse(data))
-            .then((json_data) => getItems(json_data["rows"]));
+        });
+        const data = await response.text();
+        const json_data = JSON.parse(data);
+        return json_data["rows"];
     }, [query, start, stop, sort, chunk, order]);
+
+    // use the memoized fetch result to set the items state
+    useEffect(() => {
+        memoizedFetch.then((data) => getItems(data));
+    }, [memoizedFetch]);
+
     return (
         <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
             <PlayListTable
@@ -58,6 +65,7 @@ export default function PlayListController({ setParentUrl, listUrl }) {
         </div>
     );
 }
+
 
 function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, listUrl }) {
     const queryHandler = (event) => getQuery(event.target.value.trim());

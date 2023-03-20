@@ -1,67 +1,96 @@
 import React, { useEffect, useState, useMemo } from "react";
 
 import Table from 'react-bootstrap/Table';
-import debouce from "lodash.debounce";
+import debounce from "lodash.debounce";
 
 import Controls from "./controls";
 
 function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSelected }) {
-    const queryHandler = (event) => sendQuery(event.target.value.trim());
-    const debouncedQuery = useMemo(() => {
-        return debouce(queryHandler, 1000);
-    }, []);
-    const [selectAll, toggleAll] = useState(false);
-    // this is just for debugging
-    useEffect(() => {
-        console.log("selectAll", selectAll, "selectedItems", selectedItems, Object.keys(selectedItems).length);
-    }, [selectedItems]);
-    // when new listUrl is loaded, reset the selectedItems and select all checkbox
-    useEffect(() => {
-        updateSelected({});
-        toggleAll(false);
-    }, [listUrl]);
-    // when new data is loaded for the same listUrl, uncheck the select all checkbox
-    useEffect(() => {
-        toggleAll(false);
-    }, [tableData])
-    // utility function
+    const [selectAll, setSelectAll] = useState(false);
+
     const handleSelection = (event) => {
-        let id = event.target.id,
-            checked = event.target.checked;
+        const { id, checked } = event.target;
         updateSelected(prevItems => ({ ...prevItems, [id]: checked }));
-    }
+    };
+
     const bulkAction = () => {
-        let tempState = {}
-        tableData.rows.map((element) => {
+        const tempState = {};
+        tableData.rows.forEach((element) => {
             tempState[element.id] = !selectAll;
         });
         updateSelected(prevSelected => ({ ...prevSelected, ...tempState }));
-        toggleAll(!selectAll)
-    }
+        setSelectAll(!selectAll);
+    };
+
+    useEffect(() => {
+        updateSelected({});
+        setSelectAll(false);
+    }, [listUrl]);
+
+    useEffect(() => {
+        setSelectAll(false);
+    }, [tableData]);
+
+    const debouncedQuery = useMemo(() => debounce((event) => sendQuery(event.target.value.trim()), 1000), []);
+
     return (
         <div className="container-table m-0 p-0 container-fluid">
             <Table responsive className="m-0 p-0">
                 <thead className="sticky-top">
                     <tr>
                         <th className="table-dark text-center">
-                            <input className="form-check-input" type="checkbox" onChange={bulkAction} checked={selectAll} id="selector" aria-label="..." />
+                            <input
+                                className="form-check-input"
+                                type="checkbox"
+                                onChange={bulkAction}
+                                checked={selectAll}
+                                id="selector"
+                                aria-label="..."
+                            />
                         </th>
                         <th className="table-dark large-title m-0 p-0 text-center align-middle">
-                            <input type="text" className="search m-0 p-0" id="query_sublist" placeholder="Title" onKeyUp={debouncedQuery} />
+                            <input
+                                type="text"
+                                className="search m-0 p-0"
+                                id="query_sublist"
+                                placeholder="Title"
+                                onKeyUp={debouncedQuery}
+                            />
                         </th>
                         <th className="table-dark text-center">Saved</th>
                     </tr>
                 </thead>
                 <tbody id="listing">
                     {tableData.rows.map((element, index) => (
-                        <tr key={index} className={element.downloaded ? "table-info" : !element.available ? (element.title === "[Deleted video]" ? "table-danger" : element.title === "[Private video]" ? "table-warning" : "table-secondary") : ""}>
+                        <tr
+                            key={index}
+                            className={
+                                element.downloaded
+                                    ? 'table-info'
+                                    : !element.available
+                                        ? element.title === '[Deleted video]'
+                                            ? 'table-danger'
+                                            : element.title === '[Private video]'
+                                                ? 'table-warning'
+                                                : 'table-secondary'
+                                        : ''
+                            }
+                        >
                             <td className="text-center">
-                                <input type="checkbox" className="form-check-input me-1 video-item" checked={selectedItems[element.id] || false} onChange={handleSelection} id={element.id} />
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input me-1 video-item"
+                                    checked={selectedItems[element.id] || false}
+                                    onChange={handleSelection}
+                                    id={element.id}
+                                />
                             </td>
                             <td className="large-title mx-0 px-0">
-                                <a href={element.url} target="_blank" rel="noreferrer">{element.title}</a>
+                                <a href={element.url} target="_blank" rel="noreferrer">
+                                    {element.title}
+                                </a>
                             </td>
-                            <td className="emoji">{element.downloaded ? "✅" : "❌"}</td>
+                            <td className="emoji">{element.downloaded ? '✅' : '❌'}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -77,26 +106,37 @@ export default function SubLists({ controls, listUrl, setParentUrl }) {
     const [query, getQuery] = useState("");
     const [data, setData] = useState({ count: 0, rows: [] });
     const [selectedItems, updateSelected] = useState({});
+
+    const fetchOptions = useMemo(() => ({
+        method: "post",
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        },
+        mode: "cors"
+    }), []);
+
+    const fetchData = useMemo(() => async (url, start, stop, query) => {
+        const response = await fetch("http://localhost:8888/ytdiff/getsub", {
+            ...fetchOptions,
+            body: JSON.stringify({
+                url,
+                start,
+                stop,
+                query
+            })
+        });
+        const data = await response.text();
+        return JSON.parse(data);
+    }, [fetchOptions]);
+
+
     useEffect(() => {
-        // this will prevent unecessary calls
         if (listUrl !== "" && listUrl !== undefined) {
-            fetch("http://localhost:8888/ytdiff/getsub", {
-                method: "post",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                }, mode: "cors",
-                body: JSON.stringify({
-                    url: listUrl,
-                    start: start,
-                    stop: stop,
-                    query: query,
-                })
-            }).then((response) => response.text())
-                .then((data) => JSON.parse(data))
-                .then((json_data) => setData(json_data));
+            fetchData(listUrl, start, stop, query)
+                .then(json_data => setData(json_data));
         }
-    }, [query, listUrl, start, stop, chunk])
+    }, [fetchData, listUrl, start, stop, query]);
 
     function clear() {
         setParentUrl("");
