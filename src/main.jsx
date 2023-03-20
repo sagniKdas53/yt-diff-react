@@ -7,14 +7,18 @@ import DataView from "./components/data";
 import InputView from "./components/input";
 
 function App() {
-  const [show, toggleView] = useState(false);
-  const [url, setUrl] = useState("");
+  const [showDataView, toggleView] = useState(false);
+  const [sublistUrl, setUrl] = useState("");
+  const toggleViewHandler = () => {
+    toggleView(!showDataView);
+    setUrl("");
+  };
   return (
     <React.StrictMode>
-      <NavBar state={show} updateState={toggleView} setUrl={setUrl} />
+      <NavBar state={showDataView} toggleView={toggleViewHandler} setUrl={setUrl} />
       <div className="container-fluid">
         <div className="row">
-          {show ? <DataView url={url} setUrl={setUrl} /> : <InputView url={url} setUrl={setUrl} />}
+          {showDataView ? <DataView url={sublistUrl} setUrl={setUrl} /> : <InputView url={sublistUrl} setUrl={setUrl} />}
         </div>
       </div>
     </React.StrictMode>

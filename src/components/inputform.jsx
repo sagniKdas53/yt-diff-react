@@ -24,11 +24,49 @@ export default function InputForm({ setParentUrl }) {
             setUrl(event.target.value);
         }
     };
-    const listThis = () => {
-        /*
-            urlList need to be be processed in a forEach loop, then the fetch will be done.
-        */
-        fetch("http://localhost:8888/ytdiff/list", {
+    const listThis = async () => {
+        if (bulkListing) {
+            const valid = new Set(urlList.trim().split("\n").filter(validate));
+            try {
+                for (const element of valid) {
+                    const response = await postUrl(element).then((response) => response.text()).then((data) => JSON.parse(data));
+                    // console.log(response.rows[0]["reference"]);
+                    // since listing may take a while having this here as an intermediate state can't hurt too much.
+                    setParentUrl(response.rows[0]["reference"]);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        } else {
+            try {
+                if (validate(url)) {
+                    const response = await postUrl(url).then((response) => response.text()).then((data) => JSON.parse(data));
+                    // I plan on getting the limits form the backend db thus being able to update the subList sate form here
+                    // fetching data as needed, this will also prevent the overhead of serealizing the resposne in intial listing.
+                    setParentUrl(response.rows[0]["reference"]);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    };
+
+    const validate = (element) => {
+        try {
+            const url = new URL(element);
+            if (url.protocol !== "https:" && url.protocol !== "http:") {
+                console.error("Invalid url: " + url);
+                return false;
+            }
+        } catch (error) {
+            console.error("Problem parsing url: " + url);
+            return false;
+        }
+        return true;
+    }
+
+    const postUrl = (urlItem) => {
+        return fetch("http://localhost:8888/ytdiff/list", {
             method: "post",
             headers: {
                 "Accept": "application/json",
@@ -36,16 +74,15 @@ export default function InputForm({ setParentUrl }) {
             },
             mode: "cors",
             body: JSON.stringify({
-                url: bulkListing ? urlList.trim().split("\n") : url,
+                url: urlItem,
                 start: start,
                 stop: stop,
                 chunk: chunk,
                 watch: watchMode,
                 continuous: bulkListing
             })
-        }).then((response) => response.text()).then((data) => JSON.parse(data))
-            .then((data) => { console.log("setting parent url"); setParentUrl(bulkListing ? "None" : data.rows[0]["reference"]) });
-    };
+        });
+    }
 
     /*useEffect(() => {
         console.log(`MainList:\n\tbulk: ${bulkListing}\n\turl: "${url}"\n\turlList: "${urlList}"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 
 import Table from 'react-bootstrap/Table';
 import debounce from "lodash.debounce";
@@ -7,7 +7,8 @@ import Controls from "./controls";
 
 function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSelected }) {
     const [selectAll, setSelectAll] = useState(false);
-
+    // absolutely unnecessary
+    const query = useRef("");
     const handleSelection = (event) => {
         const { id, checked } = event.target;
         updateSelected(prevItems => ({ ...prevItems, [id]: checked }));
@@ -54,6 +55,7 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
                                 className="search m-0 p-0"
                                 id="query_sublist"
                                 placeholder="Title"
+                                ref={query}
                                 onKeyUp={debouncedQuery}
                             />
                         </th>
