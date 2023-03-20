@@ -74,44 +74,38 @@ function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, lis
         return debouce(queryHandler, 1000);
     }, []);
     return (
-        <>
-            <div className="m-0 p-0 container-fluid container-table-head">
-                <Table className="m-0 p-0">
-                    <thead className="sticky-top m-0 p-0">
-                        <tr className="bg-dark">
-                            <th scope="col" className="table-dark text-center">
-                                ID
-                            </th>
-                            <th
-                                scope="col"
-                                className="table-darEk play-title m-0 p-0 text-center align-middle"
-                            >
-                                <input
-                                    type="text"
-                                    className="search m-0 p-0"
-                                    id="query_main_list"
-                                    placeholder="List Title"
-                                    onKeyUp={debouncedQuery}
-                                />
-                            </th>
-                            <th scope="col" className="table-dark text-center">
-                                Watch
-                            </th>
-                            <th scope="col" className="table-dark text-center">
-                                Expand
-                            </th>
-                        </tr>
-                    </thead>
-                </Table>
-            </div>
-            <div className="m-0 p-0 container-table container-fluid">
-                <Table responsive className="m-0 p-0">
-                    <tbody id="placeholder">
-                        <BodyGenerator tableData={tableData} updateTableData={updateTableData} setParentUrl={setParentUrl} listUrl={listUrl} />
-                    </tbody>
-                </Table>
-            </div>
-        </>
+        <div className="m-0 p-0 container-table container-fluid">
+            <Table responsive className="m-0 p-0">
+                <thead className="sticky-top">
+                    <tr className="bg-dark">
+                        <th scope="col" className="table-dark text-center">
+                            ID
+                        </th>
+                        <th
+                            scope="col"
+                            className="table-darEk play-title m-0 p-0 text-center align-middle"
+                        >
+                            <input
+                                type="text"
+                                className="search m-0 p-0"
+                                id="query_main_list"
+                                placeholder="List Title"
+                                onKeyUp={debouncedQuery}
+                            />
+                        </th>
+                        <th scope="col" className="table-dark text-center">
+                            Watch
+                        </th>
+                        <th scope="col" className="table-dark text-center">
+                            Expand
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="placeholder">
+                    <BodyGenerator tableData={tableData} updateTableData={updateTableData} setParentUrl={setParentUrl} listUrl={listUrl} />
+                </tbody>
+            </Table>
+        </div>
     );
 }
 
