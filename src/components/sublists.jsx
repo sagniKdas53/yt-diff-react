@@ -4,7 +4,6 @@ import Table from 'react-bootstrap/Table';
 import debouce from "lodash.debounce";
 
 import Controls from "./controls";
-import ListClearDownload from "./buttongroups";
 
 function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSelected }) {
     const queryHandler = (event) => sendQuery(event.target.value.trim());
@@ -14,8 +13,7 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
     const [selectAll, toggleAll] = useState(false);
     // this is just for debugging
     useEffect(() => {
-        console.log("selectAll", selectAll);
-        console.log("selectedItems", selectedItems, Object.keys(selectedItems).length);
+        console.log("selectAll", selectAll, "selectedItems", selectedItems, Object.keys(selectedItems).length);
     }, [selectedItems]);
     // when new listUrl is loaded, reset the selectedItems and select all checkbox
     useEffect(() => {
@@ -72,7 +70,7 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
     );
 }
 
-export default function SubLists({ controls, listUrl }) {
+export default function SubLists({ controls, listUrl, setParentUrl }) {
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
@@ -80,7 +78,6 @@ export default function SubLists({ controls, listUrl }) {
     const [data, setData] = useState({ count: 0, rows: [] });
     const [selectedItems, updateSelected] = useState({});
     useEffect(() => {
-        //console.log(`SubList\n\tUrl: ${listUrl}\n\tQuery: ${query}\n\tStart: ${start}\n\tStop: ${stop}\n\tData: ${JSON.stringify(data)}`)
         // this will prevent unecessary calls
         if (listUrl !== "" && listUrl !== undefined) {
             fetch("http://localhost:8888/ytdiff/getsub", {
@@ -102,7 +99,7 @@ export default function SubLists({ controls, listUrl }) {
     }, [query, listUrl, start, stop, chunk])
 
     function clear() {
-        listUrl = "";
+        setParentUrl("");
         setStart(0);
         setStop(10);
         setChunk(10);
@@ -131,7 +128,13 @@ export default function SubLists({ controls, listUrl }) {
                     <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
                 </div>
                 <div className="row p-1 mx-2">
-                    <ListClearDownload noList clearFunc={clear} downloadFunc={download} />
+                    <div className="col m-0 p-0">
+                        <div className="btn-group" role="group" aria-label="controls"><button type="button"
+                            className="btn btn-primary" onClick={clear}>Clear</button></div>
+                    </div>
+                    <div className="col m-0 p-0">
+                        <button type="button" className="float-end btn btn-primary" onClick={download}>Download</button>
+                    </div>
                 </div>
             </div> : <></>}
         </div>)

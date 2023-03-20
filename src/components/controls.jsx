@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 export default function Controls({ start, stop, chunk, setStart, setStop, setChunk }) {
     const next = () => {
@@ -34,9 +34,10 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
         setStop(start + +event.target.value);
     };
 
+    /*
     useEffect(() => {
         console.log(`Start: ${start}\nStop: ${stop}\nChunk: ${chunk}`);
-    }, [start, stop, chunk]);;
+    }, [start, stop, chunk]);;*/
 
     return (
         <div className="col m-0 p-0">

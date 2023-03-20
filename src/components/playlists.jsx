@@ -8,7 +8,7 @@ import {
 import debouce from "lodash.debounce";
 import Controls from "./controls";
 
-export default function PlayListController({ setParentUrl }) {
+export default function PlayListController({ setParentUrl, listUrl }) {
     // all of the states are here
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(1);
@@ -43,7 +43,9 @@ export default function PlayListController({ setParentUrl }) {
             <PlayListTable
                 getQuery={updateQuery}
                 tableData={items}
+                updateTableData={getItems}
                 setParentUrl={setParentUrl}
+                listUrl={listUrl}
             />
             <div className="m-0 p-0 cont-group container-fluid">
                 <div className="p-1 mx-2 row">
@@ -57,7 +59,7 @@ export default function PlayListController({ setParentUrl }) {
     );
 }
 
-function PlayListTable({ getQuery, tableData, setParentUrl }) {
+function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, listUrl }) {
     const queryHandler = (event) => getQuery(event.target.value.trim());
     // I give up lodash works good enough
     const debouncedQuery = useMemo(() => {
@@ -92,18 +94,39 @@ function PlayListTable({ getQuery, tableData, setParentUrl }) {
                     </tr>
                 </thead>
                 <tbody id="placeholder">
-                    <BodyGenerator tableData={tableData} setParentUrl={setParentUrl} />
+                    <BodyGenerator tableData={tableData} updateTableData={updateTableData} setParentUrl={setParentUrl} listUrl={listUrl} />
                 </tbody>
             </Table>
         </div>
     );
 }
 
-function BodyGenerator({ tableData, setParentUrl }) {
+function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
     // implement this later
-    const watchToggler = (event) => {
+    const watchToggler = async (event) => {
         console.log(`Toggling\n\turl:${event.target.parentElement.parentElement.children[1].children[0].href}\n\tTO:${event.target.value}`);
+        //console.log(tableData);
+        updateTableData(
+            tableData.map((item) => {
+                if (item.url === event.target.parentElement.parentElement.children[1].children[0].href) {
+                    item.watch = event.target.value;
+                }
+                return item;
+            }));
+        fetch("http://localhost:8888/ytdiff/watchlist", {
+            method: "post",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            mode: "cors",
+            body: JSON.stringify({
+                url: event.target.parentElement.parentElement.children[1].children[0].href.valueOf(),
+                watch: event.target.value,
+            })
+        });
     };
+    const subListLoader = (event) => setParentUrl(event.target.parentElement.parentElement.children[1].children[0].href);
     return (
         <>
             {tableData.map((element, index) => (
@@ -130,10 +153,10 @@ function BodyGenerator({ tableData, setParentUrl }) {
                     <td className="text-center">
                         <Button
                             type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => setParentUrl(element.url)}
+                            className={listUrl === element.url ? "btn btn-dark btn-sm" : "btn btn-secondary btn-sm"}
+                            onClick={subListLoader}
                         >
-                            Load
+                            {listUrl === element.url ? "Done" : "Load"}
                         </Button>
                     </td>
                 </tr>

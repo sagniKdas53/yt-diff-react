@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 import Controls from "./controls";
 import {
@@ -47,10 +47,11 @@ export default function InputForm({ setParentUrl }) {
             .then((data) => { console.log("setting parent url"); setParentUrl(bulkListing ? "None" : data.rows[0]["reference"]) });
     };
 
-    useEffect(() => {
-        console.log(`MainList:\n\tbulk: ${bulkListing}\n\turl: "${url}"\n\turlList: "${urlList}"\n\tstart: ${start}\n\tstop: ${stop}\n\tchunk: ${chunk}\n\twatch: ${watchMode}`);
+    /*useEffect(() => {
+        console.log(`MainList:\n\tbulk: ${bulkListing}\n\turl: "${url}"\n\turlList: "${urlList}"
+        start: ${start}\n\tstop: ${stop}\n\tchunk: ${chunk}\n\twatch: ${watchMode}`);
         //\n\titems: ${JSON.stringify(items)}
-    }, [bulkListing, url, urlList, watchMode, chunk, start, stop])
+    }, [bulkListing, url, urlList, watchMode, chunk, start, stop])*/
 
     return (
         <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
@@ -68,15 +69,14 @@ export default function InputForm({ setParentUrl }) {
                 <div className="row my-2">
                     <div className="col align-items-center m-0 p-0">
                         <div className="m-0 p-0 d-flex flex-row align-items-center">
-                            <label className="form-check-label m-0 p-0" for="bulkListing-listing">Bulk Listing: </label>
-                            <div className="form-check form-switch">
-                                <input className="form-check-input" role="switch" type="checkbox" checked={bulkListing} id="bulkListing-listing" onChange={() => toggleBulk(!bulkListing)} />
-                            </div>
+                            <label className="form-check-label emoji align-items-center">Toggle To: </label>
+                            <button id="bulk_tgl_btn" type="button" onClick={() => toggleBulk(!bulkListing)}
+                                className="btn btn-primary mx-2 btn-sm">{bulkListing ? "Single" : "Bulk"}</button>
                         </div>
                     </div>
                     <div className="col align-items-center m-0 p-0">
                         <div className="m-0 p-0 d-flex flex-row align-items-center">
-                            <label className="form-check-label emoji align-items-center">Monitor Playlist: </label>
+                            <label className="form-check-label emoji align-items-center">Monitor Type: </label>
                             <FormControl
                                 className="form-select-sm mx-2 align-items-center"
                                 id="watch-change"

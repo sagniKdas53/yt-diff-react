@@ -7,7 +7,7 @@ export default function InputView({ url, setUrl }) {
     return (
         <>
             <InputForm setParentUrl={setUrl} />
-            <SubLists controls={true} listUrl={url} />
+            <SubLists controls={true} listUrl={url} setParentUrl={setUrl} />
         </>
     )
 }
