@@ -54,7 +54,6 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
                     title="Start"
                     value={start}
                 />
-                <span className="input-group-text d-none d-sm-block">-</span>
                 <input
                     type="number"
                     className="form-control"
@@ -68,7 +67,6 @@ export default function Controls({ start, stop, chunk, setStart, setStop, setChu
                     title="Stop"
                     value={stop}
                 />
-                <span className="input-group-text d-none d-sm-block">-</span>
                 <input
                     type="number"
                     className="form-control"

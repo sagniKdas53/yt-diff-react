@@ -40,8 +40,8 @@ table thead tr td {
   position: sticky;
   top: 0;
 }
-table-head{
-  background-color: black!important;
+table-head {
+  background-color: black !important;
 }
 .play-title {
   width: 70%;
@@ -64,7 +64,11 @@ table-head{
   width: 100%;
 }
 
-#watch-change{
-  width:max-content;
+#watch-change {
+  width: max-content;
   height: max-content;
+}
+
+.input-card {
+  max-height: 85vh;
 }

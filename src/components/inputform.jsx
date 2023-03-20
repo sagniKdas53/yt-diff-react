@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import Controls from "./controls";
 import {
-    FormControl,
+    FormControl
 } from "react-bootstrap";
 export default function InputForm({ setParentUrl }) {
     // all of the states are here
@@ -54,29 +54,31 @@ export default function InputForm({ setParentUrl }) {
 
     return (
         <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
-            <div className="container-fluid">
-                <div className="row my-3">
+            <div className="container-fluid input-card">
+                <div className="row my-2">
+                    <h5 className="m-0 p-0 mb-1">Url:</h5>
                     {bulkListing ?
                         <textarea className="form-control" placeholder="url list" id="url_list" rows="5" title="Url List" hidden="" value={urlList} onChange={updateUrls} /> :
                         <input type="text" className="form-control" placeholder="url" id="url" data-bs-toggle="tooltip" data-bs-placement="top" title="Url" value={url} onChange={updateUrls} />}
                 </div>
-                <div className="row mt-3">
+                <div className="row mt-2">
+                    <h5 className="m-0 p-0 mb-1">List Control:</h5>
                     <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
                 </div>
-                <div className="row mt-3 align-items-center">
-                    <div className="col align-items-center">
-                        <div className="m-0 p-0 d-flex align-items-center">
-                            <label className="form-check-label">Bulk Listing: </label>
-                            <div className="form-check form-switch mx-2">
-                                <input className="form-check-input" type="checkbox" checked={bulkListing} role="switch" id="bulkListing-listing" onChange={() => toggleBulk(!bulkListing)} />
+                <div className="row my-2">
+                    <div className="col align-items-center m-0 p-0">
+                        <div className="m-0 p-0 d-flex flex-row align-items-center">
+                            <label className="form-check-label m-0 p-0" for="bulkListing-listing">Bulk Listing: </label>
+                            <div className="form-check form-switch">
+                                <input className="form-check-input" role="switch" type="checkbox" checked={bulkListing} id="bulkListing-listing" onChange={() => toggleBulk(!bulkListing)} />
                             </div>
                         </div>
                     </div>
-                    <div className="col align-items-center">
+                    <div className="col align-items-center m-0 p-0">
                         <div className="m-0 p-0 d-flex flex-row align-items-center">
-                            <label className="form-check-label emoji align-items-center">Watch mode: </label>
+                            <label className="form-check-label emoji align-items-center">Monitor Playlist: </label>
                             <FormControl
-                                className="form-select-sm mx-3 align-items-center"
+                                className="form-select-sm mx-2 align-items-center"
                                 id="watch-change"
                                 as="select"
                                 defaultValue={watchMode}
@@ -89,7 +91,7 @@ export default function InputForm({ setParentUrl }) {
                         </div>
                     </div>
                 </div>
-                <div className="row my-2">
+                <div className="row mb-2">
                     <div className="col m-0 p-0">
                         <button id="list_btn" type="button" onClick={listThis} className="btn btn-primary">List</button>
                     </div>
