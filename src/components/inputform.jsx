@@ -11,7 +11,6 @@ export default function InputForm({ setParentUrl }) {
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(10);
     const [chunk, setChunk] = useState(10);
-    //const [items, getItems] = useState([]);
     const [bulkListing, toggleBulk] = useState(false);
     const [url, setUrl] = useState("");
     const [urlList, setUrlList] = useState("");
@@ -130,7 +129,10 @@ export default function InputForm({ setParentUrl }) {
                 </div>
                 <div className="row mb-2">
                     <div className="col m-0 p-0">
-                        <button id="list_btn" type="button" onClick={listThis} className="btn btn-primary">List</button>
+                        <div className="btn-group" role="group">
+                            <button id="list_btn" type="button" onClick={listThis} className="btn btn-primary">List</button>
+                            <button id="clear_btn" type="button" onClick={() => { console.log("TODO") }} className="btn btn-primary">Clear</button>
+                        </div>
                     </div>
                     <div className="col m-0 p-0"></div>
                 </div>
