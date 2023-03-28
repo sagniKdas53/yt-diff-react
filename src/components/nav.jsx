@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Navbar } from "react-bootstrap";
-import navBrand from "/light.png";
+import navBrand from "/yt-diff_512x512.png";
 
 export default function NavBar({ state, toggleView, setUrl }) {
   return (
