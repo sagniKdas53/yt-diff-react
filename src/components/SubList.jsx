@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, lazy } from "react";
 
 import Table from 'react-bootstrap/Table';
 import debounce from "lodash.debounce";
-
-import Controls from "./controls";
+const ListControl = lazy(() => import('./ListControl.jsx'));
 
 function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSelected }) {
     const [selectAll, setSelectAll] = useState(false);
@@ -101,10 +100,10 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
     );
 }
 
-export default function SubLists({ controls, listUrl, setParentUrl }) {
-    const [start, setStart] = useState(0);
-    const [stop, setStop] = useState(10);
+export default function SubList({ controls, listUrl, setParentUrl, respIndex = 0 }) {
+    const [start, setStart] = useState(respIndex);
     const [chunk, setChunk] = useState(10);
+    const [stop, setStop] = useState(respIndex + chunk);
     const [query, getQuery] = useState("");
     const [data, setData] = useState({ count: 0, rows: [] });
     const [selectedItems, updateSelected] = useState({});
@@ -119,7 +118,7 @@ export default function SubLists({ controls, listUrl, setParentUrl }) {
     }), []);
 
     const fetchData = useMemo(() => async (url, start, stop, query) => {
-        const response = await fetch("http://localhost:8888/ytdiff/getsub", {
+        const response = await fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/getsub", {
             ...fetchOptions,
             body: JSON.stringify({
                 url,
@@ -138,7 +137,13 @@ export default function SubLists({ controls, listUrl, setParentUrl }) {
             fetchData(listUrl, start, stop, query)
                 .then(json_data => setData(json_data));
         }
-    }, [fetchData, listUrl, start, stop, query]);
+    }, [fetchData, listUrl, start, stop, query, respIndex]);
+
+    useEffect(() => {
+        let start = respIndex - respIndex % chunk;
+        setStart(start);
+        setStop(start + chunk);
+    }, [respIndex])
 
     function clear() {
         setParentUrl("");
@@ -152,7 +157,7 @@ export default function SubLists({ controls, listUrl, setParentUrl }) {
     function download() {
         const data = Object.keys(selectedItems).filter(key => selectedItems[key]);
         console.log(JSON.stringify({ id: data }));
-        fetch("http://localhost:8888/ytdiff/download", {
+        fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/download", {
             method: "post",
             headers: {
                 "Accept": "application/json",
@@ -167,7 +172,7 @@ export default function SubLists({ controls, listUrl, setParentUrl }) {
             <SubListTable sendQuery={getQuery} tableData={data} listUrl={listUrl} selectedItems={selectedItems} updateSelected={updateSelected} />
             {controls ? <div className="m-0 p-0 cont-group container-fluid">
                 <div className="row p-1 mx-2">
-                    <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
+                    <ListControl start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
                 </div>
                 <div className="row p-1 mx-2">
                     <div className="col m-0 p-0">

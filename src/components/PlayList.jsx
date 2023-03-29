@@ -6,9 +6,9 @@ import {
     FormControl,
 } from "react-bootstrap";
 import debouce from "lodash.debounce";
-import Controls from "./controls";
+import Controls from "./ListControl";
 
-export default function PlayListController({ setParentUrl, listUrl }) {
+export default function PlayList({ setParentUrl, listUrl }) {
     // all of the states are here
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(1);
@@ -20,7 +20,7 @@ export default function PlayListController({ setParentUrl, listUrl }) {
 
     // memoize the fetch result using useMemo
     const memoizedFetch = useMemo(async () => {
-        const response = await fetch("http://localhost:8888/ytdiff/dbi", {
+        const response = await fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/dbi", {
             method: "post",
             headers: {
                 Accept: "application/json",
@@ -121,7 +121,7 @@ function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
                 }
                 return item;
             }));
-        fetch("http://localhost:8888/ytdiff/watchlist", {
+        fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/watchlist", {
             method: "post",
             headers: {
                 "Accept": "application/json",

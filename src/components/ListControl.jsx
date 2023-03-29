@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function Controls({ start, stop, chunk, setStart, setStop, setChunk }) {
+export default function ListControl({ start, stop, chunk, setStart, setStop, setChunk }) {
     const next = () => {
         setStart(start + chunk);
         setStop(stop + chunk);

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { lazy, useState } from "react";
 
-import Controls from "./controls";
+const ListControl = lazy(() => import('./ListControl.jsx'));
 import {
     FormControl
 } from "react-bootstrap";
-export default function InputForm({ setParentUrl }) {
+
+export default function InputForm({ setParentUrl, setRespStart }) {
     // all of the states are here
     //const [sort, updateSort] = useState(1);
     //const [order, updateOrder] = useState(1);
@@ -32,6 +33,7 @@ export default function InputForm({ setParentUrl }) {
                     // console.log(response.rows[0]["reference"]);
                     // since listing may take a while having this here as an intermediate state can't hurt too much.
                     setParentUrl(response.rows[0]["reference"]);
+                    setRespStart(+response.start);
                 }
             } catch (error) {
                 console.error(error);
@@ -43,6 +45,7 @@ export default function InputForm({ setParentUrl }) {
                     // I plan on getting the limits form the backend db thus being able to update the subList sate form here
                     // fetching data as needed, this will also prevent the overhead of serealizing the resposne in intial listing.
                     setParentUrl(response.rows[0]["reference"]);
+                    setRespStart(+response.start);
                 }
             } catch (error) {
                 console.error(error);
@@ -65,7 +68,7 @@ export default function InputForm({ setParentUrl }) {
     }
 
     const postUrl = (urlItem) => {
-        return fetch("http://localhost:8888/ytdiff/list", {
+        return fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/list", {
             method: "post",
             headers: {
                 "Accept": "application/json",
@@ -100,7 +103,7 @@ export default function InputForm({ setParentUrl }) {
                 </div>
                 <div className="row mt-2">
                     <h5 className="m-0 p-0 mb-1">List Control:</h5>
-                    <Controls start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
+                    <ListControl start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
                 </div>
                 <div className="row my-2">
                     <div className="col align-items-center m-0 p-0">

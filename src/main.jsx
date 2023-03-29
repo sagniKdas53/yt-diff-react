@@ -2,24 +2,26 @@ import React, { lazy, Suspense, useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
 
-const NavBar = lazy(() => import('./components/nav.jsx'));
-const DataView = lazy(() => import('./components/data.jsx'));
-const InputView = lazy(() => import('./components/input.jsx'));
+const NavBar = lazy(() => import('./components/NavBar.jsx'));
+const DataComp = lazy(() => import('./components/DataComp.jsx'));
+const InputComp = lazy(() => import('./components/InputComp.jsx'));
 
 function App() {
-  const [showDataView, toggleView] = useState(false);
-  const [sublistUrl, setUrl] = useState("");
-  const toggleViewHandler = () => {
-    toggleView(!showDataView);
-    setUrl("");
+  const [showData, toggleData] = useState(false);
+  const [sublistUrl, setSublistUrl] = useState("");
+  const toggleView = () => {
+    toggleData(!showData);
+    setSublistUrl("");
   };
   return (
     <React.StrictMode>
-      <NavBar state={showDataView} toggleView={toggleViewHandler} setUrl={setUrl} />
+      <NavBar showData={showData} toggleView={toggleView} setUrl={setSublistUrl} />
       <div className="container-fluid">
         <div className="row">
           <Suspense fallback={<>Loading...</>}>
-            {showDataView ? <DataView url={sublistUrl} setUrl={setUrl} /> : <InputView url={sublistUrl} setUrl={setUrl} />}
+            {showData ?
+              <DataComp url={sublistUrl} setUrl={setSublistUrl} /> :
+              <InputComp url={sublistUrl} setUrl={setSublistUrl} />}
           </Suspense>
         </div>
       </div>
