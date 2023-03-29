@@ -34,69 +34,93 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
     const debouncedQuery = useMemo(() => debounce((event) => sendQuery(event.target.value.trim()), 1000), []);
 
     return (
-        <div className="container-table m-0 p-0 container-fluid">
-            <Table responsive className="m-0 p-0">
-                <thead className="sticky-top">
-                    <tr>
-                        <th className="table-dark text-center">
-                            <input
-                                className="form-check-input"
-                                type="checkbox"
-                                onChange={bulkAction}
-                                checked={selectAll}
-                                id="selector"
-                                aria-label="..."
-                            />
-                        </th>
-                        <th className="table-dark large-title m-0 p-0 text-center align-middle">
-                            <input
-                                type="text"
-                                className="search m-0 p-0"
-                                id="query_sublist"
-                                placeholder="Title"
-                                ref={query}
-                                onKeyUp={debouncedQuery}
-                            />
-                        </th>
-                        <th className="table-dark text-center">Saved</th>
-                    </tr>
-                </thead>
-                <tbody id="listing">
-                    {tableData.rows.map((element, index) => (
-                        <tr
-                            key={index}
-                            className={
-                                element.downloaded
-                                    ? 'table-info'
-                                    : !element.available
-                                        ? element.title === '[Deleted video]'
-                                            ? 'table-danger'
-                                            : element.title === '[Private video]'
-                                                ? 'table-warning'
-                                                : 'table-secondary'
-                                        : ''
-                            }
-                        >
-                            <td className="text-center">
+        <>
+            <div className="container-fluid m-0 p-0 container-head">
+                <Table responsive className="m-0 p-0 table-head">
+                    <thead>
+                        <tr>
+                            <th className="table-dark text-center">
                                 <input
+                                    className="form-check-input"
                                     type="checkbox"
-                                    className="form-check-input me-1 video-item"
-                                    checked={selectedItems[element.id] || false}
-                                    onChange={handleSelection}
-                                    id={element.id}
+                                    onChange={bulkAction}
+                                    checked={selectAll}
+                                    id="selector"
+                                    aria-label="..."
                                 />
-                            </td>
-                            <td className="large-title mx-0 px-0">
-                                <a href={element.url} target="_blank" rel="noreferrer">
-                                    {element.title}
-                                </a>
-                            </td>
-                            <td className="emoji">{element.downloaded ? '✅' : '❌'}</td>
+                            </th>
+                            <th className="table-dark large-title m-0 p-0 align-middle">
+                                <input
+                                    type="text"
+                                    className="search m-0 mt-1 p-0"
+                                    id="query_sublist"
+                                    placeholder="Title"
+                                    ref={query}
+                                    onKeyUp={debouncedQuery}
+                                />
+                            </th>
+                            <th className="table-dark text-center">Saved</th>
                         </tr>
-                    ))}
-                </tbody>
-            </Table>
-        </div>
+                    </thead>
+                </Table>
+            </div>
+            <div className="container-fluid m-0 p-0 container-table">
+                <Table responsive className="m-0 p-0">
+                    <thead>
+                        <tr>
+                            <th className="table-dark text-center">
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    aria-label="..."
+                                />
+                            </th>
+                            <th className="table-dark large-title m-0 p-0 align-middle">
+                                <input
+                                    type="text"
+                                    className="search m-0 mt-1 p-0"
+                                />
+                            </th>
+                            <th className="table-dark text-center">Saved</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listing">
+                        {tableData.rows.map((element, index) => (
+                            <tr
+                                key={index}
+                                className={
+                                    element.downloaded
+                                        ? 'table-info'
+                                        : !element.available
+                                            ? element.title === '[Deleted video]'
+                                                ? 'table-danger'
+                                                : element.title === '[Private video]'
+                                                    ? 'table-warning'
+                                                    : 'table-secondary'
+                                            : ''
+                                }
+                            >
+                                <td className="text-center">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input me-1 video-item"
+                                        checked={selectedItems[element.id] || false}
+                                        onChange={handleSelection}
+                                        id={element.id}
+                                    />
+                                </td>
+                                <td className="large-title mx-0 px-0">
+                                    <a href={element.url} target="_blank" rel="noreferrer">
+                                        {element.title}
+                                    </a>
+                                </td>
+                                <td className="emoji">{element.downloaded ? '✅' : '❌'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            </div>
+        </>
     );
 }
 

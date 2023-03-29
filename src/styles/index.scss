@@ -13,9 +13,35 @@ body,
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
-  //background-color: deeppink;
+}
+/*background-color: #121212;
+  color: #ffffff;
 }
 
+a:link {
+  color: green;
+  background-color: transparent;
+  text-decoration: none;
+}
+
+a:visited {
+  color: pink;
+  background-color: transparent;
+  text-decoration: none;
+}
+
+a:hover {
+  color: red;
+  background-color: transparent;
+  text-decoration: underline;
+}
+
+a:active {
+  color: yellow;
+  background-color: transparent;
+  text-decoration: underline;
+}
+*/
 .no-underline {
   text-decoration: none !important;
 }
@@ -26,8 +52,6 @@ nav {
 
 .container-table {
   height: 85vh;
-  //background-color: rgb(235, 255, 145);
-  //tbody {background-color: rgb(177, 247, 247);}
   overflow-y: scroll;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
@@ -35,14 +59,16 @@ nav {
     display: none; /* Chrome, Safari and Opera */
   }
 }
-table thead tr td {
-  position: -webkit-sticky;
-  position: sticky;
+.container-head {
+  position: relative;
+}
+.table-head {
+  position: absolute;
   top: 0;
+  left: 0;
+  z-index: 69;
 }
-table-head {
-  background-color: black !important;
-}
+
 .play-title {
   width: 70%;
 }
@@ -61,7 +87,7 @@ table-head {
 }
 
 .search {
-  width: 100%;
+  width: 95%;
 }
 
 #watch-change {
@@ -71,8 +97,4 @@ table-head {
 
 .input-card {
   max-height: 85vh;
-}
-
-.container-table-head {
-  z-index: -1;
 }

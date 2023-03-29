@@ -101,21 +101,10 @@ export default function InputForm({ setParentUrl, setRespStart }) {
                         <textarea className="form-control" placeholder="url list" id="url_list" rows="5" title="Url List" hidden="" value={urlList} onChange={updateUrls} /> :
                         <input type="text" className="form-control" placeholder="url" id="url" data-bs-toggle="tooltip" data-bs-placement="top" title="Url" value={url} onChange={updateUrls} />}
                 </div>
-                <div className="row mt-2">
-                    <h5 className="m-0 p-0 mb-1">List Control:</h5>
-                    <ListControl start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
-                </div>
                 <div className="row my-2">
                     <div className="col align-items-center m-0 p-0">
                         <div className="m-0 p-0 d-flex flex-row align-items-center">
-                            <label className="form-check-label emoji align-items-center">Toggle To: </label>
-                            <button id="bulk_tgl_btn" type="button" onClick={() => toggleBulk(!bulkListing)}
-                                className="btn btn-primary mx-2 btn-sm">{bulkListing ? "Single" : "Bulk"}</button>
-                        </div>
-                    </div>
-                    <div className="col align-items-center m-0 p-0">
-                        <div className="m-0 p-0 d-flex flex-row align-items-center">
-                            <label className="form-check-label emoji align-items-center">Monitor Type: </label>
+                            <label className="form-check-label emoji align-items-center">Watch Playlist? </label>
                             <FormControl
                                 className="form-select-sm mx-2 align-items-center"
                                 id="watch-change"
@@ -123,12 +112,23 @@ export default function InputForm({ setParentUrl, setRespStart }) {
                                 defaultValue={watchMode}
                                 onChange={(event) => setWatch(event.target.value)}
                             >
-                                <option value="1">NA</option>
+                                <option value="1">NO</option>
                                 <option value="2">Full</option>
                                 <option value="3">Quick</option>
                             </FormControl>
                         </div>
                     </div>
+                    <div className="col align-items-center m-0 p-0">
+                        <div className="m-0 p-0 d-flex flex-row align-items-center">
+                            <label className="form-check-label emoji align-items-center">Toggle To: </label>
+                            <button id="bulk_tgl_btn" type="button" onClick={() => toggleBulk(!bulkListing)}
+                                className="btn btn-primary mx-2 btn-sm">{bulkListing ? "Single" : "Bulk"}</button>
+                        </div>
+                    </div>
+                </div>
+                <div className="row mb-2">
+                    <h5 className="m-0 p-0 mb-1">Controls:</h5>
+                    <ListControl start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
                 </div>
                 <div className="row mb-2">
                     <div className="col m-0 p-0">

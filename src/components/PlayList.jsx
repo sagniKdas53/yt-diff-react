@@ -74,38 +74,63 @@ function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, lis
         return debouce(queryHandler, 1000);
     }, []);
     return (
-        <div className="m-0 p-0 container-table container-fluid">
-            <Table responsive className="m-0 p-0">
-                <thead className="sticky-top">
-                    <tr className="bg-dark">
-                        <th scope="col" className="table-dark text-center">
-                            ID
-                        </th>
-                        <th
-                            scope="col"
-                            className="table-darEk play-title m-0 p-0 text-center align-middle"
-                        >
-                            <input
-                                type="text"
-                                className="search m-0 p-0"
-                                id="query_main_list"
-                                placeholder="List Title"
-                                onKeyUp={debouncedQuery}
-                            />
-                        </th>
-                        <th scope="col" className="table-dark text-center">
-                            Watch
-                        </th>
-                        <th scope="col" className="table-dark text-center">
-                            Expand
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="placeholder">
-                    <BodyGenerator tableData={tableData} updateTableData={updateTableData} setParentUrl={setParentUrl} listUrl={listUrl} />
-                </tbody>
-            </Table>
-        </div>
+        <>
+            <div className="container-fluid m-0 p-0 container-head">
+                <Table responsive className="m-0 p-0 table-head">
+                    <thead>
+                        <tr>
+                            <th className="table-dark text-center">
+                                ID
+                            </th>
+                            <th className="table-dark large-title m-0 p-0 align-middle">
+                                <input
+                                    type="text"
+                                    className="search m-0 mt-1 p-0"
+                                    id="query_main_list"
+                                    placeholder="List Title"
+                                    onKeyUp={debouncedQuery}
+                                />
+                            </th>
+                            <th className="table-dark text-center">
+                                Watch
+                            </th>
+                            <th className="table-dark text-center">
+                                Expand
+                            </th>
+                        </tr>
+                    </thead>
+                </Table>
+            </div>
+            <div className="container-fluid m-0 p-0 container-table">
+                <Table responsive className="m-0 p-0">
+                    <thead>
+                        <tr>
+                            <th className="table-dark text-center">
+                                ID
+                            </th>
+                            <th className="table-dark large-title m-0 p-0 align-middle">
+                                <input
+                                    type="text"
+                                    className="search m-0 mt-1 p-0"
+                                    id="query_main_list"
+                                    placeholder="List Title"
+                                    onKeyUp={debouncedQuery}
+                                />
+                            </th>
+                            <th className="table-dark text-center">
+                                Watch
+                            </th>
+                            <th className="table-dark text-center">
+                                Expand
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="placeholder">
+                        <BodyGenerator tableData={tableData} updateTableData={updateTableData} setParentUrl={setParentUrl} listUrl={listUrl} />
+                    </tbody>
+                </Table>
+            </div>
+        </>
     );
 }
 
@@ -183,11 +208,13 @@ function SortTable({ sort, order, getSort, getOrder }) {
     return (
         <div className="m-0 p-0 container-fluid">
             <InputGroup>
+                <span className="input-group-text">Sort by</span>
                 <FormControl as="select" defaultValue={sort} onChange={typeHandler}>
                     <option value="1">ID</option>
                     <option value="2">CreatedAt</option>
                     <option value="3">UpdatedAt</option>
                 </FormControl>
+                <span className="input-group-text">Order</span>
                 <FormControl as="select" defaultValue={order} onChange={orderHandler}>
                     <option value="1">Ascending</option>
                     <option value="2">Descending</option>
