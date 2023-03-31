@@ -33,9 +33,8 @@ export default function InputForm({ setParentUrl, setRespStart }) {
         try {
             for (const element of valid) {
                 const response = await postUrl(element).then((response) => response.text()).then((data) => JSON.parse(data));
-                // console.log(response.rows[0]["reference"]);
                 // since listing may take a while having this here as an intermediate state can't hurt too much.
-                setParentUrl(response.rows[0]["reference"]);
+                setParentUrl(response.resp_url);
                 setRespStart(+response.start);
             }
         } catch (error) {

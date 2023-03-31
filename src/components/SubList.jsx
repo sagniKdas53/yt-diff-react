@@ -29,7 +29,20 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
 
     useEffect(() => {
         setSelectAll(false);
+        tableData.rows.map((element) => selectedItems[element.id] = false);
+        // Remove keys not present in tableData
+        Object.keys(selectedItems).forEach(key => {
+            if (!tableData.rows.find(element => element.id === key)) {
+                delete selectedItems[key];
+            }
+        });
     }, [tableData]);
+
+    useEffect(() => {
+        //console.log(selectedItems);
+        if (!(Object.keys(selectedItems).length === 0 && selectedItems.constructor === Object))
+            setSelectAll(Object.values(selectedItems).every((value) => { return (value === true); }));
+    }, [selectedItems])
 
     const debouncedQuery = useMemo(() => debounce((event) => sendQuery(event.target.value.trim()), 1000), []);
 
