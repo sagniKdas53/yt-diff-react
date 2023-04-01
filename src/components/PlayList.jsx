@@ -20,7 +20,7 @@ export default function PlayList({ setParentUrl, listUrl }) {
 
     // memoize the fetch result using useMemo
     const memoizedFetch = useMemo(async () => {
-        const response = await fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/dbi", {
+        const response = await fetch("http://192.168.0.103:8888/ytdiff/dbi", {
             method: "post",
             headers: {
                 Accept: "application/json",
@@ -146,7 +146,7 @@ function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
                 }
                 return item;
             }));
-        fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/watchlist", {
+        fetch("http://192.168.0.103:8888/ytdiff/watchlist", {
             method: "post",
             headers: {
                 "Accept": "application/json",

@@ -155,7 +155,7 @@ export default function SubList({ controls, listUrl, setParentUrl, respIndex = 0
     }), []);
 
     const fetchData = useMemo(() => async (url, start, stop, query) => {
-        const response = await fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/getsub", {
+        const response = await fetch("http://192.168.0.103:8888/ytdiff/getsub", {
             ...fetchOptions,
             body: JSON.stringify({
                 url,
@@ -194,7 +194,7 @@ export default function SubList({ controls, listUrl, setParentUrl, respIndex = 0
     function download() {
         const data = Object.keys(selectedItems).filter(key => selectedItems[key]);
         console.log(JSON.stringify({ id: data }));
-        fetch("http://lenovo-ideapad-320-15ikb.tail9ece4.ts.net:8888/ytdiff/download", {
+        fetch("http://192.168.0.103:8888/ytdiff/download", {
             method: "post",
             headers: {
                 "Accept": "application/json",
