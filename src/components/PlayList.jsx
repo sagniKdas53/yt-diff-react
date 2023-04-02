@@ -177,11 +177,15 @@ function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
                             as="select"
                             value={element.watch}
                             onChange={watchToggler}
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title={"indexed " + Math.floor((new Date().getTime() - new Date(element.updatedAt).getTime()) / (1000 * 3600 * 24)) + " days ago"}
                         >
                             <option value="1">NA</option>
                             <option value="2">Full</option>
                             <option value="3">Quick</option>
                         </FormControl>
+                        {/* "indexed " + Math.floor((new Date().getTime() - new Date(element.updatedAt).getTime()) / (1000 * 3600 * 24)) + " days ago" */}
                     </td>
                     <td className="text-center">
                         <Button
