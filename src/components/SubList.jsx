@@ -4,7 +4,95 @@ import Table from 'react-bootstrap/Table';
 import debounce from "lodash.debounce";
 const ListControl = lazy(() => import('./ListControl.jsx'));
 
-function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSelected }) {
+export default function SubList({ controls, listUrl, setParentUrl, respIndex = 0 }) {
+    const [start, setStart] = useState(respIndex);
+    const [chunk, setChunk] = useState(10);
+    const [stop, setStop] = useState(respIndex + chunk);
+    const [query, getQuery] = useState("");
+    const [data, setData] = useState({ count: 0, rows: [] });
+    const [selectedItems, updateSelected] = useState({});
+    const [sortDownloaded, setSort] = useState(false);
+    const fetchOptions = useMemo(() => ({
+        method: "post",
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        },
+        mode: "cors"
+    }), []);
+
+    const fetchData = useMemo(() => async (url, start, stop, query, sortDownloaded) => {
+        const response = await fetch("http://192.168.0.106:8888/ytdiff/getsub", {
+            ...fetchOptions,
+            body: JSON.stringify({
+                url,
+                start,
+                stop,
+                query,
+                sortDownloaded
+            })
+        });
+        const data = await response.text();
+        return JSON.parse(data);
+    }, [fetchOptions]);
+
+
+    useEffect(() => {
+        if (listUrl !== "" && listUrl !== undefined) {
+            fetchData(listUrl, start, stop, query, sortDownloaded)
+                .then(json_data => setData(json_data));
+        }
+    }, [fetchData, listUrl, start, stop, query, respIndex, sortDownloaded]);
+
+    useEffect(() => {
+        let start = respIndex - respIndex % chunk;
+        setStart(start);
+        setStop(start + chunk);
+    }, [respIndex])
+
+    function clear() {
+        setParentUrl("");
+        setStart(0);
+        setStop(10);
+        setChunk(10);
+        getQuery("");
+        setData({ count: 0, rows: [] });
+    }
+
+    function download() {
+        const data = Object.keys(selectedItems).filter(key => selectedItems[key]);
+        //console.log(JSON.stringify({ id: data }));
+        fetch("http://192.168.0.106:8888/ytdiff/download", {
+            method: "post",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }, mode: "cors",
+            body: JSON.stringify({ id: data })
+        });
+    }
+
+    return (
+        <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
+            <SubListTable sendQuery={getQuery} data={data} listUrl={listUrl} selectedItems={selectedItems} updateSelected={updateSelected} sortDownloaded={sortDownloaded} setSort={setSort} />
+            {controls ? <div className="m-0 p-0 cont-group container-fluid">
+                <div className="row p-1 mx-2">
+                    <ListControl start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
+                </div>
+                <div className="row p-1 mx-2">
+                    <div className="col m-0 p-0">
+                        <div className="btn-group" role="group" aria-label="controls"><button type="button"
+                            className="btn btn-primary" onClick={clear}>Clear</button></div>
+                    </div>
+                    <div className="col m-0 p-0">
+                        <button type="button" className="float-end btn btn-primary" onClick={download}>Download</button>
+                    </div>
+                </div>
+            </div> : <></>}
+        </div>)
+}
+
+function SubListTable({ data, sendQuery, listUrl, selectedItems, updateSelected, sortDownloaded, setSort }) {
     const [selectAll, setSelectAll] = useState(false);
     // absolutely unnecessary
     const query = useRef("");
@@ -15,28 +103,34 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
 
     const bulkAction = () => {
         const tempState = {};
-        tableData.rows.forEach((element) => {
+        data.rows.forEach((element) => {
             tempState[element.id] = !selectAll;
         });
         updateSelected(prevSelected => ({ ...prevSelected, ...tempState }));
         setSelectAll(!selectAll);
     };
 
+    const handleSort = () => {
+        setSort(!sortDownloaded);
+    }
+
     useEffect(() => {
         updateSelected({});
         setSelectAll(false);
+        setSort(null);
     }, [listUrl]);
 
     useEffect(() => {
         setSelectAll(false);
-        tableData.rows.map((element) => selectedItems[element.id] = false);
-        // Remove keys not present in tableData
+        data.rows.map((element) => selectedItems[element.id] = false);
+        // Remove keys not present in data
         Object.keys(selectedItems).forEach(key => {
-            if (!tableData.rows.find(element => element.id === key)) {
+            if (!data.rows.find(element => element.id === key)) {
                 delete selectedItems[key];
             }
         });
-    }, [tableData]);
+        //setSort(null);
+    }, [data]);
 
     useEffect(() => {
         //console.log(selectedItems);
@@ -72,7 +166,9 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
                                     onKeyUp={debouncedQuery}
                                 />
                             </th>
-                            <th className="table-dark text-center">Saved</th>
+                            <th className="table-dark text-center" onClick={handleSort}>
+                                Saved<span className="sort-arrow">{sortDownloaded ? "▲" : "⭮"}</span>
+                            </th>
                         </tr>
                     </thead>
                 </Table>
@@ -94,11 +190,13 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
                                     className="search m-0 mt-1 p-0"
                                 />
                             </th>
-                            <th className="table-dark text-center">Saved</th>
+                            <th className="table-dark text-center" onClick={() => setSort(!sortDownloaded)}>
+                                Saved<span className="sort-arrow">{sortDownloaded === null ? "⭮" : sortDownloaded ? "▲" : "▼"}</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="listing">
-                        {tableData.rows.map((element, index) => (
+                        {data.rows.map((element, index) => (
                             <tr
                                 key={index}
                                 className={
@@ -135,91 +233,4 @@ function SubListTable({ tableData, sendQuery, listUrl, selectedItems, updateSele
             </div>
         </>
     );
-}
-
-export default function SubList({ controls, listUrl, setParentUrl, respIndex = 0 }) {
-    const [start, setStart] = useState(respIndex);
-    const [chunk, setChunk] = useState(10);
-    const [stop, setStop] = useState(respIndex + chunk);
-    const [query, getQuery] = useState("");
-    const [data, setData] = useState({ count: 0, rows: [] });
-    const [selectedItems, updateSelected] = useState({});
-
-    const fetchOptions = useMemo(() => ({
-        method: "post",
-        headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        },
-        mode: "cors"
-    }), []);
-
-    const fetchData = useMemo(() => async (url, start, stop, query) => {
-        const response = await fetch("http://192.168.0.103:8888/ytdiff/getsub", {
-            ...fetchOptions,
-            body: JSON.stringify({
-                url,
-                start,
-                stop,
-                query
-            })
-        });
-        const data = await response.text();
-        return JSON.parse(data);
-    }, [fetchOptions]);
-
-
-    useEffect(() => {
-        if (listUrl !== "" && listUrl !== undefined) {
-            fetchData(listUrl, start, stop, query)
-                .then(json_data => setData(json_data));
-        }
-    }, [fetchData, listUrl, start, stop, query, respIndex]);
-
-    useEffect(() => {
-        let start = respIndex - respIndex % chunk;
-        setStart(start);
-        setStop(start + chunk);
-    }, [respIndex])
-
-    function clear() {
-        setParentUrl("");
-        setStart(0);
-        setStop(10);
-        setChunk(10);
-        getQuery("");
-        setData({ count: 0, rows: [] });
-    }
-
-    function download() {
-        const data = Object.keys(selectedItems).filter(key => selectedItems[key]);
-        console.log(JSON.stringify({ id: data }));
-        fetch("http://192.168.0.103:8888/ytdiff/download", {
-            method: "post",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            }, mode: "cors",
-            body: JSON.stringify({ id: data })
-        });
-    }
-
-    return (
-        <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12">
-            <SubListTable sendQuery={getQuery} tableData={data} listUrl={listUrl} selectedItems={selectedItems} updateSelected={updateSelected} />
-            {controls ? <div className="m-0 p-0 cont-group container-fluid">
-                <div className="row p-1 mx-2">
-                    <ListControl start={start} stop={stop} chunk={chunk} setStart={setStart} setStop={setStop} setChunk={setChunk} />
-                </div>
-                <div className="row p-1 mx-2">
-                    <div className="col m-0 p-0">
-                        <div className="btn-group" role="group" aria-label="controls"><button type="button"
-                            className="btn btn-primary" onClick={clear}>Clear</button></div>
-                    </div>
-                    <div className="col m-0 p-0">
-                        <button type="button" className="float-end btn btn-primary" onClick={download}>Download</button>
-                    </div>
-                </div>
-            </div> : <></>}
-        </div>)
 }

@@ -57,7 +57,7 @@ export default function InputForm({ setParentUrl, setRespStart }) {
     }
 
     const postUrl = (urlItem) => {
-        return fetch("http://192.168.0.103:8888/ytdiff/list", {
+        return fetch("http://192.168.0.106:8888/ytdiff/list", {
             method: "post",
             headers: {
                 "Accept": "application/json",

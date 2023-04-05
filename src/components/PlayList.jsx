@@ -9,9 +9,14 @@ import debouce from "lodash.debounce";
 import Controls from "./ListControl";
 
 export default function PlayList({ setParentUrl, listUrl }) {
-    // all of the states are here
+    // query is an empty string initially
     const [query, updateQuery] = useState("");
+    // 1 == ID, 2 == createdAt, 3 == updatedAt
+    /*
+        Dropping support for existing stuff is not ideal, but sometimes necessary
+    */
     const [sort, updateSort] = useState(1);
+    // 1 == ASC, 2 == DESC
     const [order, updateOrder] = useState(1);
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(10);
@@ -20,7 +25,7 @@ export default function PlayList({ setParentUrl, listUrl }) {
 
     // memoize the fetch result using useMemo
     const memoizedFetch = useMemo(async () => {
-        const response = await fetch("http://192.168.0.103:8888/ytdiff/dbi", {
+        const response = await fetch("http://192.168.0.106:8888/ytdiff/dbi", {
             method: "post",
             headers: {
                 Accept: "application/json",
@@ -53,6 +58,10 @@ export default function PlayList({ setParentUrl, listUrl }) {
                 updateTableData={getItems}
                 setParentUrl={setParentUrl}
                 listUrl={listUrl}
+                sort={sort}
+                order={order}
+                getSort={updateSort}
+                getOrder={updateOrder}
             />
             <div className="m-0 p-0 cont-group container-fluid">
                 <div className="p-1 mx-2 row">
@@ -67,8 +76,81 @@ export default function PlayList({ setParentUrl, listUrl }) {
 }
 
 
-function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, listUrl }) {
+function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, listUrl, sort, order, getSort, getOrder }) {
     const queryHandler = (event) => getQuery(event.target.value.trim());
+    // true === ASC, false === DESC, null === not
+    const [sortState, updatedSort] = useState({
+        ID: null,
+        UAT: null,
+        CAT: null
+    });
+    useEffect(() => {
+        if (sort === 1 && order === 1) {
+            updatedSort({
+                ID: true,
+                UAT: null,
+                CAT: null
+            })
+        }
+        else if (sort === 1 && order === 2) {
+            updatedSort({
+                ID: false,
+                UAT: null,
+                CAT: null
+            })
+        }
+        else if (sort === 2 && order === 1) {
+            updatedSort({
+                ID: null,
+                UAT: null,
+                CAT: true
+            })
+        }
+        else if (sort === 2 && order === 2) {
+            updatedSort({
+                ID: null,
+                UAT: null,
+                CAT: false
+            })
+        }
+        else if (sort === 3 && order === 1) {
+            updatedSort({
+                ID: null,
+                UAT: true,
+                CAT: null
+            })
+        }
+        else if (sort === 3 && order === 2) {
+            updatedSort({
+                ID: null,
+                UAT: false,
+                CAT: null
+            })
+        }
+    }, [sort, order])
+    const updateIDSort = () => {
+        updatedSort({
+            ID: !sortState.ID,
+            UAT: null
+        })
+    };
+    const updateUATSort = () => {
+        updatedSort({
+            ID: null,
+            UAT: !sortState.UAT
+        })
+    }
+    useEffect(() => {
+        if (sortState.ID === false) {
+            getSort(1); getOrder(2)
+        } else if (sortState.ID === true) {
+            getSort(1); getOrder(1)
+        } else if (sortState.UAT === false) {
+            getSort(3); getOrder(2)
+        } else if (sortState.UAT === true) {
+            getSort(3); getOrder(1)
+        }
+    }, [sortState])
     // I give up lodash works good enough
     const debouncedQuery = useMemo(() => {
         return debouce(queryHandler, 1000);
@@ -79,8 +161,8 @@ function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, lis
                 <Table responsive className="m-0 p-0 table-head">
                     <thead>
                         <tr>
-                            <th className="table-dark text-center">
-                                ID
+                            <th className="table-dark text-center" onClick={updateIDSort}>
+                                ID<span className="sort-arrow">{sortState.ID === null ? "⭮" : sortState.ID ? "▲" : "▼"}</span>
                             </th>
                             <th className="table-dark large-title m-0 p-0 align-middle">
                                 <input
@@ -91,8 +173,8 @@ function PlayListTable({ getQuery, tableData, setParentUrl, updateTableData, lis
                                     onKeyUp={debouncedQuery}
                                 />
                             </th>
-                            <th className="table-dark text-center">
-                                Watch
+                            <th className="table-dark text-center" onClick={updateUATSort}>
+                                Watch<span className="sort-arrow">{sortState.UAT === null ? "⭮" : sortState.UAT ? "▲" : "▼"}</span>
                             </th>
                             <th className="table-dark text-center">
                                 Expand
@@ -146,7 +228,7 @@ function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
                 }
                 return item;
             }));
-        fetch("http://192.168.0.103:8888/ytdiff/watchlist", {
+        fetch("http://192.168.0.106:8888/ytdiff/watchlist", {
             method: "post",
             headers: {
                 "Accept": "application/json",
@@ -213,13 +295,13 @@ function SortTable({ sort, order, getSort, getOrder }) {
         <div className="m-0 p-0 container-fluid">
             <InputGroup>
                 <span className="input-group-text">Sort by</span>
-                <FormControl as="select" defaultValue={sort} onChange={typeHandler}>
+                <FormControl as="select" value={"" + sort} onChange={typeHandler}>
                     <option value="1">ID</option>
                     <option value="2">CreatedAt</option>
                     <option value="3">UpdatedAt</option>
                 </FormControl>
                 <span className="input-group-text">Order</span>
-                <FormControl as="select" defaultValue={order} onChange={orderHandler}>
+                <FormControl as="select" value={"" + order} onChange={orderHandler}>
                     <option value="1">Ascending</option>
                     <option value="2">Descending</option>
                 </FormControl>
