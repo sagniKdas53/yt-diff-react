@@ -14,40 +14,17 @@ body,
     display: none; /* Chrome, Safari and Opera */
   }
 }
-/*background-color: #121212;
-  color: #ffffff;
-}
-
-a:link {
-  color: green;
-  background-color: transparent;
-  text-decoration: none;
-}
-
-a:visited {
-  color: pink;
-  background-color: transparent;
-  text-decoration: none;
-}
-
-a:hover {
-  color: red;
-  background-color: transparent;
-  text-decoration: underline;
-}
-
-a:active {
-  color: yellow;
-  background-color: transparent;
-  text-decoration: underline;
-}
-*/
-.no-underline {
-  text-decoration: none !important;
-}
 
 nav {
   height: fit-content;
+}
+
+.nav-link-btn {
+  text-decoration: none !important;
+}
+
+.nav-icon {
+  object-fit: cover;
 }
 
 .container-table {
@@ -99,10 +76,10 @@ nav {
   max-height: 85vh;
 }
 
-.unified-input{
+.unified-input {
   height: max-content;
 }
 
-.sort-arrow{
+.sort-arrow {
   font-size: smaller;
 }

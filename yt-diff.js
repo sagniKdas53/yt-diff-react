@@ -1,1 +1,0 @@
-/home/sagnik/Projects/yt-diff/cors-allowed.js
