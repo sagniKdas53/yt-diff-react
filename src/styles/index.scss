@@ -60,12 +60,21 @@ nav {
 }
 
 .large-title {
-  width: 75% !important;
-  max-width: 85% !important;
+  width: 85%;
+  max-width: 85%;
 }
 
-.search {
-  width: 95%;
+.large-title input {
+  width: 90%;
+}
+
+.large-title-body {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  // These ones do the trick
+  width: inherit;
+  max-width: 0;
 }
 
 #watch-change {

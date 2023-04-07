@@ -125,6 +125,51 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
   );
 }
 
+function TableHead({
+  bulkAction,
+  selectAll,
+  query,
+  debouncedQuery,
+  handleSort,
+  sortDownloaded,
+}) {
+  return (
+    <>
+      <thead>
+        <tr>
+          <th className="table-dark text-center">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              onChange={bulkAction}
+              checked={selectAll}
+              id="selector"
+              aria-label="..."
+            />
+          </th>
+          <th className="table-dark align-middle large-title m-0 mx-1 p-0">
+            <input
+              type="text"
+              className="m-0 mt-1 ms-1 p-0"
+              id="query_sublist"
+              placeholder="Title"
+              ref={query}
+              onKeyUp={debouncedQuery}
+            />
+          </th>
+          <th
+            className="table-dark align-middle text-center"
+            onClick={handleSort}
+          >
+            Saved
+            <span className="sort-arrow">{sortDownloaded ? "▲" : "⭮"}</span>
+          </th>
+        </tr>
+      </thead>
+    </>
+  );
+}
+
 function SubListTable({
   data,
   sendQuery,
@@ -197,61 +242,26 @@ function SubListTable({
     <>
       <div className="container-fluid m-0 p-0 container-head">
         <Table responsive className="m-0 p-0 table-head">
-          <thead>
-            <tr>
-              <th className="table-dark text-center">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  onChange={bulkAction}
-                  checked={selectAll}
-                  id="selector"
-                  aria-label="..."
-                />
-              </th>
-              <th className="table-dark large-title m-0 p-0 align-middle">
-                <input
-                  type="text"
-                  className="search m-0 mt-1 p-0"
-                  id="query_sublist"
-                  placeholder="Title"
-                  ref={query}
-                  onKeyUp={debouncedQuery}
-                />
-              </th>
-              <th className="table-dark text-center" onClick={handleSort}>
-                Saved
-                <span className="sort-arrow">{sortDownloaded ? "▲" : "⭮"}</span>
-              </th>
-            </tr>
-          </thead>
+          <TableHead
+            bulkAction={bulkAction}
+            selectAll={selectAll}
+            query={query}
+            debouncedQuery={debouncedQuery}
+            handleSort={handleSort}
+            sortDownloaded={sortDownloaded}
+          />
         </Table>
       </div>
       <div className="container-fluid m-0 p-0 container-table">
         <Table responsive className="m-0 p-0">
-          <thead>
-            <tr>
-              <th className="table-dark text-center">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  aria-label="..."
-                />
-              </th>
-              <th className="table-dark large-title m-0 p-0 align-middle">
-                <input type="text" className="search m-0 mt-1 p-0" />
-              </th>
-              <th
-                className="table-dark text-center"
-                onClick={() => setSort(!sortDownloaded)}
-              >
-                Saved
-                <span className="sort-arrow">
-                  {sortDownloaded === null ? "⭮" : sortDownloaded ? "▲" : "▼"}
-                </span>
-              </th>
-            </tr>
-          </thead>
+          <TableHead
+            bulkAction={bulkAction}
+            selectAll={selectAll}
+            query={query}
+            debouncedQuery={debouncedQuery}
+            handleSort={handleSort}
+            sortDownloaded={sortDownloaded}
+          />
           <tbody id="listing">
             {data.rows.map((element, index) => (
               <tr
@@ -268,17 +278,17 @@ function SubListTable({
                     : ""
                 }
               >
-                <td className="text-center">
+                <td className=" text-center">
                   <input
                     type="checkbox"
-                    className="form-check-input me-1 video-item"
+                    className="form-check-input"
                     checked={selectedItems[element.id] || false}
                     onChange={handleSelection}
                     id={element.id}
                   />
                 </td>
                 <td
-                  className="large-title mx-0 px-0 text-truncate large-title"
+                  className="large-title large-title-body"
                   data-bs-toggle="tooltip"
                   data-bs-placement="top"
                   title={element.title}
@@ -287,7 +297,9 @@ function SubListTable({
                     {element.title}
                   </a>
                 </td>
-                <td className="emoji">{element.downloaded ? "✅" : "❌"}</td>
+                <td className="emoji mx-0 px-0">
+                  {element.downloaded ? "✅" : "❌"}
+                </td>
               </tr>
             ))}
           </tbody>
