@@ -4,12 +4,7 @@ import Table from "react-bootstrap/Table";
 import debounce from "lodash.debounce";
 const ListControl = lazy(() => import("./ListControl.jsx"));
 
-export default function SubList({
-  controls,
-  listUrl,
-  setParentUrl,
-  respIndex = 0,
-}) {
+export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
   const [start, setStart] = useState(respIndex);
   const [chunk, setChunk] = useState(10);
   const [stop, setStop] = useState(respIndex + chunk);
@@ -96,44 +91,36 @@ export default function SubList({
         sortDownloaded={sortDownloaded}
         setSort={setSort}
       />
-      {controls ? (
-        <div className="m-0 p-0 cont-group container-fluid">
-          <div className="row p-1 mx-2">
-            <ListControl
-              start={start}
-              stop={stop}
-              chunk={chunk}
-              setStart={setStart}
-              setStop={setStop}
-              setChunk={setChunk}
-            />
-          </div>
-          <div className="row p-1 mx-2">
-            <div className="col m-0 p-0">
-              <div className="btn-group" role="group" aria-label="controls">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={clear}
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-            <div className="col m-0 p-0">
-              <button
-                type="button"
-                className="float-end btn btn-primary"
-                onClick={download}
-              >
-                Download
+      <div className="m-0 p-0 cont-group container-fluid">
+        <div className="row p-1 mx-2">
+          <ListControl
+            start={start}
+            stop={stop}
+            chunk={chunk}
+            setStart={setStart}
+            setStop={setStop}
+            setChunk={setChunk}
+          />
+        </div>
+        <div className="row p-1 mx-2">
+          <div className="col m-0 p-0">
+            <div className="btn-group" role="group" aria-label="controls">
+              <button type="button" className="btn btn-primary" onClick={clear}>
+                Clear
               </button>
             </div>
           </div>
+          <div className="col m-0 p-0">
+            <button
+              type="button"
+              className="float-end btn btn-primary"
+              onClick={download}
+            >
+              Download
+            </button>
+          </div>
         </div>
-      ) : (
-        <></>
-      )}
+      </div>
     </div>
   );
 }
@@ -290,7 +277,12 @@ function SubListTable({
                     id={element.id}
                   />
                 </td>
-                <td className="large-title mx-0 px-0">
+                <td
+                  className="large-title mx-0 px-0 text-truncate large-title"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  title={element.title}
+                >
                   <a href={element.url} target="_blank" rel="noreferrer">
                     {element.title}
                   </a>

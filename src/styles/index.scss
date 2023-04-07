@@ -60,7 +60,8 @@ nav {
 }
 
 .large-title {
-  width: 75%;
+  width: 75% !important;
+  max-width: 85% !important;
 }
 
 .search {

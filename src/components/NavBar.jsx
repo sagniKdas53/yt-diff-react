@@ -23,7 +23,7 @@ export default function NavBar({ showInput, toggleFunc, setSubListUrl }) {
             className="link-warning m-0 mx-2 p-0 nav-link-btn"
             onClick={toggleFunc}
           >
-            {showInput ? "Add Data" : "Show Data"}
+            {!showInput ? "Add Data" : "Show Data"}
           </Button>
           <Button
             variant="link"

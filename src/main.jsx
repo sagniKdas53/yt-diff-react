@@ -23,7 +23,7 @@ function App() {
       <div className="container-fluid">
         <div className="row">
           <Suspense fallback={<>Loading...</>}>
-            {input ? (
+            {!input ? (
               <DataView url={SubListUrl} setUrl={setSubListUrl} />
             ) : (
               <InputView url={SubListUrl} setUrl={setSubListUrl} />

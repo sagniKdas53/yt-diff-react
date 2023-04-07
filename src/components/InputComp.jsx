@@ -1,14 +1,14 @@
 import React, { lazy, useState, Suspense } from "react";
 
-const InputForm = lazy(() => import('./InputForm.jsx'));
-const SubList = lazy(() => import('./SubList.jsx'));
+const InputForm = lazy(() => import("./InputForm.jsx"));
+const SubList = lazy(() => import("./SubList.jsx"));
 
 export default function InputView({ url, setUrl }) {
-    const [respIndex, setRespStart] = useState(0);
-    return (
-        <Suspense fallback={<>Loading...</>}>
-            <InputForm setParentUrl={setUrl} setRespStart={setRespStart} />
-            <SubList controls={true} listUrl={url} setParentUrl={setUrl} respIndex={respIndex} />
-        </Suspense>
-    )
+  const [respIndex, setRespStart] = useState(0);
+  return (
+    <Suspense fallback={<>Loading...</>}>
+      <InputForm setParentUrl={setUrl} setRespStart={setRespStart} />
+      <SubList listUrl={url} setParentUrl={setUrl} respIndex={respIndex} />
+    </Suspense>
+  );
 }
