@@ -22,6 +22,7 @@ function App() {
       />
       <div className="container-fluid">
         <div className="row">
+          {/*I honsetly wonder if react router would have been better*/}
           <Suspense fallback={<>Loading...</>}>
             {!input ? (
               <DataView url={SubListUrl} setUrl={setSubListUrl} />
