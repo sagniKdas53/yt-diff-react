@@ -162,7 +162,7 @@ function TableHead({
             onClick={handleSort}
           >
             Saved
-            <span className="sort-arrow">{sortDownloaded ? "▲" : "⭮"}</span>
+            <span className="sort-arrow">{sortDownloaded ? "▲" : "•"}</span>
           </th>
         </tr>
       </thead>
