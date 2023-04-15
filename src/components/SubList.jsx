@@ -95,37 +95,13 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
         setSort={setSort}
         clear={clear}
         download={download}
+        start={start}
+        stop={stop}
+        chunk={chunk}
+        setStart={setStart}
+        setStop={setStop}
+        setChunk={setChunk}
       />
-      <div className="m-0 p-0 cont-group container-fluid">
-        <div className="row p-1 mx-2">
-          <ListControl
-            start={start}
-            stop={stop}
-            chunk={chunk}
-            setStart={setStart}
-            setStop={setStop}
-            setChunk={setChunk}
-          />
-        </div>
-        {/* {<div className="row p-1 mx-2">
-          <div className="col m-0 p-0">
-            <div className="btn-group" role="group" aria-label="controls">
-              <button type="button" className="btn btn-primary" onClick={clear}>
-                Clear
-              </button>
-            </div>
-          </div>
-          <div className="col m-0 p-0">
-            <button
-              type="button"
-              className="float-end btn btn-primary"
-              onClick={download}
-            >
-              Download
-            </button>
-          </div>
-        </div>} */}
-      </div>
     </div>
   );
 }
@@ -185,6 +161,12 @@ function SubListTable({
   setSort,
   clear,
   download,
+  start,
+  stop,
+  chunk,
+  setStart,
+  setStop,
+  setChunk,
 }) {
   const [selectAll, setSelectAll] = useState(false);
   // absolutely unnecessary
@@ -246,7 +228,7 @@ function SubListTable({
   );
 
   return (
-    <>
+    <div className="m-0 p-0 sub-list-cont">
       <div className="container-fluid m-0 p-0 container-head">
         <Table responsive className="m-0 p-0 table-head">
           <TableHead
@@ -259,7 +241,7 @@ function SubListTable({
           />
         </Table>
       </div>
-      <div className="container-fluid m-0 p-0 container-table">
+      <div className="container-fluid m-0 p-0 container-table actual-list">
         <Table responsive className="m-0 p-0">
           <TableHead
             bulkAction={bulkAction}
@@ -311,6 +293,8 @@ function SubListTable({
             ))}
           </tbody>
         </Table>
+      </div>
+      <div className="container-fluid m-0 p-0 container-table fab-holder">
         <div className="action-button">
           <CustomFab
             selectedItems={selectedItems}
@@ -319,7 +303,19 @@ function SubListTable({
           />
         </div>
       </div>
-    </>
+      <div className="m-0 p-0 cont-group container-fluid sub-list-cont">
+        <div className="row p-1 mx-2">
+          <ListControl
+            start={start}
+            stop={stop}
+            chunk={chunk}
+            setStart={setStart}
+            setStop={setStop}
+            setChunk={setChunk}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -328,14 +324,14 @@ function CustomFab({ selectedItems, clear, download }) {
     Object.keys(selectedItems).length === 0 ||
     Object.values(selectedItems).every((val) => !val);
 
-  const color = isNoItemsSelected ? "secondary" : "primary";
+  //const color = isNoItemsSelected ? "secondary" : "primary";
 
   const handleClick = isNoItemsSelected ? clear : download;
 
   const icon = isNoItemsSelected ? <ClearIcon /> : <DownloadIcon />;
 
   return (
-    <Fab color={color} aria-label="action" onClick={handleClick}>
+    <Fab color="primary" aria-label="action" onClick={handleClick}>
       {icon}
     </Fab>
   );

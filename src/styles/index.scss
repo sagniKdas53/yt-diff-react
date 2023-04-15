@@ -44,7 +44,7 @@ nav {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 69;
+  z-index: 96;
 }
 
 .play-title {
@@ -70,9 +70,9 @@ nav {
 }
 
 .large-title-body {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  //overflow: hidden;
+  //text-overflow: ellipsis;
+  //white-space: nowrap;
   // These ones do the trick
   width: inherit;
   max-width: 0;
@@ -97,7 +97,24 @@ nav {
 
 .action-button {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 25px;
+  right: 40px;
   z-index: 69;
+}
+
+.fab-holder {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+
+.sub-list-cont {
+  position: relative;
+}
+
+.actual-list {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 43;
 }
