@@ -2,6 +2,9 @@ import React, { useEffect, useState, useMemo, useRef, lazy } from "react";
 
 import Table from "react-bootstrap/Table";
 import debounce from "lodash.debounce";
+import Fab from "@mui/material/Fab";
+import DownloadIcon from "@mui/icons-material/Download";
+import ClearIcon from "@mui/icons-material/Clear";
 const ListControl = lazy(() => import("./ListControl.jsx"));
 
 export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
@@ -90,6 +93,8 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
         updateSelected={updateSelected}
         sortDownloaded={sortDownloaded}
         setSort={setSort}
+        clear={clear}
+        download={download}
       />
       <div className="m-0 p-0 cont-group container-fluid">
         <div className="row p-1 mx-2">
@@ -102,7 +107,7 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
             setChunk={setChunk}
           />
         </div>
-        <div className="row p-1 mx-2">
+        {/* {<div className="row p-1 mx-2">
           <div className="col m-0 p-0">
             <div className="btn-group" role="group" aria-label="controls">
               <button type="button" className="btn btn-primary" onClick={clear}>
@@ -119,7 +124,7 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
               Download
             </button>
           </div>
-        </div>
+        </div>} */}
       </div>
     </div>
   );
@@ -178,6 +183,8 @@ function SubListTable({
   updateSelected,
   sortDownloaded,
   setSort,
+  clear,
+  download,
 }) {
   const [selectAll, setSelectAll] = useState(false);
   // absolutely unnecessary
@@ -304,7 +311,32 @@ function SubListTable({
             ))}
           </tbody>
         </Table>
+        <div className="action-button">
+          <CustomFab
+            selectedItems={selectedItems}
+            clear={clear}
+            download={download}
+          />
+        </div>
       </div>
     </>
+  );
+}
+
+function CustomFab({ selectedItems, clear, download }) {
+  const isNoItemsSelected =
+    Object.keys(selectedItems).length === 0 ||
+    Object.values(selectedItems).every((val) => !val);
+
+  const color = isNoItemsSelected ? "secondary" : "primary";
+
+  const handleClick = isNoItemsSelected ? clear : download;
+
+  const icon = isNoItemsSelected ? <ClearIcon /> : <DownloadIcon />;
+
+  return (
+    <Fab color={color} aria-label="action" onClick={handleClick}>
+      {icon}
+    </Fab>
   );
 }

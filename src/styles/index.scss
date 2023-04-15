@@ -29,6 +29,7 @@ nav {
 
 .container-table {
   height: 85vh;
+  position: relative;
   overflow-y: scroll;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
@@ -92,4 +93,11 @@ nav {
 
 .sort-arrow {
   font-size: smaller;
+}
+
+.action-button {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 69;
 }

@@ -69,14 +69,14 @@ export default function PlayList({ setParentUrl, listUrl }) {
             setChunk={setChunk}
           />
         </div>
-        <div className="p-1 mx-2 row">
+        {/* {<div className="p-1 mx-2 row">
           <SortTable
             sort={sort}
             order={order}
             getSort={updateSort}
             getOrder={updateOrder}
           />
-        </div>
+        </div>} */}
       </div>
     </div>
   );
