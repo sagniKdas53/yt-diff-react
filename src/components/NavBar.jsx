@@ -2,7 +2,7 @@ import React from "react";
 import { Button, Navbar } from "react-bootstrap";
 import navBrand from "/nav-brand-512x512.png";
 
-export default function NavBar({ showInput, toggleFunc, setSubListUrl }) {
+export default function NavBar({ showInput, toggleFunc, setSubListUrl, id }) {
   const showUnlisted = () => setSubListUrl("None");
   return (
     <Navbar bg="dark" variant="dark" className="mt-0 pt-0 mb-0 pb-0 nav-size">
@@ -18,6 +18,13 @@ export default function NavBar({ showInput, toggleFunc, setSubListUrl }) {
           <span className="align-middle mb-1">-diff</span>
         </Navbar.Brand>
         <div>
+          <Button
+            variant="link"
+            className="link-warning m-0 p-0 nav-link-btn"
+            disabled
+          >
+            {id === "" ? "Disconnected" : "Connected"}
+          </Button>
           <Button
             variant="link"
             className="link-warning m-0 mx-2 p-0 nav-link-btn"
