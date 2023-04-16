@@ -1,6 +1,8 @@
 import React, { lazy, Suspense, useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 
 const NavBar = lazy(() => import("./components/NavBar.jsx"));
 const DataView = lazy(() => import("./components/DataComp.jsx"));
@@ -32,6 +34,16 @@ function App() {
           </Suspense>
         </div>
       </div>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        theme="light"
+      />
     </React.StrictMode>
   );
 }

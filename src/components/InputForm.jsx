@@ -2,6 +2,7 @@ import React, { lazy, useState } from "react";
 
 const ListControl = lazy(() => import("./ListControl.jsx"));
 import { FormControl } from "react-bootstrap";
+import { toast } from "react-toastify";
 
 export default function InputForm({ setParentUrl, setRespStart }) {
   // all of the states are here
@@ -42,11 +43,31 @@ export default function InputForm({ setParentUrl, setRespStart }) {
     try {
       const url = new URL(element);
       if (url.protocol !== "https:" && url.protocol !== "http:") {
+        toast.error("Invalid url: " + element, {
+          position: "bottom-right",
+          autoClose: false,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: 0,
+          theme: "light",
+        });
         console.error("Invalid url: " + url);
         return false;
       }
     } catch (error) {
-      console.error("Problem parsing url: " + url);
+      toast.error("Problem parsing url: " + element, {
+        position: "bottom-right",
+        autoClose: false,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: 0,
+        theme: "light",
+      });
+      console.error("Problem parsing url: " + element);
       return false;
     }
     return true;
