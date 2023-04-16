@@ -95,13 +95,19 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
         setSort={setSort}
         clear={clear}
         download={download}
-        start={start}
-        stop={stop}
-        chunk={chunk}
-        setStart={setStart}
-        setStop={setStop}
-        setChunk={setChunk}
       />
+      <div className="m-0 p-0 cont-group container-fluid">
+        <div className="row p-1 mx-2">
+          <ListControl
+            start={start}
+            stop={stop}
+            chunk={chunk}
+            setStart={setStart}
+            setStop={setStop}
+            setChunk={setChunk}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -161,12 +167,6 @@ function SubListTable({
   setSort,
   clear,
   download,
-  start,
-  stop,
-  chunk,
-  setStart,
-  setStop,
-  setChunk,
 }) {
   const [selectAll, setSelectAll] = useState(false);
   // absolutely unnecessary
@@ -228,94 +228,85 @@ function SubListTable({
   );
 
   return (
-    <div className="m-0 p-0 sub-list-cont">
-      <div className="container-fluid m-0 p-0 container-head">
-        <Table responsive className="m-0 p-0 table-head">
-          <TableHead
-            bulkAction={bulkAction}
-            selectAll={selectAll}
-            query={query}
-            debouncedQuery={debouncedQuery}
-            handleSort={handleSort}
-            sortDownloaded={sortDownloaded}
-          />
-        </Table>
-      </div>
-      <div className="container-fluid m-0 p-0 container-table actual-list">
-        <Table responsive className="m-0 p-0">
-          <TableHead
-            bulkAction={bulkAction}
-            selectAll={selectAll}
-            query={query}
-            debouncedQuery={debouncedQuery}
-            handleSort={handleSort}
-            sortDownloaded={sortDownloaded}
-          />
-          <tbody id="listing">
-            {data.rows.map((element, index) => (
-              <tr
-                key={index}
-                className={
-                  element.downloaded
-                    ? "table-info"
-                    : !element.available
-                    ? element.title === "[Deleted video]"
-                      ? "table-danger"
-                      : element.title === "[Private video]"
-                      ? "table-warning"
-                      : "table-secondary"
-                    : ""
-                }
-              >
-                <td className=" text-center">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    checked={selectedItems[element.id] || false}
-                    onChange={handleSelection}
-                    id={element.id}
-                  />
-                </td>
-                <td
-                  className="large-title large-title-body"
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  title={element.title}
+    <>
+      <div className="m-0 p-0 sub-list-cont">
+        {/* {container-head is position relative} */}
+        <div className="container-fluid m-0 p-0 container-head">
+          <Table responsive className="m-0 p-0 table-head">
+            <TableHead
+              bulkAction={bulkAction}
+              selectAll={selectAll}
+              query={query}
+              debouncedQuery={debouncedQuery}
+              handleSort={handleSort}
+              sortDownloaded={sortDownloaded}
+            />
+          </Table>
+        </div>
+        <div className="container-fluid m-0 p-0 container-table actual-list">
+          <Table responsive className="m-0 p-0">
+            <TableHead
+              bulkAction={bulkAction}
+              selectAll={selectAll}
+              query={query}
+              debouncedQuery={debouncedQuery}
+              handleSort={handleSort}
+              sortDownloaded={sortDownloaded}
+            />
+            <tbody id="listing">
+              {data.rows.map((element, index) => (
+                <tr
+                  key={index}
+                  className={
+                    element.downloaded
+                      ? "table-info"
+                      : !element.available
+                      ? element.title === "[Deleted video]"
+                        ? "table-danger"
+                        : element.title === "[Private video]"
+                        ? "table-warning"
+                        : "table-secondary"
+                      : ""
+                  }
                 >
-                  <a href={element.url} target="_blank" rel="noreferrer">
-                    {element.title}
-                  </a>
-                </td>
-                <td className="emoji mx-0 px-0">
-                  {element.downloaded ? "✅" : "❌"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
-      <div className="container-fluid m-0 p-0 container-table fab-holder">
-        <div className="action-button">
-          <CustomFab
-            selectedItems={selectedItems}
-            clear={clear}
-            download={download}
-          />
+                  <td className=" text-center">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={selectedItems[element.id] || false}
+                      onChange={handleSelection}
+                      id={element.id}
+                    />
+                  </td>
+                  <td
+                    className="large-title large-title-body"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title={element.title}
+                  >
+                    <a href={element.url} target="_blank" rel="noreferrer">
+                      {element.title}
+                    </a>
+                  </td>
+                  <td className="emoji mx-0 px-0">
+                    {element.downloaded ? "✅" : "❌"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+        <div className="container-fluid m-0 p-0 container-table fab-holder">
+          <div className="action-button">
+            <CustomFab
+              selectedItems={selectedItems}
+              clear={clear}
+              download={download}
+            />
+          </div>
         </div>
       </div>
-      <div className="m-0 p-0 cont-group container-fluid sub-list-cont">
-        <div className="row p-1 mx-2">
-          <ListControl
-            start={start}
-            stop={stop}
-            chunk={chunk}
-            setStart={setStart}
-            setStop={setStop}
-            setChunk={setChunk}
-          />
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 

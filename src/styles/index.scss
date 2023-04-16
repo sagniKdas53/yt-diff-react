@@ -36,6 +36,7 @@ nav {
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+  //background-color: rgb(221, 255, 188);
 }
 .container-head {
   position: relative;
@@ -52,6 +53,7 @@ nav {
 }
 .cont-group {
   //background-color: rgb(255, 195, 207);
+  position: relative;
   height: fit-content;
 }
 
@@ -110,6 +112,7 @@ nav {
 
 .sub-list-cont {
   position: relative;
+  height: 85vh;
 }
 
 .actual-list {
