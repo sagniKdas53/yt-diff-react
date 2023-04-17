@@ -237,9 +237,9 @@ function PlayListTable({
 function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
   // implement this later
   const watchToggler = async (event) => {
-    console.log(
-      `Toggling\n\turl:${event.target.parentElement.parentElement.children[1].children[0].href}\n\tTO:${event.target.value}`
-    );
+    // console.log(
+    //   `Toggling\n\turl:${event.target.parentElement.parentElement.children[1].children[0].href}\n\tTO:${event.target.value}`
+    // );
     //console.log(tableData);
     updateTableData(
       tableData.map((item) => {

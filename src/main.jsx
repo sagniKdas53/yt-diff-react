@@ -4,7 +4,9 @@ import "./styles/index.scss";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
 import io from "socket.io-client";
-const socket = io.connect("http://localhost:8888/");
+const socket = io.connect("http://localhost:8888", {
+  path: "/ytdiff/socket.io",
+});
 
 const NavBar = lazy(() => import("./components/NavBar.jsx"));
 const DataView = lazy(() => import("./components/DataComp.jsx"));
@@ -15,7 +17,9 @@ function App() {
   const [SubListUrl, setSubListUrl] = useState("");
   const [id, setID] = useState("");
   const [disableBtns, toggleDisable] = useState(false);
-  // disableBtns should be passed in as a prop to the buttons so that that they can be disabled.
+  // disableBtns should be passed in as a prop to the buttons so that that they can be disabled,
+  // when the prop is false the buttons are enabled and when it's true they are disabled
+  // after some thinking it can also be used to refresh the sublist when the download or listing is done.
   const toggleFunc = () => {
     toggle(!input);
     setSubListUrl("");
@@ -33,6 +37,7 @@ function App() {
       toggleDisable(true);
     });
     socket.on("error", function (data) {
+      console.log(`${data.message} ❌`);
       toast.error(`${data.message} ❌`, {
         position: "bottom-right",
         autoClose: false,
@@ -71,6 +76,8 @@ function App() {
       toggleDisable(false);
     });
   }, [socket]);
+
+  // Use react-router-dom
   return (
     <React.StrictMode>
       <NavBar
