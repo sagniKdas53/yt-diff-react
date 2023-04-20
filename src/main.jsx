@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles/index.scss";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,6 +7,8 @@ import io from "socket.io-client";
 const socket = io.connect("http://localhost:8888", {
   path: "/ytdiff/socket.io",
 });
+import Box from "@mui/material/Box";
+import LinearProgress from "@mui/material/LinearProgress";
 
 const NavBar = lazy(() => import("./components/NavBar.jsx"));
 const DataView = lazy(() => import("./components/DataComp.jsx"));
@@ -17,6 +19,7 @@ function App() {
   const [SubListUrl, setSubListUrl] = useState("");
   const [id, setID] = useState("");
   const [disableBtns, toggleDisable] = useState(false);
+  const [progress, setProgress] = useState(0);
   // disableBtns should be passed in as a prop to the buttons so that that they can be disabled,
   // when the prop is false the buttons are enabled and when it's true they are disabled
   // after some thinking it can also be used to refresh the sublist when the download or listing is done.
@@ -25,19 +28,32 @@ function App() {
     setSubListUrl("");
   };
 
+  const toggleDisableCallBack = useCallback((state) => {
+    // Your existing toggleDisable logic goes here
+    toggleDisable(state);
+  }, []);
+
   useEffect(() => {
+    // this one sets up sockets
     socket.on("init", function (data) {
       setID(data.id);
+      toggleDisableCallBack(false);
       socket.emit("acknowledge", { data: "Connected", id: data.id });
     });
-    socket.on("download-start", function (data) {
-      toggleDisable(true);
+    // triggered when a download starts, as progress my not start right away
+    socket.on("download-start", function () {
+      setProgress(101);
+      if (disableBtns === false) toggleDisableCallBack(true);
     });
-    socket.on("progress", function (data) {
-      toggleDisable(true);
+    // gives incremental progress updates at 10% intervals also
+    // used to keep the state updated of background activity
+    socket.on("listing-or-downloading", function (data) {
+      setProgress(data.percentage);
+      if (disableBtns === false) toggleDisableCallBack(true);
     });
+    // shows errors
     socket.on("error", function (data) {
-      console.log(`${data.message} ❌`);
+      //toggleDisableCallBack(false);
       toast.error(`${data.message} ❌`, {
         position: "bottom-right",
         autoClose: false,
@@ -49,9 +65,13 @@ function App() {
         theme: "light",
       });
     });
+    // shows when a download is done
     socket.on("download-done", function (data) {
+      toggleDisableCallBack(false);
+      setProgress(0);
       toast.success(`${data.message} ✅`, {
         position: "bottom-right",
+        toastId: data.id,
         autoClose: false,
         hideProgressBar: false,
         closeOnClick: true,
@@ -60,11 +80,15 @@ function App() {
         progress: 0,
         theme: "light",
       });
-      toggleDisable(false);
     });
+    // shows when listing is done
     socket.on("playlist-done", function (data) {
+      toggleDisableCallBack(false);
+      setProgress(0);
+      console.log(data);
       toast.success(`${data.message} ✅`, {
         position: "bottom-right",
+        toastId: data.id,
         autoClose: false,
         hideProgressBar: false,
         closeOnClick: true,
@@ -73,9 +97,8 @@ function App() {
         progress: 0,
         theme: "light",
       });
-      toggleDisable(false);
     });
-  }, [socket]);
+  }, [socket, toggleDisableCallBack]);
 
   // Use react-router-dom
   return (
@@ -116,6 +139,12 @@ function App() {
         draggable
         theme="light"
       />
+      <Box sx={{ width: "100%" }}>
+        <LinearProgress
+          variant={progress === 101 ? "indeterminate" : "determinate"}
+          value={progress}
+        />
+      </Box>
     </React.StrictMode>
   );
 }

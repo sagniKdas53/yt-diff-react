@@ -156,7 +156,6 @@ export default function InputForm({ setParentUrl, setRespStart, disableBtns }) {
                 id="clear_btn"
                 type="button"
                 onClick={clearInput}
-                disabled={disableBtns}
                 className="btn btn-primary"
               >
                 Clear
