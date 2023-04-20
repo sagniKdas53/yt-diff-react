@@ -3,14 +3,15 @@ import React, { lazy, useState, Suspense } from "react";
 const InputForm = lazy(() => import("./InputForm.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 
-export default function InputView({ url, setUrl, disableBtns }) {
-  const [respIndex, setRespStart] = useState(0);
+export default function InputView({ url, setUrl, disableBtns, setProgress }) {
+  const [respIndex, setRespIndex] = useState(0);
   return (
     <Suspense fallback={<>Loading...</>}>
       <InputForm
         setParentUrl={setUrl}
-        setRespStart={setRespStart}
+        setRespIndex={setRespIndex}
         disableBtns={disableBtns}
+        setProgress={setProgress}
       />
       <SubList
         listUrl={url}

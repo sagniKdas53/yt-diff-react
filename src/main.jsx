@@ -4,7 +4,7 @@ import "./styles/index.scss";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
 import io from "socket.io-client";
-const socket = io.connect("http://localhost:8888", {
+const socket = io.connect("https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net", {
   path: "/ytdiff/socket.io",
 });
 import Box from "@mui/material/Box";
@@ -28,9 +28,9 @@ function App() {
     setSubListUrl("");
   };
 
-  const toggleDisableCallBack = useCallback((state) => {
+  const toggleDisableCallBack = useCallback((next) => {
     // Your existing toggleDisable logic goes here
-    toggleDisable(state);
+    toggleDisable(next);
   }, []);
 
   useEffect(() => {
@@ -43,13 +43,22 @@ function App() {
     // triggered when a download starts, as progress my not start right away
     socket.on("download-start", function () {
       setProgress(101);
-      if (disableBtns === false) toggleDisableCallBack(true);
+      if (disableBtns === false) {
+        toggleDisableCallBack(true);
+      }
     });
     // gives incremental progress updates at 10% intervals also
     // used to keep the state updated of background activity
     socket.on("listing-or-downloading", function (data) {
-      setProgress(data.percentage);
-      if (disableBtns === false) toggleDisableCallBack(true);
+      console.log(data.percentage);
+      if (data.percentage === 100) {
+        setProgress(101);
+      } else {
+        setProgress(data.percentage);
+      }
+      if (disableBtns === false) {
+        toggleDisableCallBack(true);
+      }
     });
     // shows errors
     socket.on("error", function (data) {
@@ -67,19 +76,22 @@ function App() {
     });
     // shows when a download is done
     socket.on("download-done", function (data) {
-      toggleDisableCallBack(false);
-      setProgress(0);
-      toast.success(`${data.message} ✅`, {
-        position: "bottom-right",
-        toastId: data.id,
-        autoClose: false,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: 0,
-        theme: "light",
-      });
+      // add a sleep of 10 seconds here before the rest of it executed
+      setTimeout(() => {
+        toggleDisableCallBack(false);
+        setProgress(0);
+        toast.success(`${data.message} ✅`, {
+          position: "bottom-right",
+          toastId: data.id,
+          autoClose: false,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: 0,
+          theme: "light",
+        });
+      }, 10000);
     });
     // shows when listing is done
     socket.on("playlist-done", function (data) {
@@ -124,6 +136,7 @@ function App() {
                 url={SubListUrl}
                 setUrl={setSubListUrl}
                 disableBtns={disableBtns}
+                setProgress={setProgress}
               />
             )}
           </Suspense>

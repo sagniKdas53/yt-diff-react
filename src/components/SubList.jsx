@@ -11,7 +11,7 @@ export default function SubList({
   listUrl,
   setParentUrl,
   disableBtns,
-  respIndex = 0,
+  respIndex,
 }) {
   const [start, setStart] = useState(respIndex);
   const [chunk, setChunk] = useState(10);
@@ -35,16 +35,19 @@ export default function SubList({
 
   const fetchData = useMemo(
     () => async (url, start, stop, query, sortDownloaded) => {
-      const response = await fetch("http://192.168.0.106:8888/ytdiff/getsub", {
-        ...fetchOptions,
-        body: JSON.stringify({
-          url,
-          start,
-          stop,
-          query,
-          sortDownloaded,
-        }),
-      });
+      const response = await fetch(
+        "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/getsub",
+        {
+          ...fetchOptions,
+          body: JSON.stringify({
+            url,
+            start,
+            stop,
+            query,
+            sortDownloaded,
+          }),
+        }
+      );
       const data = await response.text();
       return JSON.parse(data);
     },
@@ -69,9 +72,10 @@ export default function SubList({
   ]);
 
   useEffect(() => {
-    let start = respIndex - (respIndex % chunk);
-    setStart(start);
-    setStop(start + chunk);
+    // this needs to be tested, as I guessed this has some problems and doesn't work for playlist properly
+    // let start = respIndex - (respIndex % chunk);
+    setStart(respIndex - chunk);
+    setStop(respIndex);
   }, [respIndex]);
 
   function clear() {
@@ -86,7 +90,7 @@ export default function SubList({
   function download() {
     const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
     //console.log(JSON.stringify({ id: data }));
-    fetch("http://192.168.0.106:8888/ytdiff/download", {
+    fetch("https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/download", {
       method: "post",
       headers: {
         Accept: "application/json",

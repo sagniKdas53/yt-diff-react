@@ -20,21 +20,24 @@ export default function PlayList({ setParentUrl, listUrl }) {
 
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
-    const response = await fetch("http://192.168.0.106:8888/ytdiff/dbi", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        start: start,
-        stop: stop,
-        sort: sort,
-        order: order,
-        query: query,
-      }),
-    });
+    const response = await fetch(
+      "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/dbi",
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          start: start,
+          stop: stop,
+          sort: sort,
+          order: order,
+          query: query,
+        }),
+      }
+    );
     const data = await response.text();
     const json_data = JSON.parse(data);
     return json_data["rows"];
@@ -252,18 +255,21 @@ function BodyGenerator({ tableData, setParentUrl, updateTableData, listUrl }) {
         return item;
       })
     );
-    fetch("http://192.168.0.106:8888/ytdiff/watchlist", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        url: event.target.parentElement.parentElement.children[1].children[0].href.valueOf(),
-        watch: event.target.value,
-      }),
-    });
+    fetch(
+      "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/watchlist",
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          url: event.target.parentElement.parentElement.children[1].children[0].href.valueOf(),
+          watch: event.target.value,
+        }),
+      }
+    );
   };
   const subListLoader = (event) =>
     setParentUrl(

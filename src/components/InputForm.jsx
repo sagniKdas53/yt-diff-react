@@ -4,7 +4,12 @@ const ListControl = lazy(() => import("./ListControl.jsx"));
 import { FormControl } from "react-bootstrap";
 import { toast } from "react-toastify";
 
-export default function InputForm({ setParentUrl, setRespStart, disableBtns }) {
+export default function InputForm({
+  setParentUrl,
+  setRespIndex,
+  disableBtns,
+  setProgress,
+}) {
   // all of the states are here
   const [start, setStart] = useState(0);
   const [stop, setStop] = useState(10);
@@ -25,6 +30,7 @@ export default function InputForm({ setParentUrl, setRespStart, disableBtns }) {
   };
   const listThis = async () => {
     const valid = new Set(urlList.trim().split("\n").filter(validate));
+    setProgress(101);
     try {
       for (const element of valid) {
         const response = await postUrl(element)
@@ -32,7 +38,7 @@ export default function InputForm({ setParentUrl, setRespStart, disableBtns }) {
           .then((data) => JSON.parse(data));
         // since listing may take a while having this here as an intermediate state can't hurt too much.
         setParentUrl(response.resp_url);
-        setRespStart(+response.start);
+        setRespIndex(+response.start);
       }
     } catch (error) {
       console.error(error);
@@ -74,22 +80,25 @@ export default function InputForm({ setParentUrl, setRespStart, disableBtns }) {
   };
 
   const postUrl = (urlItem) => {
-    return fetch("http://192.168.0.106:8888/ytdiff/list", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        url: urlItem,
-        start: start,
-        stop: stop,
-        chunk: chunk,
-        watch: watchMode,
-        continuous: true,
-      }),
-    });
+    return fetch(
+      "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/list",
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          url: urlItem,
+          start: start,
+          stop: stop,
+          chunk: chunk,
+          watch: watchMode,
+          continuous: true,
+        }),
+      }
+    );
   };
 
   return (
