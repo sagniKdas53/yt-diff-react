@@ -91,9 +91,17 @@ function App() {
           {/*I honsetly wonder if react router would have been better*/}
           <Suspense fallback={<>Loading...</>}>
             {!input ? (
-              <DataView url={SubListUrl} setUrl={setSubListUrl} />
+              <DataView
+                url={SubListUrl}
+                setUrl={setSubListUrl}
+                disableBtns={disableBtns}
+              />
             ) : (
-              <InputView url={SubListUrl} setUrl={setSubListUrl} />
+              <InputView
+                url={SubListUrl}
+                setUrl={setSubListUrl}
+                disableBtns={disableBtns}
+              />
             )}
           </Suspense>
         </div>

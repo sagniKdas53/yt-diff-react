@@ -4,7 +4,7 @@ const ListControl = lazy(() => import("./ListControl.jsx"));
 import { FormControl } from "react-bootstrap";
 import { toast } from "react-toastify";
 
-export default function InputForm({ setParentUrl, setRespStart }) {
+export default function InputForm({ setParentUrl, setRespStart, disableBtns }) {
   // all of the states are here
   const [start, setStart] = useState(0);
   const [stop, setStop] = useState(10);
@@ -147,6 +147,7 @@ export default function InputForm({ setParentUrl, setRespStart }) {
                 id="list_btn"
                 type="button"
                 onClick={listThis}
+                disabled={disableBtns}
                 className="btn btn-primary"
               >
                 List
@@ -155,6 +156,7 @@ export default function InputForm({ setParentUrl, setRespStart }) {
                 id="clear_btn"
                 type="button"
                 onClick={clearInput}
+                disabled={disableBtns}
                 className="btn btn-primary"
               >
                 Clear

@@ -7,7 +7,12 @@ import DownloadIcon from "@mui/icons-material/Download";
 import ClearIcon from "@mui/icons-material/Clear";
 const ListControl = lazy(() => import("./ListControl.jsx"));
 
-export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
+export default function SubList({
+  listUrl,
+  setParentUrl,
+  disableBtns,
+  respIndex = 0,
+}) {
   const [start, setStart] = useState(respIndex);
   const [chunk, setChunk] = useState(10);
   const [stop, setStop] = useState(respIndex + chunk);
@@ -52,7 +57,16 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
         setData(json_data)
       );
     }
-  }, [fetchData, listUrl, start, stop, query, respIndex, sortDownloaded]);
+  }, [
+    fetchData,
+    listUrl,
+    start,
+    stop,
+    query,
+    respIndex,
+    sortDownloaded,
+    disableBtns,
+  ]);
 
   useEffect(() => {
     let start = respIndex - (respIndex % chunk);
@@ -95,6 +109,7 @@ export default function SubList({ listUrl, setParentUrl, respIndex = 0 }) {
         setSort={setSort}
         clear={clear}
         download={download}
+        disableBtns={disableBtns}
       />
       <div className="m-0 p-0 cont-group container-fluid">
         <div className="row p-1 mx-2">
@@ -167,6 +182,7 @@ function SubListTable({
   setSort,
   clear,
   download,
+  disableBtns,
 }) {
   const [selectAll, setSelectAll] = useState(false);
   // absolutely unnecessary
@@ -302,6 +318,7 @@ function SubListTable({
               selectedItems={selectedItems}
               clear={clear}
               download={download}
+              disableBtns={disableBtns}
             />
           </div>
         </div>
@@ -310,7 +327,7 @@ function SubListTable({
   );
 }
 
-function CustomFab({ selectedItems, clear, download }) {
+function CustomFab({ selectedItems, clear, download, disableBtns }) {
   const isNoItemsSelected =
     Object.keys(selectedItems).length === 0 ||
     Object.values(selectedItems).every((val) => !val);
@@ -322,7 +339,12 @@ function CustomFab({ selectedItems, clear, download }) {
   const icon = isNoItemsSelected ? <ClearIcon /> : <DownloadIcon />;
 
   return (
-    <Fab color="primary" aria-label="action" onClick={handleClick}>
+    <Fab
+      color="primary"
+      aria-label="action"
+      onClick={handleClick}
+      disabled={disableBtns}
+    >
       {icon}
     </Fab>
   );
