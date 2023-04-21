@@ -6,7 +6,7 @@ import { ToastContainer, toast } from "react-toastify";
 import io from "socket.io-client";
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+
 const socket = io.connect("http://localhost:8888", {
   path: "/ytdiff/socket.io",
 });
@@ -19,15 +19,16 @@ function App() {
   const [id, setID] = useState("");
   const [SubListUrl, setSubListUrl] = useState("");
   const [disableBtns, toggleDisable] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [disregardSocket, toggelDisregard] = useState(false);
+  const [showPlaylists, toggleView] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [respIndex, setRespIndex] = useState(0);
   // disableBtns should be passed in as a prop to the buttons so that that they can be disabled,
   // when the prop is false the buttons are enabled and when it's true they are disabled
   // after some thinking it can also be used to refresh the sublist when the download or listing is done.
   const toggleFunc = () => {
-    toggle(!input);
-    setSubListUrl("");
+    toggleView(!showPlaylists);
+    //setSubListUrl("");
   };
 
   const toggleDisableCallBack = useCallback((next) => {
@@ -144,41 +145,29 @@ function App() {
 
   return (
     <React.StrictMode>
-      <NavBar setSubListUrl={setSubListUrl} id={id} />
+      <NavBar
+        setSubListUrl={setSubListUrl}
+        id={id}
+        showPlaylists={showPlaylists}
+        toggleFunc={toggleFunc}
+      />
       <div className="container-fluid">
         <div className="row">
           <Suspense fallback={<>Loading...</>}>
-            <BrowserRouter>
-              <Routes>
-                <Route
-                  path="ytdiff/"
-                  element={
-                    <InputForm
-                      setParentUrl={setSubListUrl}
-                      setRespIndex={setRespIndex}
-                      disableBtns={disableBtns}
-                      setProgress={setProgress}
-                    />
-                  }
-                />
-                <Route
-                  path="ytdiff/data"
-                  element={
-                    <PlayList
-                      setParentUrl={setSubListUrl}
-                      listUrl={SubListUrl}
-                      disableBtns={disableBtns}
-                    />
-                  }
-                />
-                <Route
-                  path="*"
-                  element={
-                    <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12"></div>
-                  }
-                />
-              </Routes>
-            </BrowserRouter>
+            {showPlaylists ? (
+              <PlayList
+                setParentUrl={setSubListUrl}
+                listUrl={SubListUrl}
+                disableBtns={disableBtns}
+              />
+            ) : (
+              <InputForm
+                setParentUrl={setSubListUrl}
+                setRespIndex={setRespIndex}
+                disableBtns={disableBtns}
+                setProgress={setProgress}
+              />
+            )}
             <SubList
               listUrl={SubListUrl}
               setParentUrl={setSubListUrl}

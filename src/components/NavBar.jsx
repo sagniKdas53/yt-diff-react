@@ -2,7 +2,12 @@ import React from "react";
 import { Button, Navbar } from "react-bootstrap";
 import navBrand from "/nav-brand-512x512.png";
 
-export default function NavBar({ setSubListUrl, id }) {
+export default function NavBar({
+  setSubListUrl,
+  id,
+  showPlaylists,
+  toggleFunc,
+}) {
   const showUnlisted = () => setSubListUrl("None");
   //const navigate = useNavigate();
   return (
@@ -33,9 +38,9 @@ export default function NavBar({ setSubListUrl, id }) {
           <Button
             variant="link"
             className="link-warning m-0 mx-2 p-0 nav-link-btn"
-            onClick={() => navigate("/ytdiff/data")}
+            onClick={toggleFunc}
           >
-            Show Data
+            {showPlaylists ? "Add Data" : "Show Data"}
           </Button>
           <Button
             variant="link"
