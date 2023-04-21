@@ -2,12 +2,17 @@ import React from "react";
 import { Button, Navbar } from "react-bootstrap";
 import navBrand from "/nav-brand-512x512.png";
 
-export default function NavBar({ showInput, toggleFunc, setSubListUrl, id }) {
+export default function NavBar({ setSubListUrl, id }) {
   const showUnlisted = () => setSubListUrl("None");
+  //const navigate = useNavigate();
   return (
     <Navbar bg="dark" variant="dark" className="mt-0 pt-0 mb-0 pb-0 nav-size">
       <div className="container-fluid">
-        <Navbar.Brand className="pt-0" href="#">
+        <Navbar.Brand
+          className="pt-0"
+          href="#"
+          // onClick={() => navigate("/ytdiff")}
+        >
           <img
             src={navBrand}
             alt=""
@@ -28,9 +33,9 @@ export default function NavBar({ showInput, toggleFunc, setSubListUrl, id }) {
           <Button
             variant="link"
             className="link-warning m-0 mx-2 p-0 nav-link-btn"
-            onClick={toggleFunc}
+            onClick={() => navigate("/ytdiff/data")}
           >
-            {!showInput ? "Add Data" : "Show Data"}
+            Show Data
           </Button>
           <Button
             variant="link"

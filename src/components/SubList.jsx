@@ -35,19 +35,16 @@ export default function SubList({
 
   const fetchData = useMemo(
     () => async (url, start, stop, query, sortDownloaded) => {
-      const response = await fetch(
-        "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/getsub",
-        {
-          ...fetchOptions,
-          body: JSON.stringify({
-            url,
-            start,
-            stop,
-            query,
-            sortDownloaded,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:8888/ytdiff/getsub", {
+        ...fetchOptions,
+        body: JSON.stringify({
+          url,
+          start,
+          stop,
+          query,
+          sortDownloaded,
+        }),
+      });
       const data = await response.text();
       return JSON.parse(data);
     },
@@ -73,9 +70,10 @@ export default function SubList({
 
   useEffect(() => {
     // this needs to be tested, as I guessed this has some problems and doesn't work for playlist properly
-    // let start = respIndex - (respIndex % chunk);
-    setStart(respIndex - chunk);
-    setStop(respIndex);
+    // console.log("respIndex: " + respIndex);
+    let start = respIndex - (respIndex % chunk);
+    setStart(start);
+    setStop(start + chunk);
   }, [respIndex]);
 
   function clear() {
@@ -90,7 +88,7 @@ export default function SubList({
   function download() {
     const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
     //console.log(JSON.stringify({ id: data }));
-    fetch("https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/download", {
+    fetch("http://localhost:8888/ytdiff/download", {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -347,7 +345,7 @@ function CustomFab({ selectedItems, clear, download, disableBtns }) {
       color="primary"
       aria-label="action"
       onClick={handleClick}
-      disabled={disableBtns}
+      disabled={isNoItemsSelected ? false : disableBtns}
     >
       {icon}
     </Fab>

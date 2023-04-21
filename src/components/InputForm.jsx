@@ -29,8 +29,8 @@ export default function InputForm({
     setWatch("1");
   };
   const listThis = async () => {
-    const valid = new Set(urlList.trim().split("\n").filter(validate));
     setProgress(101);
+    const valid = new Set(urlList.trim().split("\n").filter(validate));
     try {
       for (const element of valid) {
         const response = await postUrl(element)
@@ -49,9 +49,10 @@ export default function InputForm({
     try {
       const url = new URL(element);
       if (url.protocol !== "https:" && url.protocol !== "http:") {
+        setProgress(0);
         toast.error("Invalid url: " + element, {
           position: "bottom-right",
-          autoClose: false,
+          autoClose: 5000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
@@ -59,13 +60,14 @@ export default function InputForm({
           progress: 0,
           theme: "light",
         });
-        console.error("Invalid url: " + url);
+        //console.error("Invalid url: " + url);
         return false;
       }
     } catch (error) {
+      setProgress(0);
       toast.error("Problem parsing url: " + element, {
         position: "bottom-right",
-        autoClose: false,
+        autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -73,32 +75,29 @@ export default function InputForm({
         progress: 0,
         theme: "light",
       });
-      console.error("Problem parsing url: " + element);
+      //console.error("Problem parsing url: " + element);
       return false;
     }
     return true;
   };
 
   const postUrl = (urlItem) => {
-    return fetch(
-      "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/list",
-      {
-        method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
-        body: JSON.stringify({
-          url: urlItem,
-          start: start,
-          stop: stop,
-          chunk: chunk,
-          watch: watchMode,
-          continuous: true,
-        }),
-      }
-    );
+    return fetch("http://localhost:8888/ytdiff/list", {
+      method: "post",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      mode: "cors",
+      body: JSON.stringify({
+        url: urlItem,
+        start: start,
+        stop: stop,
+        chunk: chunk,
+        watch: watchMode,
+        continuous: true,
+      }),
+    });
   };
 
   return (

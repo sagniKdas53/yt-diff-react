@@ -4,22 +4,24 @@ import "./styles/index.scss";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer, toast } from "react-toastify";
 import io from "socket.io-client";
-const socket = io.connect("https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net", {
-  path: "/ytdiff/socket.io",
-});
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+const socket = io.connect("http://localhost:8888", {
+  path: "/ytdiff/socket.io",
+});
 
 const NavBar = lazy(() => import("./components/NavBar.jsx"));
-const DataView = lazy(() => import("./components/DataComp.jsx"));
-const InputView = lazy(() => import("./components/InputComp.jsx"));
-
+const SubList = lazy(() => import("./components/SubList.jsx"));
+const InputForm = lazy(() => import("./components/InputForm.jsx"));
+const PlayList = lazy(() => import("./components/PlayList.jsx"));
 function App() {
-  const [input, toggle] = useState(true);
-  const [SubListUrl, setSubListUrl] = useState("");
   const [id, setID] = useState("");
+  const [SubListUrl, setSubListUrl] = useState("");
   const [disableBtns, toggleDisable] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [disregardSocket, toggelDisregard] = useState(false);
+  const [respIndex, setRespIndex] = useState(0);
   // disableBtns should be passed in as a prop to the buttons so that that they can be disabled,
   // when the prop is false the buttons are enabled and when it's true they are disabled
   // after some thinking it can also be used to refresh the sublist when the download or listing is done.
@@ -33,39 +35,50 @@ function App() {
     toggleDisable(next);
   }, []);
 
+  const toggelDisregardCallBack = useCallback((next) => {
+    // Your existing toggleDisable logic goes here
+    toggelDisregard(next);
+  }, []);
+
   useEffect(() => {
     // this one sets up sockets
     socket.on("init", function (data) {
       setID(data.id);
+      setProgress(0);
+      toggelDisregardCallBack(false);
       toggleDisableCallBack(false);
       socket.emit("acknowledge", { data: "Connected", id: data.id });
     });
     // triggered when a download starts, as progress my not start right away
     socket.on("download-start", function () {
+      // put the progress bar in an indeterminate state
       setProgress(101);
-      if (disableBtns === false) {
-        toggleDisableCallBack(true);
-      }
+      // if socket is et to be disregarded then set it back to listen to it
+      toggelDisregardCallBack(false);
+      // if buttons are not disabled then disable them
+      toggleDisableCallBack(true);
     });
     // gives incremental progress updates at 10% intervals also
     // used to keep the state updated of background activity
     socket.on("listing-or-downloading", function (data) {
-      console.log(data.percentage);
-      if (data.percentage === 100) {
+      //console.log(data.percentage);
+      if (data.percentage >= 99) {
         setProgress(101);
-      } else {
+        toggelDisregardCallBack(true);
+      } else if (!disregardSocket) {
+        // if the disregardSocket is false then update percentage
         setProgress(data.percentage);
       }
-      if (disableBtns === false) {
+
+      if (!disableBtns) {
         toggleDisableCallBack(true);
       }
     });
     // shows errors
     socket.on("error", function (data) {
-      //toggleDisableCallBack(false);
       toast.error(`${data.message} ❌`, {
         position: "bottom-right",
-        autoClose: false,
+        autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -76,32 +89,13 @@ function App() {
     });
     // shows when a download is done
     socket.on("download-done", function (data) {
-      // add a sleep of 10 seconds here before the rest of it executed
-      setTimeout(() => {
-        toggleDisableCallBack(false);
-        setProgress(0);
-        toast.success(`${data.message} ✅`, {
-          position: "bottom-right",
-          toastId: data.id,
-          autoClose: false,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: 0,
-          theme: "light",
-        });
-      }, 10000);
-    });
-    // shows when listing is done
-    socket.on("playlist-done", function (data) {
+      // enable the buttons and reset progress
       toggleDisableCallBack(false);
       setProgress(0);
-      console.log(data);
       toast.success(`${data.message} ✅`, {
         position: "bottom-right",
         toastId: data.id,
-        autoClose: false,
+        autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -110,35 +104,87 @@ function App() {
         theme: "light",
       });
     });
-  }, [socket, toggleDisableCallBack]);
+    socket.on("download-failed", function (data) {
+      // enable the buttons and reset progress
+      toggleDisableCallBack(false);
+      setProgress(0);
+      toggleDisableCallBack(false);
+      setProgress(0);
+      toast.error(`${data.message} ❌`, {
+        position: "bottom-right",
+        toastId: data.id,
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: 0,
+        theme: "light",
+      });
+    });
+    // shows when listing is done
+    socket.on("playlist-done", function (data) {
+      // enable the buttons and reset progress
+      toggleDisableCallBack(false);
+      setProgress(0);
 
-  // Use react-router-dom
+      toast.success(`${data.message} ✅`, {
+        position: "bottom-right",
+        toastId: data.id,
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: 0,
+        theme: "light",
+      });
+    });
+  }, [socket, toggleDisableCallBack, toggelDisregardCallBack]);
+
   return (
     <React.StrictMode>
-      <NavBar
-        showInput={input}
-        toggleFunc={toggleFunc}
-        setSubListUrl={setSubListUrl}
-        id={id}
-      />
+      <NavBar setSubListUrl={setSubListUrl} id={id} />
       <div className="container-fluid">
         <div className="row">
-          {/*I honsetly wonder if react router would have been better*/}
           <Suspense fallback={<>Loading...</>}>
-            {!input ? (
-              <DataView
-                url={SubListUrl}
-                setUrl={setSubListUrl}
-                disableBtns={disableBtns}
-              />
-            ) : (
-              <InputView
-                url={SubListUrl}
-                setUrl={setSubListUrl}
-                disableBtns={disableBtns}
-                setProgress={setProgress}
-              />
-            )}
+            <BrowserRouter>
+              <Routes>
+                <Route
+                  path="ytdiff/"
+                  element={
+                    <InputForm
+                      setParentUrl={setSubListUrl}
+                      setRespIndex={setRespIndex}
+                      disableBtns={disableBtns}
+                      setProgress={setProgress}
+                    />
+                  }
+                />
+                <Route
+                  path="ytdiff/data"
+                  element={
+                    <PlayList
+                      setParentUrl={setSubListUrl}
+                      listUrl={SubListUrl}
+                      disableBtns={disableBtns}
+                    />
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <div className="m-0 p-0 col-xl-6 col-lg-6 col-md-12 col-sm-12 col-12"></div>
+                  }
+                />
+              </Routes>
+            </BrowserRouter>
+            <SubList
+              listUrl={SubListUrl}
+              setParentUrl={setSubListUrl}
+              respIndex={respIndex}
+              disableBtns={disableBtns}
+            />
           </Suspense>
         </div>
       </div>
