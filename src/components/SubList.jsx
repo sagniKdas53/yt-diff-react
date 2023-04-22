@@ -35,16 +35,19 @@ export default function SubList({
 
   const fetchData = useMemo(
     () => async (url, start, stop, query, sortDownloaded) => {
-      const response = await fetch("http://localhost:8888/ytdiff/getsub", {
-        ...fetchOptions,
-        body: JSON.stringify({
-          url,
-          start,
-          stop,
-          query,
-          sortDownloaded,
-        }),
-      });
+      const response = await fetch(
+        "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/getsub",
+        {
+          ...fetchOptions,
+          body: JSON.stringify({
+            url,
+            start,
+            stop,
+            query,
+            sortDownloaded,
+          }),
+        }
+      );
       const data = await response.text();
       return JSON.parse(data);
     },
@@ -88,7 +91,7 @@ export default function SubList({
   function download() {
     const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
     //console.log(JSON.stringify({ id: data }));
-    fetch("http://localhost:8888/ytdiff/download", {
+    fetch("https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/download", {
       method: "post",
       headers: {
         Accept: "application/json",

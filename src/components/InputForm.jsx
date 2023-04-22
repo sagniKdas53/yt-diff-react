@@ -82,22 +82,25 @@ export default function InputForm({
   };
 
   const postUrl = (urlItem) => {
-    return fetch("http://localhost:8888/ytdiff/list", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        url: urlItem,
-        start: start,
-        stop: stop,
-        chunk: chunk,
-        watch: watchMode,
-        continuous: true,
-      }),
-    });
+    return fetch(
+      "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net/ytdiff/list",
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          url: urlItem,
+          start: start,
+          stop: stop,
+          chunk: chunk,
+          watch: watchMode,
+          continuous: true,
+        }),
+      }
+    );
   };
 
   return (

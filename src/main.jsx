@@ -7,7 +7,7 @@ import io from "socket.io-client";
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
 
-const socket = io.connect("http://localhost:8888", {
+const socket = io.connect("https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net", {
   path: "/ytdiff/socket.io",
 });
 
