@@ -4,20 +4,22 @@ import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
 import PropTypes from 'prop-types';
 
-export default function Navigation({ modeSwitcher, mode }) {
+export default function Navigation({ modeSwitcher, mode, connectionId,setListUrl }) {
     return (<>
         <AppBar position="static">
             <Toolbar variant="dense">
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }} >yt-diff</Typography>
                 <Button onClick={()=>modeSwitcher(!mode)} color='inherit'> {!mode ? 'dark' : 'light'}</Button>
-                <Button color="inherit">Connect</Button>
+                <Button color="inherit">{connectionId?"Connected":"Disconnected"}</Button>
                 <Button color="inherit">Lists</Button>
-                <Button color="inherit">Videos</Button>
+                <Button color="inherit" onClick={() => setListUrl("None")}>Videos</Button>
             </Toolbar>
         </AppBar>
     </>)
 }
 Navigation.propTypes = {
     modeSwitcher: PropTypes.func.isRequired, 
-    mode: PropTypes.bool.isRequired
+    mode: PropTypes.bool.isRequired,
+    connectionId: PropTypes.string.isRequired,
+    setListUrl: PropTypes.func.isRequired
 };
