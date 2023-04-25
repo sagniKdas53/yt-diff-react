@@ -25,6 +25,7 @@ const columns = [
     label: "ID",
     minWidth: 10,
     align: "center",
+    searchable: false,
     sortable: true,
     idx: 1,
   },
@@ -34,12 +35,15 @@ const columns = [
     minWidth: 10,
     align: "left",
     searchable: true,
+    sortable: false,
+    idx: 2,
   },
   {
     id: "watch",
     label: "Updated",
     minWidth: 10,
     align: "center",
+    searchable: false,
     sortable: true,
     idx: 3,
   },
@@ -48,6 +52,9 @@ const columns = [
     label: "Load",
     minWidth: 10,
     align: "center",
+    searchable: false,
+    sortable: false,
+    idx: 4
   },
 ];
 
@@ -84,7 +91,7 @@ SortHeader.propTypes = {
   order: PropTypes.number.isRequired,
   setSort: PropTypes.func.isRequired,
   setOrder: PropTypes.func.isRequired,
-  sortable: PropTypes.func.isRequired,
+  sortable: PropTypes.bool.isRequired,
 };
 
 export default function PlayList({ setUrl, url, backend = "" }) {

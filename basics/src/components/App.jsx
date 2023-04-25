@@ -1,10 +1,11 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, forwardRef } from 'react';
 import Box from "@mui/material/Box";
 import CloseIcon from '@mui/icons-material/Close';
 import Grid from '@mui/material/Unstable_Grid2';
 import IconButton from '@mui/material/IconButton';
 import LinearProgress from "@mui/material/LinearProgress";
+import MuiAlert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 
@@ -19,9 +20,9 @@ const socket = io.connect(backend[0], {
     path: "/ytdiff/socket.io",
 });
 
-const theme = (mode) => createTheme({
+const themeObj = (theme) => createTheme({
     palette: {
-        mode: mode ? 'dark' : 'light',
+        mode: theme ? 'dark' : 'light',
         primary: {
             main: '#3f51b5',
         },
@@ -31,9 +32,12 @@ const theme = (mode) => createTheme({
     },
 });
 
+const Alert = forwardRef(function Alert(props, ref) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 export default function App() {
-    const [mode, modeSwitcher] = useState(true);
+    const [theme, themeSwitcher] = useState(true);
     const [listUrl, setListUrl] = useState("");
     //const [respIndex, setRespIndex] = useState(0);
     //const [showPlaylists, toggleView] = useState(false);
@@ -42,6 +46,7 @@ export default function App() {
     const [disableProgress, toggleProgress] = useState(false);
     const [showSnackbar, setSnack] = useState(false);
     const [snackMsg, setSnackMsgTxt] = useState("");
+    const [snackSeverity, setSnackSeverity] = useState("success");
     const [progress, setProgress] = useState(0);
 
     const toggleDisableCallBack = useCallback((next) => {
@@ -52,7 +57,7 @@ export default function App() {
         toggleProgress(next);
     }, []);
 
-    const setSnackMsg = (msg) => { setSnackMsgTxt(msg); setSnack(true); };
+    const setSnackMsg = (msg, type) => { setSnackMsgTxt(msg); setSnackSeverity(type); setSnack(true); };
 
     useEffect(() => {
         // this one sets up sockets
@@ -61,7 +66,7 @@ export default function App() {
             setProgress(0);
             toggleProgressCallBack(false);
             toggleDisableCallBack(false);
-            setSnackMsg("Connected: " + data.id);
+            setSnackMsg("Connected: " + data.id, "success");
             socket.emit("acknowledge", { data: "Connected", id: data.id });
         });
         // triggered when a download starts, as progress my not start right away
@@ -91,14 +96,14 @@ export default function App() {
         });
         // shows errors
         socket.on("error", function (data) {
-            setSnackMsg(`${data.message} ❌`);
+            setSnackMsg(`${data.message}`, "error");
         });
         // shows when a download is done
         socket.on("download-done", function (data) {
             // enable the buttons and reset progress
             toggleDisableCallBack(false);
             setProgress(0);
-            setSnackMsg(`${data.message} ✅`);
+            setSnackMsg(`${data.message}`, "success");
         });
         socket.on("download-failed", function (data) {
             // enable the buttons and reset progress
@@ -106,26 +111,26 @@ export default function App() {
             setProgress(0);
             toggleDisableCallBack(false);
             setProgress(0);
-            setSnackMsg(`${data.message} ❌`);
+            setSnackMsg(`${data.message}`, "error");
         });
         // shows when listing is done
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
             toggleDisableCallBack(false);
             setProgress(0);
-            setSnackMsg(`${data.message} ✅`);
+            setSnackMsg(`${data.message}`, "success");
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
     return (
-        <ThemeProvider theme={theme(mode)}>
-            <Navigation modeSwitcher={modeSwitcher} mode={mode} connectionId={connectionId} setListUrl={setListUrl} />
+        <ThemeProvider theme={themeObj(theme)}>
+            <Navigation themeSwitcher={themeSwitcher} theme={theme} connectionId={connectionId} setListUrl={setListUrl} />
             <Grid container spacing={0}>
                 <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
                     <PlayList url={listUrl} setUrl={setListUrl} backend={backend[0]} />
                 </Grid>
                 <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
-
+                    Sublist will be added soon.
                 </Grid>
             </Grid>
             <Box sx={{ width: "100%", height: "2vh" }}>
@@ -139,7 +144,6 @@ export default function App() {
                     open={showSnackbar}
                     autoHideDuration={6000}
                     onClose={() => setSnack(false)}
-                    message={snackMsg}
                     action={<>
                         <IconButton
                             size="small"
@@ -150,7 +154,10 @@ export default function App() {
                             <CloseIcon fontSize="small" />
                         </IconButton>
                     </>}
-                />
+                ><Alert onClose={() => setSnack(false)} severity={snackSeverity} sx={{ width: '100%' }}>
+                        {snackMsg}
+                    </Alert>
+                </Snackbar>
             </Stack>
         </ThemeProvider>
     );
