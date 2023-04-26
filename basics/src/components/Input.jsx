@@ -14,11 +14,16 @@ const bull = (
         •
     </Box>
 );
-
+// eslint-disable-next-line no-unused-vars
 export default function InputForm({ setUrl,
+    // eslint-disable-next-line no-unused-vars
     setRespIndex,
+    // eslint-disable-next-line no-unused-vars
     disableBtns,
-    progressRef, backend = "" }) {
+    // eslint-disable-next-line no-unused-vars
+    progressRef,
+    // eslint-disable-next-line no-unused-vars
+    backend = "" }) {
 
     return (<Paper sx={{ height: "89.7vh", width: "100%", overflow: "hidden" }}>
         <Card variant="outlined">

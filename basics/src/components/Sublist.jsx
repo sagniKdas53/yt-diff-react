@@ -97,6 +97,7 @@ export default function SubList({
     const handleChangePage = useCallback(
         (event, newPage) => {
             setPage(newPage);
+            console.log("Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
             setStart(newPage * rowsPerPage);
             setStop((newPage + 1) * rowsPerPage);
         },
@@ -170,7 +171,12 @@ export default function SubList({
     };
 
     useEffect(() => {
-        handleChangePage(null, Math.floor(respIndex / rowsPerPage));
+        console.log(respIndex, Math.floor(respIndex / rowsPerPage))
+        if (respIndex === -1) {
+            handleChangePage(null, 0);
+        } else {
+            handleChangePage(null, Math.floor(respIndex / rowsPerPage));
+        }
     }, [respIndex, handleChangePage, rowsPerPage]);
 
     function downloadFunc() {
@@ -189,7 +195,7 @@ export default function SubList({
 
     return (
         <>
-            <Paper sx={{ width: "100%", overflow: "hidden" }} className="sub-list">
+            <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
                 <TableContainer sx={{ height: "81vh" }}>
                     <Table stickyHeader size="small" aria-label="sub-list table">
                         <TableHead>
@@ -219,6 +225,7 @@ export default function SubList({
                                     key="title-head"
                                     align="center"
                                     style={{ minWidth: 10 }}
+                                    sx={{ width: "75%" }}
                                 >
                                     <TextField
                                         id="title-input"
@@ -303,13 +310,13 @@ export default function SubList({
                     </Table>
                     <Box
                         sx={{
-                            zIndex: "tooltip",
+                            zIndex: 50,
                             position: "absolute",
-                            bottom: "60px",
-                            right: "70px",
+                            bottom: "10%",
+                            right: "5%",
                         }}
                     >
-                        <CustomFab
+                        <SubListFab
                             selectedItems={selectedItems}
                             clear={clearList}
                             download={downloadFunc}
@@ -340,7 +347,7 @@ SubList.propTypes = {
     downloaded: PropTypes.string.isRequired,
 };
 
-function CustomFab({ selectedItems, clear, download, disableBtns }) {
+function SubListFab({ selectedItems, clear, download, disableBtns }) {
     const isNoItemsSelected =
         Object.keys(selectedItems).length === 0 ||
         Object.values(selectedItems).every((val) => !val);
@@ -363,7 +370,7 @@ function CustomFab({ selectedItems, clear, download, disableBtns }) {
     );
 }
 
-CustomFab.propTypes = {
+SubListFab.propTypes = {
     selectedItems: PropTypes.object.isRequired,
     disableBtns: PropTypes.bool.isRequired,
     download: PropTypes.func.isRequired,

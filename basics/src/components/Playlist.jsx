@@ -16,8 +16,16 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
-
+import Fab from "@mui/material/Fab";
+import Box from "@mui/material/Box";
 import debouce from "lodash.debounce";
+import AddIcon from '@mui/icons-material/Add';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+
+//import DialogContentText from '@mui/material/DialogContentText';
 
 const columns = [
   {
@@ -54,7 +62,7 @@ const columns = [
     align: "center",
     searchable: false,
     sortable: false,
-    idx: 4
+    idx: 4,
   },
 ];
 
@@ -94,7 +102,7 @@ SortHeader.propTypes = {
   sortable: PropTypes.bool.isRequired,
 };
 
-export default function PlayList({ setUrl, url, backend = "" }) {
+export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
   const [sort, updateSort] = useState(1);
@@ -108,6 +116,85 @@ export default function PlayList({ setUrl, url, backend = "" }) {
   // actual table data
   const [items, setItems] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
+  // dialog stuff
+  const [open, setOpen] = useState(false);
+  const [urlList, setUrlList] = useState("");
+
+  const updateUrls = (event) => {
+    setUrlList(event.target.value);
+  };
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const clearUrlList = () => {
+    setUrlList("");
+    setOpen(false);
+  };
+
+  const downloadUrlList = async () => {
+    setIndeterminate(true);
+    setOpen(false);
+    const valid = new Set(urlList.trim().split("\n").filter(validate));
+    try {
+      for (const element of valid) {
+        const response = await postUrl(element)
+          .then((response) => response.text())
+          .then((data) => JSON.parse(data));
+        // since listing may take a while having this here as an intermediate state can't hurt too much.
+        setUrl(response.resp_url);
+        console.log(+response.start);
+        setRespIndex(+response.start);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    setUrlList("");
+  };
+
+  const validate = (element) => {
+    try {
+      const url = new URL(element);
+      if (url.protocol !== "https:" && url.protocol !== "http:") {
+        setIndeterminate(false);
+        setSnack("Invalid url: " + element, "error");
+        return false;
+      }
+    } catch (error) {
+      setIndeterminate(false);
+      setSnack("Problem parsing url: " + element, "error");
+      return false;
+    }
+    return true;
+  };
+
+  const postUrl = (urlItem) => {
+    return fetch(backend +
+      "/ytdiff/list",
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          url: urlItem,
+          start: start,
+          stop: stop,
+          chunk: rowsPerPage,
+          watch: "1",
+          continuous: true,
+        }),
+      }
+    );
+  };
+
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
     const response = await fetch(backend + "/ytdiff/dbi", {
@@ -217,7 +304,7 @@ export default function PlayList({ setUrl, url, backend = "" }) {
 
   return (
     <>
-      <Paper sx={{ width: "100%", overflow: "hidden" }}>
+      <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
         <TableContainer sx={{ height: "81vh" }}>
           <Table stickyHeader size="small" aria-label="a dense table">
             <TableHead>
@@ -226,7 +313,7 @@ export default function PlayList({ setUrl, url, backend = "" }) {
                   <TableCell
                     key={column.id}
                     align={column.align}
-                    style={{ minWidth: column.minWidth }}
+                    style={{ minWidth: column.minWidth, padding: "0px" }}
                   >
                     {column.searchable ? (
                       <TextField
@@ -320,6 +407,23 @@ export default function PlayList({ setUrl, url, backend = "" }) {
               })}
             </TableBody>
           </Table>
+          <Box
+            sx={{
+              zIndex: 50,
+              position: "absolute",
+              bottom: "10%",
+              right: "10%",
+            }}
+          >
+            <Fab
+              color="primary"
+              aria-label="action"
+              onClick={handleClickOpen}
+              disabled={disableBtns}
+            >
+              <AddIcon />
+            </Fab>
+          </Box>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[10, 25, 50, 100]}
@@ -330,6 +434,41 @@ export default function PlayList({ setUrl, url, backend = "" }) {
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
+        <Dialog open={open} onClose={handleClose} fullWidth sx={{zIndex: 100}}>
+          <DialogTitle>Add</DialogTitle>
+          <DialogContent>
+            {/*<DialogContentText>
+              To subscribe to this website, please enter your email address here. We
+              will send updates occasionally.
+            </DialogContentText>
+             <TextField
+              autoFocus
+              margin="dense"
+              id="name"
+              label="Email Address"
+              type="email"
+              fullWidth
+              variant="standard"
+            /> */}
+            <TextField
+              id="standard-multiline-static"
+              label="Url List"
+              fullWidth
+              multiline
+              rows={
+                urlList.split("\n").length < 12 ? (urlList.split("\n").length < 4 ? 4 : urlList.split("\n").length) : 12
+              }
+              value={urlList}
+              variant="standard"
+              onChange={updateUrls}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={clearUrlList}>Clear</Button>
+            <Button onClick={downloadUrlList}>Submit</Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     </>
   );
@@ -339,4 +478,8 @@ PlayList.propTypes = {
   setUrl: PropTypes.func.isRequired,
   url: PropTypes.string.isRequired,
   backend: PropTypes.string,
+  disableBtns: PropTypes.bool.isRequired,
+  setRespIndex: PropTypes.func.isRequired,
+  setIndeterminate: PropTypes.func.isRequired,
+  setSnack: PropTypes.func.isRequired
 };

@@ -1,37 +1,41 @@
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { useState, useCallback, useEffect, forwardRef, useRef } from 'react';
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { useState, useCallback, useEffect, forwardRef, useRef } from "react";
 import Box from "@mui/material/Box";
-import CloseIcon from '@mui/icons-material/Close';
-import Grid from '@mui/material/Unstable_Grid2';
-import IconButton from '@mui/material/IconButton';
+import CloseIcon from "@mui/icons-material/Close";
+import Grid from "@mui/material/Unstable_Grid2";
+import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
-import MuiAlert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
-import Stack from '@mui/material/Stack';
+import MuiAlert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
+import Stack from "@mui/material/Stack";
 
 import io from "socket.io-client";
 
-import Navigation from './Nav';
-import PlayList from './Playlist';
-import SubList from './Sublist';
-import InputForm from './Input';
-const backend = ["https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net", "http://localhost:8888"];
+import Navigation from "./Nav";
+import PlayList from "./Playlist";
+import SubList from "./Sublist";
 
-const socket = io.connect(backend[0], {
+const backend = [
+    "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
+    "http://localhost:8888",
+][0];
+
+const socket = io.connect(backend, {
     path: "/ytdiff/socket.io",
 });
 
-const themeObj = (theme) => createTheme({
-    palette: {
-        mode: theme ? 'dark' : 'light',
-        primary: {
-            main: '#3f51b5',
+const themeObj = (theme) =>
+    createTheme({
+        palette: {
+            mode: theme ? "dark" : "light",
+            primary: {
+                main: "#3f51b5",
+            },
+            secondary: {
+                main: "#f50057",
+            },
         },
-        secondary: {
-            main: '#f50057',
-        },
-    },
-});
+    });
 
 const Alert = forwardRef(function Alert(props, ref) {
     return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -40,8 +44,7 @@ const Alert = forwardRef(function Alert(props, ref) {
 export default function App() {
     const [theme, themeSwitcher] = useState(true);
     const [listUrl, setListUrl] = useState("");
-    const respIndex = 0;
-    //const [respIndex, setRespIndex] = useState(0);
+    const [respIndex, setRespIndex] = useState(0);
     const [showPlaylists, toggleView] = useState(true);
     const [connectionId, setConnectionId] = useState("");
     const [disableBtns, toggleDisable] = useState(false);
@@ -49,7 +52,7 @@ export default function App() {
     const [showSnackbar, setSnackVisibility] = useState(false);
     const [snackMsg, setSnackMsgTxt] = useState("");
     const [snackSeverity, setSnackSeverity] = useState("success");
-    //const [progress, setProgress] = useState(0);
+    const [indeterminate, setIndeterminate] = useState(false);
 
     const progressRef = useRef(0);
     const downloaded = useRef("");
@@ -72,7 +75,7 @@ export default function App() {
         // this one sets up sockets
         socket.on("init", function (data) {
             setConnectionId(data.id);
-            //setProgress(0);
+            setIndeterminate(false);
             progressRef.current = 0;
             toggleProgressCallBack(false);
             toggleDisableCallBack(false);
@@ -82,7 +85,7 @@ export default function App() {
         // triggered when a download starts, as progress my not start right away
         socket.on("download-start", function () {
             // put the progress bar in an indeterminate state
-            //setProgress(101);
+            setIndeterminate(true);
             progressRef.current = 101;
             // if socket is set to be disregarded then set it back to listen
             toggleProgressCallBack(false);
@@ -94,7 +97,7 @@ export default function App() {
         socket.on("listing-or-downloading", function (data) {
             //console.log(data.percentage);
             if (data.percentage >= 99) {
-                //setProgress(101);
+                setIndeterminate(true);
                 progressRef.current = 101;
                 toggleProgressCallBack(true);
             } else if (!disableProgress) {
@@ -115,7 +118,7 @@ export default function App() {
         socket.on("download-done", function (data) {
             // enable the buttons and reset progress
             toggleDisableCallBack(false);
-            //setProgress(0);
+            setIndeterminate(false);
             progressRef.current = 0;
             downloaded.current = data.id;
             //console.log(downloaded.current);
@@ -124,7 +127,7 @@ export default function App() {
         socket.on("download-failed", function (data) {
             // enable the buttons and reset progress
             toggleDisableCallBack(false);
-            //setProgress(0);
+            setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "error");
         });
@@ -132,28 +135,52 @@ export default function App() {
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
             toggleDisableCallBack(false);
-            //setProgress(0);
+            setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");
+            // use this to update the playlists, which will inturn update the sublist if it's selected
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
     return (
         <ThemeProvider theme={themeObj(theme)}>
-            <Navigation themeSwitcher={themeSwitcher} theme={theme}
-                connectionId={connectionId} setListUrl={setListUrl} showPlaylists={showPlaylists} toggleView={toggleView} />
+            <Navigation
+                themeSwitcher={themeSwitcher}
+                theme={theme}
+                connectionId={connectionId}
+                setListUrl={setListUrl}
+                showPlaylists={showPlaylists}
+                toggleView={toggleView}
+            />
             <Grid container spacing={0}>
                 <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
-                    {showPlaylists ? <PlayList url={listUrl} setUrl={setListUrl} backend={backend[0]} /> : <InputForm />}
+                    <PlayList
+                        url={listUrl}
+                        setUrl={setListUrl}
+                        backend={backend}
+                        setRespIndex={setRespIndex}
+                        disableBtns={disableBtns}
+                        setIndeterminate={setIndeterminate}
+                        setSnack={setSnack}
+                    />
                 </Grid>
                 <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
-                    <SubList url={listUrl} setUrl={setListUrl} backend={backend[0]}
-                        respIndex={respIndex} disableBtns={disableBtns} downloaded={downloaded.current} />
+                    <SubList
+                        url={listUrl}
+                        setUrl={setListUrl}
+                        backend={backend}
+                        respIndex={respIndex}
+                        disableBtns={disableBtns}
+                        downloaded={downloaded.current}
+                    />
                 </Grid>
             </Grid>
             <Box sx={{ width: "100%", height: "2vh" }}>
-                <LinearProgress sx={{ height: "100%", borderRadius: 5 }}
-                    variant={progressRef.current === 101 ? "indeterminate" : "determinate"}
+                <LinearProgress
+                    sx={{ height: "100%", borderRadius: 5 }}
+                    variant={
+                        indeterminate ? "indeterminate" : "determinate"
+                    }
                     value={progressRef.current}
                 />
             </Box>
@@ -162,17 +189,24 @@ export default function App() {
                     open={showSnackbar}
                     autoHideDuration={6000}
                     onClose={() => setSnackVisibility(false)}
-                    action={<>
-                        <IconButton
-                            size="small"
-                            aria-label="close"
-                            color="inherit"
-                            onClick={() => setSnackVisibility(false)}
-                        >
-                            <CloseIcon fontSize="small" />
-                        </IconButton>
-                    </>}
-                ><Alert onClose={() => setSnackVisibility(false)} severity={snackSeverity} sx={{ width: '100%' }}>
+                    action={
+                        <>
+                            <IconButton
+                                size="small"
+                                aria-label="close"
+                                color="inherit"
+                                onClick={() => setSnackVisibility(false)}
+                            >
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
+                        </>
+                    }
+                >
+                    <Alert
+                        onClose={() => setSnackVisibility(false)}
+                        severity={snackSeverity}
+                        sx={{ width: "100%" }}
+                    >
                         {snackMsg}
                     </Alert>
                 </Snackbar>
