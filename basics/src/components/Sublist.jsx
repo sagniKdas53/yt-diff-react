@@ -97,7 +97,7 @@ export default function SubList({
     const handleChangePage = useCallback(
         (event, newPage) => {
             setPage(newPage);
-            console.log("Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
+            //console.log("Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
             setStart(newPage * rowsPerPage);
             setStop((newPage + 1) * rowsPerPage);
         },
@@ -171,7 +171,7 @@ export default function SubList({
     };
 
     useEffect(() => {
-        console.log(respIndex, Math.floor(respIndex / rowsPerPage))
+        //console.log(respIndex, Math.floor(respIndex / rowsPerPage))
         if (respIndex === -1) {
             handleChangePage(null, 0);
         } else {

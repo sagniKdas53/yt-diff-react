@@ -31,38 +31,38 @@ const columns = [
   {
     id: "id",
     label: "ID",
-    minWidth: 10,
     align: "center",
     searchable: false,
     sortable: true,
     idx: 1,
+    style: { minWidth: 10, paddingInlineEnd: "0px" }
   },
   {
     id: "title",
     label: "Title",
-    minWidth: 10,
     align: "left",
     searchable: true,
     sortable: false,
     idx: 2,
+    style: { minWidth: 10, paddingInline: "0px" }
   },
   {
     id: "watch",
     label: "Updated",
-    minWidth: 10,
     align: "center",
     searchable: false,
     sortable: true,
     idx: 3,
+    style: { minWidth: 10, paddingInlineEnd: "0px" }
   },
   {
     id: "expand",
     label: "Load",
-    minWidth: 10,
     align: "center",
     searchable: false,
     sortable: false,
     idx: 4,
+    style: { minWidth: 10, paddingInlineEnd: "2px" }
   },
 ];
 
@@ -148,7 +148,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           .then((data) => JSON.parse(data));
         // since listing may take a while having this here as an intermediate state can't hurt too much.
         setUrl(response.resp_url);
-        console.log(+response.start);
+        //console.log(+response.start);
         setRespIndex(+response.start);
       }
     } catch (error) {
@@ -313,7 +313,8 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                   <TableCell
                     key={column.id}
                     align={column.align}
-                    style={{ minWidth: column.minWidth, padding: "0px" }}
+                    /*padding: top | right and bottom | left */
+                    style={column.style}
                   >
                     {column.searchable ? (
                       <TextField
@@ -346,6 +347,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                     <TableCell
                       key={element.order_added + "-order"}
                       align="justify"
+                      style={{ paddingInlineEnd: "0px" }}
                     >
                       {+element.order_added + 1}
                     </TableCell>
@@ -353,6 +355,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                       key={element.order_added + "-title"}
                       align="left"
                       sx={{ width: "75%" }}
+                      style={{ paddingInline: "0px" }}
                     >
                       <Link
                         href={element.url}
@@ -367,6 +370,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                     <TableCell
                       key={element.order_added + "-watch"}
                       align="right"
+                      style={{ paddingInlineEnd: "0px" }}
                     >
                       <FormControl
                         variant="outlined"
@@ -392,6 +396,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                     <TableCell
                       key={element.order_added + "-button"}
                       align="center"
+                      style={{ paddingInlineEnd: "2px" }}
                     >
                       <Button
                         size="small"
@@ -434,7 +439,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
-        <Dialog open={open} onClose={handleClose} fullWidth sx={{zIndex: 100}}>
+        <Dialog open={open} onClose={handleClose} fullWidth sx={{ zIndex: 100 }}>
           <DialogTitle>Add</DialogTitle>
           <DialogContent>
             {/*<DialogContentText>
