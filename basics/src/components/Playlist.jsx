@@ -309,10 +309,10 @@ export default function PlayList({ setUrl, url, backend = "" }) {
                       <Button
                         size="small"
                         variant="contained"
-                        color={url === element.url ? "warning" : "secondary"}
+                        color={url === element.url ? "success" : "secondary"}
                         onClick={() => handleLoad(element.url)}
                       >
-                        Load
+                        {url === element.url ? "DONE" : "LOAD"}
                       </Button>
                     </TableCell>
                   </TableRow>
