@@ -25,8 +25,6 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 
-//import DialogContentText from '@mui/material/DialogContentText';
-
 const columns = [
   {
     id: "id",
@@ -102,7 +100,7 @@ SortHeader.propTypes = {
   sortable: PropTypes.bool.isRequired,
 };
 
-export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack }) {
+export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack, reFetch }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
   const [sort, updateSort] = useState(1);
@@ -197,6 +195,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
 
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
+    //console.log('Fetching Playlists');
     const response = await fetch(backend + "/ytdiff/dbi", {
       method: "post",
       headers: {
@@ -215,7 +214,8 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
     const data = await response.text();
     const json_data = JSON.parse(data);
     return json_data;
-  }, [backend, start, stop, sort, order, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backend, start, stop, sort, order, query, reFetch]);
 
   // use the memoized fetch result to set the items state
   useEffect(() => {
@@ -435,26 +435,13 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           component="div"
           count={totalItems}
           rowsPerPage={rowsPerPage}
-          page={page}
+          page={!totalItems || totalItems <= 0 ? 0 : page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
         <Dialog open={open} onClose={handleClose} fullWidth sx={{ zIndex: 100 }}>
           <DialogTitle>Add</DialogTitle>
           <DialogContent>
-            {/*<DialogContentText>
-              To subscribe to this website, please enter your email address here. We
-              will send updates occasionally.
-            </DialogContentText>
-             <TextField
-              autoFocus
-              margin="dense"
-              id="name"
-              label="Email Address"
-              type="email"
-              fullWidth
-              variant="standard"
-            /> */}
             <TextField
               id="standard-multiline-static"
               label="Url List"
@@ -486,5 +473,6 @@ PlayList.propTypes = {
   disableBtns: PropTypes.bool.isRequired,
   setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
-  setSnack: PropTypes.func.isRequired
+  setSnack: PropTypes.func.isRequired,
+  reFetch: PropTypes.string.isRequired
 };

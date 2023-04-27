@@ -53,9 +53,10 @@ export default function App() {
     const [snackMsg, setSnackMsgTxt] = useState("");
     const [snackSeverity, setSnackSeverity] = useState("success");
     const [indeterminate, setIndeterminate] = useState(false);
-
+    const [reFetch, setReFetch] = useState("");
     const progressRef = useRef(0);
     const downloaded = useRef("");
+    // const reFetch = useRef(false);
 
     const toggleDisableCallBack = useCallback((next) => {
         toggleDisable(next);
@@ -134,11 +135,14 @@ export default function App() {
         // shows when listing is done
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
+            console.log(data);
             toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");
             // use this to update the playlists, which will inturn update the sublist if it's selected
+            //reFetch.current = !reFetch.current;
+            setReFetch(data.id);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
@@ -162,6 +166,7 @@ export default function App() {
                         disableBtns={disableBtns}
                         setIndeterminate={setIndeterminate}
                         setSnack={setSnack}
+                        reFetch={reFetch}
                     />
                 </Grid>
                 <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
@@ -172,6 +177,7 @@ export default function App() {
                         respIndex={respIndex}
                         disableBtns={disableBtns}
                         downloaded={downloaded.current}
+                        reFetch={reFetch}
                     />
                 </Grid>
             </Grid>

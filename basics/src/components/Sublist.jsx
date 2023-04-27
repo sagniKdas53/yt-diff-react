@@ -31,6 +31,7 @@ export default function SubList({
     disableBtns,
     downloaded,
     backend = "",
+    reFetch
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
@@ -46,6 +47,7 @@ export default function SubList({
     const [selectAll, setSelectAll] = useState(false);
 
     const memoizedFetch = useMemo(async () => {
+        //console.log('Fetching Sublists');
         if (url !== "") {
             const response = await fetch(backend + "/ytdiff/getsub", {
                 method: "post",
@@ -68,7 +70,8 @@ export default function SubList({
         } else {
             return { count: 0, rows: [] };
         }
-    }, [backend, start, stop, sort, url, query]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [backend, start, stop, sort, url, query, reFetch]);
 
     // use the memoized fetch result to set the items state
     useEffect(() => {
@@ -329,7 +332,7 @@ export default function SubList({
                     component="div"
                     count={totalItems}
                     rowsPerPage={rowsPerPage}
-                    page={page}
+                    page={!totalItems || totalItems <= 0 ? 0 : page}
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
@@ -345,6 +348,7 @@ SubList.propTypes = {
     respIndex: PropTypes.number.isRequired,
     disableBtns: PropTypes.bool.isRequired,
     downloaded: PropTypes.string.isRequired,
+    reFetch: PropTypes.string.isRequired
 };
 
 function SubListFab({ selectedItems, clear, download, disableBtns }) {
