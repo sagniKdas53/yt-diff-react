@@ -305,7 +305,8 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   return (
     <>
       <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-        <TableContainer sx={{ height: "81vh" }}>
+        {/* {will need to do some more test to see which is the best way} */}
+        <TableContainer sx={{ height: "86vh" }}>
           <Table stickyHeader size="small" aria-label="a dense table">
             <TableHead>
               <TableRow>

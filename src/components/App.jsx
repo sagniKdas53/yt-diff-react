@@ -1,5 +1,5 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { useState, useCallback, useEffect, forwardRef, useRef } from "react";
+import { useState, useCallback, useEffect, forwardRef, useRef, lazy, Suspense } from "react";
 import Box from "@mui/material/Box";
 import CloseIcon from "@mui/icons-material/Close";
 import Grid from "@mui/material/Unstable_Grid2";
@@ -8,12 +8,16 @@ import LinearProgress from "@mui/material/LinearProgress";
 import MuiAlert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
-
+import CircularProgress from '@mui/material/CircularProgress';
 import io from "socket.io-client";
 
-import Navigation from "./Nav";
-import PlayList from "./Playlist";
-import SubList from "./Sublist";
+// import Navigation from "./Nav";
+// import PlayList from "./PlayList";
+// import SubList from "./SubList";
+
+const Navigation = lazy(() => import("./Nav.jsx"));
+const PlayList = lazy(() => import("./PlayList.jsx"));
+const SubList = lazy(() => import("./SubList.jsx"));
 
 const backend = [
     "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
@@ -148,75 +152,86 @@ export default function App() {
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
     return (
         <ThemeProvider theme={themeObj(theme)}>
-            <Navigation
-                themeSwitcher={themeSwitcher}
-                theme={theme}
-                connectionId={connectionId}
-                setListUrl={setListUrl}
-                showPlaylists={showPlaylists}
-                toggleView={toggleView}
-            />
-            <Grid container spacing={0}>
-                <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
-                    <PlayList
-                        url={listUrl}
-                        setUrl={setListUrl}
-                        backend={backend}
-                        setRespIndex={setRespIndex}
-                        disableBtns={disableBtns}
-                        setIndeterminate={setIndeterminate}
-                        setSnack={setSnack}
-                        reFetch={reFetch}
+            <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default' }}>
+                <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
+                    <CircularProgress color="secondary" key="NavSus" /></Grid>}>
+                    <Navigation
+                        themeSwitcher={themeSwitcher}
+                        theme={theme}
+                        connectionId={connectionId}
+                        setListUrl={setListUrl}
+                        showPlaylists={showPlaylists}
+                        toggleView={toggleView}
                     />
+                </Suspense>
+                <Grid container spacing={0} key="MainGrid">
+                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid">
+                        <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
+                            <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
+                            <PlayList
+                                url={listUrl}
+                                setUrl={setListUrl}
+                                backend={backend}
+                                setRespIndex={setRespIndex}
+                                disableBtns={disableBtns}
+                                setIndeterminate={setIndeterminate}
+                                setSnack={setSnack}
+                                reFetch={reFetch}
+                            />
+                        </Suspense>
+                    </Grid>
+                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid">
+                        <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
+                            <CircularProgress color="secondary" key="SubSus" /></Grid>}>
+                            <SubList
+                                url={listUrl}
+                                setUrl={setListUrl}
+                                backend={backend}
+                                respIndex={respIndex}
+                                disableBtns={disableBtns}
+                                downloaded={downloaded.current}
+                                reFetch={reFetch}
+                            />
+                        </Suspense>
+                    </Grid>
                 </Grid>
-                <Grid xl={6} lg={6} md={12} sm={12} xs={12}>
-                    <SubList
-                        url={listUrl}
-                        setUrl={setListUrl}
-                        backend={backend}
-                        respIndex={respIndex}
-                        disableBtns={disableBtns}
-                        downloaded={downloaded.current}
-                        reFetch={reFetch}
+                <Box sx={{ width: "100%", height: "1vh" }}>
+                    <LinearProgress
+                        sx={{ height: "100%", borderRadius: 5 }}
+                        variant={
+                            indeterminate ? "indeterminate" : "determinate"
+                        }
+                        value={progressRef.current}
                     />
-                </Grid>
-            </Grid>
-            <Box sx={{ width: "100%", height: "2vh" }}>
-                <LinearProgress
-                    sx={{ height: "100%", borderRadius: 5 }}
-                    variant={
-                        indeterminate ? "indeterminate" : "determinate"
-                    }
-                    value={progressRef.current}
-                />
-            </Box>
-            <Stack spacing={2} sx={{ maxWidth: 600 }}>
-                <Snackbar
-                    open={showSnackbar}
-                    autoHideDuration={6000}
-                    onClose={() => setSnackVisibility(false)}
-                    action={
-                        <>
-                            <IconButton
-                                size="small"
-                                aria-label="close"
-                                color="inherit"
-                                onClick={() => setSnackVisibility(false)}
-                            >
-                                <CloseIcon fontSize="small" />
-                            </IconButton>
-                        </>
-                    }
-                >
-                    <Alert
+                </Box>
+                <Stack spacing={2} sx={{ maxWidth: 600 }}>
+                    <Snackbar
+                        open={showSnackbar}
+                        autoHideDuration={6000}
                         onClose={() => setSnackVisibility(false)}
-                        severity={snackSeverity}
-                        sx={{ width: "100%" }}
+                        action={
+                            <>
+                                <IconButton
+                                    size="small"
+                                    aria-label="close"
+                                    color="inherit"
+                                    onClick={() => setSnackVisibility(false)}
+                                >
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            </>
+                        }
                     >
-                        {snackMsg}
-                    </Alert>
-                </Snackbar>
-            </Stack>
+                        <Alert
+                            onClose={() => setSnackVisibility(false)}
+                            severity={snackSeverity}
+                            sx={{ width: "100%" }}
+                        >
+                            {snackMsg}
+                        </Alert>
+                    </Snackbar>
+                </Stack>
+            </Box>
         </ThemeProvider>
     );
 }
