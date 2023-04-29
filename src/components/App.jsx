@@ -22,6 +22,8 @@ const SubList = lazy(() => import("./SubList.jsx"));
 const backend = [
     "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
     "http://localhost:8888",
+    "http://192.168.0.106:8888",
+    "http://192.168.0.103:8888",
 ][0];
 
 const socket = io.connect(backend, {
@@ -61,6 +63,25 @@ export default function App() {
     const progressRef = useRef(0);
     const downloaded = useRef("");
     // const reFetch = useRef(false);
+    const [height, setHeight] = useState(window.innerHeight);
+    const [tableHeight,setTableHeight] = useState(height-162);
+    const [width, setWidth] = useState(window.innerWidth);
+    //const { height, width } = { height: window.innerHeight, width: window.innerWidth };
+
+
+    useEffect(() => {
+        function handleResize() {
+            setHeight(window.innerHeight);
+            setWidth(window.innerWidth);
+            setTableHeight(window.innerHeight-162)
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
 
     const toggleDisableCallBack = useCallback((next) => {
         toggleDisable(next);
@@ -139,7 +160,7 @@ export default function App() {
         // shows when listing is done
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
-            console.log(data);
+            //console.log(data);
             toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
@@ -153,6 +174,9 @@ export default function App() {
     return (
         <ThemeProvider theme={themeObj(theme)}>
             <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default' }}>
+                <Box sx={{position:"absolute", left:0,top:0, color: "white", font: "menu"}}>
+                    width: {width} ~ height: {height} ~ tableHeight: {tableHeight}
+                </Box>
                 <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
                     <CircularProgress color="secondary" key="NavSus" /></Grid>}>
                     <Navigation
@@ -177,6 +201,7 @@ export default function App() {
                                 setIndeterminate={setIndeterminate}
                                 setSnack={setSnack}
                                 reFetch={reFetch}
+                                tableHeight={tableHeight}
                             />
                         </Suspense>
                     </Grid>
@@ -191,6 +216,7 @@ export default function App() {
                                 disableBtns={disableBtns}
                                 downloaded={downloaded.current}
                                 reFetch={reFetch}
+                                tableHeight={tableHeight}
                             />
                         </Suspense>
                     </Grid>

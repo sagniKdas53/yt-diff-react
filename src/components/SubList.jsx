@@ -31,7 +31,8 @@ export default function SubList({
     disableBtns,
     downloaded,
     backend = "",
-    reFetch
+    reFetch,
+    tableHeight
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
@@ -199,7 +200,7 @@ export default function SubList({
     return (
         <>
             <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-                <TableContainer sx={{ height: "86vh" }}>
+                <TableContainer sx={{ height: tableHeight }}>
                     <Table stickyHeader size="small" aria-label="sub-list table">
                         <TableHead>
                             <TableRow>
@@ -348,7 +349,8 @@ SubList.propTypes = {
     respIndex: PropTypes.number.isRequired,
     disableBtns: PropTypes.bool.isRequired,
     downloaded: PropTypes.string.isRequired,
-    reFetch: PropTypes.string.isRequired
+    reFetch: PropTypes.string.isRequired,
+    tableHeight: PropTypes.string.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download, disableBtns }) {

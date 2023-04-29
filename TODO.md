@@ -7,3 +7,8 @@
 - [ ] Use react virtuiso to speed things up, it's getting really slow when using this
 - [ ] Make the input dialog display properly when on different platforms
 - [ ] Use code splitting to make the page load faster
+
+## Viewport problems
+
+52px table top, 52 px table bottom 48 px app bar 10 px progress bar
+`const fixed = "162px";`

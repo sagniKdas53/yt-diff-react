@@ -100,7 +100,7 @@ SortHeader.propTypes = {
   sortable: PropTypes.bool.isRequired,
 };
 
-export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack, reFetch }) {
+export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack, reFetch, tableHeight }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
   const [sort, updateSort] = useState(1);
@@ -150,7 +150,8 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
         setRespIndex(+response.start);
       }
     } catch (error) {
-      console.error(error);
+      //console.error(error);
+      setSnack("Problem parsing url: " + error, "error");
     }
     setUrlList("");
   };
@@ -305,16 +306,15 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   return (
     <>
       <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-        {/* {will need to do some more test to see which is the best way} */}
-        <TableContainer sx={{ height: "86vh" }}>
+        <TableContainer sx={{ height: tableHeight }}>
           <Table stickyHeader size="small" aria-label="a dense table">
             <TableHead>
               <TableRow>
                 {columns.map((column) => (
-                  <TableCell
+                <TableCell
                     key={column.id}
                     align={column.align}
-                    /*padding: top | right and bottom | left */
+                  /*padding: top | right and bottom | left */
                     style={column.style}
                   >
                     {column.searchable ? (
@@ -475,5 +475,6 @@ PlayList.propTypes = {
   setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
-  reFetch: PropTypes.string.isRequired
+  reFetch: PropTypes.string.isRequired,
+  tableHeight: PropTypes.string.isRequired,
 };
