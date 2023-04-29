@@ -10,5 +10,5 @@
 
 ## Viewport problems
 
-52px table top, 52 px table bottom 48 px app bar 10 px progress bar
-`const fixed = "162px";`
+53px table top, 52 px table bottom 48 px app bar 10 px progress bar
+`const fixed = "163px";`

@@ -1,6 +1,7 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useState, useCallback, useEffect, forwardRef, useRef, lazy, Suspense } from "react";
 import Box from "@mui/material/Box";
+import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from "@mui/icons-material/Close";
 import Grid from "@mui/material/Unstable_Grid2";
 import IconButton from "@mui/material/IconButton";
@@ -8,7 +9,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import MuiAlert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
-import CircularProgress from '@mui/material/CircularProgress';
+
 import io from "socket.io-client";
 
 // import Navigation from "./Nav";
@@ -24,6 +25,7 @@ const backend = [
     "http://localhost:8888",
     "http://192.168.0.106:8888",
     "http://192.168.0.103:8888",
+    null
 ][0];
 
 const socket = io.connect(backend, {
@@ -62,26 +64,22 @@ export default function App() {
     const [reFetch, setReFetch] = useState("");
     const progressRef = useRef(0);
     const downloaded = useRef("");
-    // const reFetch = useRef(false);
-    const [height, setHeight] = useState(window.innerHeight);
-    const [tableHeight,setTableHeight] = useState(height-162);
-    const [width, setWidth] = useState(window.innerWidth);
-    //const { height, width } = { height: window.innerHeight, width: window.innerWidth };
+    const tableHeight = "82vh";
+    // 53px table top, 52 px table bottom 48 px app bar 10 px progress bar
+    // const adjust = 48 + 52 + 53 + 10;
+    // const [tableHeight, setTableHeight] = useState(window.outerHeight - adjust + "px");
+    // useEffect(() => {
+    //     function handleResize() {
+    //         setTableHeight(window.outerHeight - adjust + "px")
+    //     }
 
+    //     window.addEventListener('resize', handleResize);
 
-    useEffect(() => {
-        function handleResize() {
-            setHeight(window.innerHeight);
-            setWidth(window.innerWidth);
-            setTableHeight(window.innerHeight-162)
-        }
-
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, []);
+    //     return () => {
+    //         window.removeEventListener('resize', handleResize);
+    //     };
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, []);
 
     const toggleDisableCallBack = useCallback((next) => {
         toggleDisable(next);
@@ -173,10 +171,10 @@ export default function App() {
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
     return (
         <ThemeProvider theme={themeObj(theme)}>
-            <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default' }}>
-                <Box sx={{position:"absolute", left:0,top:0, color: "white", font: "menu"}}>
-                    width: {width} ~ height: {height} ~ tableHeight: {tableHeight}
-                </Box>
+            <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default', height: "100vh" }}>
+                {/* <Box sx={{ position: "absolute", left: "50%", top: 0, color: "white", font: "menu" }}>
+                    tableHeight: {tableHeight}
+                </Box> */}
                 <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
                     <CircularProgress color="secondary" key="NavSus" /></Grid>}>
                     <Navigation

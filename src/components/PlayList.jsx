@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import AddIcon from '@mui/icons-material/Add';
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
@@ -16,14 +23,8 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
-import Fab from "@mui/material/Fab";
-import Box from "@mui/material/Box";
+
 import debouce from "lodash.debounce";
-import AddIcon from '@mui/icons-material/Add';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
 
 const columns = [
   {
@@ -74,6 +75,9 @@ function SortHeader({ lable, id, sortable, sort, order, setSort, setOrder }) {
       else if (sort === 3) setSort(1);
     }
   };
+  /* Note for myslef the sort for updated at isn't broken, 
+  when sorting by ascending we are loading the oldest time stamps (ie less in value)
+  and in descending we are loading the latest time stamps (ie greater in value) */
 
   if (sortable) {
     return (
@@ -311,10 +315,10 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
             <TableHead>
               <TableRow>
                 {columns.map((column) => (
-                <TableCell
+                  <TableCell
                     key={column.id}
                     align={column.align}
-                  /*padding: top | right and bottom | left */
+                    /*padding: top | right and bottom | left */
                     style={column.style}
                   >
                     {column.searchable ? (

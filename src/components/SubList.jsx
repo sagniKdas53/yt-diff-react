@@ -19,11 +19,8 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 
-// import { TableVirtuoso } from 'react-virtuoso';
-
 import debouce from "lodash.debounce";
 
-// eslint-disable-next-line no-unused-vars
 export default function SubList({
     setUrl,
     url,
