@@ -20,13 +20,14 @@ const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 
+//Find a way to pass it as evn variable during build process
 const backend = [
     "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
     "http://localhost:8888",
     "http://192.168.0.106:8888",
     "http://192.168.0.103:8888",
     null
-][0];
+][2];
 
 const socket = io.connect(backend, {
     path: "/ytdiff/socket.io",
@@ -42,6 +43,9 @@ const themeObj = (theme) =>
             secondary: {
                 main: "#f50057",
             },
+            info: {
+                main: "#03a9f4",
+            }
         },
     });
 
@@ -64,22 +68,24 @@ export default function App() {
     const [reFetch, setReFetch] = useState("");
     const progressRef = useRef(0);
     const downloaded = useRef("");
-    const tableHeight = "82vh";
-    // 53px table top, 52 px table bottom 48 px app bar 10 px progress bar
-    // const adjust = 48 + 52 + 53 + 10;
-    // const [tableHeight, setTableHeight] = useState(window.outerHeight - adjust + "px");
-    // useEffect(() => {
-    //     function handleResize() {
-    //         setTableHeight(window.outerHeight - adjust + "px")
-    //     }
+    // const tableHeight = "82vh";
+    // 53px table top, 52 px table bottom 48 px app bar 2 px progress bar
+    // Table top is included in the table height so no need to subtract it
+    const progressHeight = 5;
+    const adjust = 52 + 48 + progressHeight;
+    const [tableHeight, setTableHeight] = useState(window.innerHeight - adjust);
+    useEffect(() => {
+        function handleResize() {
+            setTableHeight(window.innerHeight - adjust)
+        }
 
-    //     window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', handleResize);
 
-    //     return () => {
-    //         window.removeEventListener('resize', handleResize);
-    //     };
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, []);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const toggleDisableCallBack = useCallback((next) => {
         toggleDisable(next);
@@ -171,23 +177,35 @@ export default function App() {
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
     return (
         <ThemeProvider theme={themeObj(theme)}>
-            <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default', height: "100vh" }}>
-                {/* <Box sx={{ position: "absolute", left: "50%", top: 0, color: "white", font: "menu" }}>
-                    tableHeight: {tableHeight}
+            <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default', height: "100vh", position: "relative" }}>
+                {/* <Box sx={{ position: "absolute", left: "50%", top: 0, color: "white", font: "menu", zIndex: 200 }}>
+                    table: {tableHeight + "px"}
                 </Box> */}
                 <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
                     <CircularProgress color="secondary" key="NavSus" /></Grid>}>
-                    <Navigation
-                        themeSwitcher={themeSwitcher}
-                        theme={theme}
-                        connectionId={connectionId}
-                        setListUrl={setListUrl}
-                        showPlaylists={showPlaylists}
-                        toggleView={toggleView}
-                    />
+                    <Box sx={{ position: "sticky", top: 0, left: 0, zIndex: 100 }}>
+                        <Navigation
+                            themeSwitcher={themeSwitcher}
+                            theme={theme}
+                            connectionId={connectionId}
+                            setListUrl={setListUrl}
+                            showPlaylists={showPlaylists}
+                            toggleView={toggleView}
+                        />
+                        <Box sx={{ width: "100%", height: progressHeight + "px" }}>
+                            <LinearProgress
+                                sx={{ height: "100%", borderRadius: 0 }}
+                                variant={
+                                    indeterminate ? "indeterminate" : "determinate"
+                                }
+                                color={theme ? "secondary" : "info"}
+                                value={progressRef.current}
+                            />
+                        </Box>
+                    </Box>
                 </Suspense>
                 <Grid container spacing={0} key="MainGrid">
-                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid">
+                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid" sx={{ height: tableHeight + 52 + "px" }}>
                         <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
                             <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
                             <PlayList
@@ -199,11 +217,11 @@ export default function App() {
                                 setIndeterminate={setIndeterminate}
                                 setSnack={setSnack}
                                 reFetch={reFetch}
-                                tableHeight={tableHeight}
+                                tableHeight={tableHeight + "px"}
                             />
                         </Suspense>
                     </Grid>
-                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid">
+                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid" sx={{ height: tableHeight + 52 + "px" }}>
                         <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
                             <CircularProgress color="secondary" key="SubSus" /></Grid>}>
                             <SubList
@@ -214,20 +232,11 @@ export default function App() {
                                 disableBtns={disableBtns}
                                 downloaded={downloaded.current}
                                 reFetch={reFetch}
-                                tableHeight={tableHeight}
+                                tableHeight={tableHeight + "px"}
                             />
                         </Suspense>
                     </Grid>
                 </Grid>
-                <Box sx={{ width: "100%", height: "1vh" }}>
-                    <LinearProgress
-                        sx={{ height: "100%", borderRadius: 5 }}
-                        variant={
-                            indeterminate ? "indeterminate" : "determinate"
-                        }
-                        value={progressRef.current}
-                    />
-                </Box>
                 <Stack spacing={2} sx={{ maxWidth: 600 }}>
                     <Snackbar
                         open={showSnackbar}

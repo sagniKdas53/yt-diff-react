@@ -409,7 +409,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                         color={url === element.url ? "success" : "secondary"}
                         onClick={() => handleLoad(element.url)}
                       >
-                        {url === element.url ? "DONE" : "LOAD"}
+                        {url === element.url ? "DONE" : "LIST"}
                       </Button>
                     </TableCell>
                   </TableRow>

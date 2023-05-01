@@ -301,7 +301,7 @@ export default function SubList({
                                             {element.downloaded ? (
                                                 <CheckCircleIcon color="success" />
                                             ) : (
-                                                <CancelIcon color="secondary" />
+                                                <CancelIcon color="error" />
                                             )}
                                         </TableCell>
                                     </TableRow>
