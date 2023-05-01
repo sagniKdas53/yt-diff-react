@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Make playlist table header static and fix the alignments
 - [ ] Use build time variables to make rednering faster and easier.
 - [ ] Find buttons that work best in dark mode.
 - [ ] Use react virtuiso to speed things up, it's getting really slow when using this

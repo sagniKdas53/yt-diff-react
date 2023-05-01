@@ -360,7 +360,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                       key={element.order_added + "-title"}
                       align="left"
                       sx={{ width: "75%" }}
-                      style={{ paddingInline: "0px" }}
+                      style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
                     >
                       <Link
                         href={element.url}
@@ -375,11 +375,11 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                     <TableCell
                       key={element.order_added + "-watch"}
                       align="right"
-                      style={{ paddingInlineEnd: "0px" }}
+                      style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
                     >
                       <FormControl
-                        variant="outlined"
-                        sx={{ m: 0, minWidth: 80 }}
+                        variant="standard"
+                        sx={{ m: 0, minWidth: 80, minHeight: 45 }}
                         size="small"
                       >
                         <InputLabel id={element.order_added + "-label"}>
@@ -394,14 +394,14 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
                         >
                           <MenuItem value={"1"}>NA</MenuItem>
                           <MenuItem value={"2"}>Full</MenuItem>
-                          <MenuItem value={"3"}>Quick</MenuItem>
+                          <MenuItem value={"3"}>Fast</MenuItem>
                         </Select>
                       </FormControl>
                     </TableCell>
                     <TableCell
                       key={element.order_added + "-button"}
                       align="center"
-                      style={{ paddingInlineEnd: "2px" }}
+                      style={{ paddingInline: "8px" }}
                     >
                       <Button
                         size="small"

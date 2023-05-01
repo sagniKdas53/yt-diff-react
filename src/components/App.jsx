@@ -41,10 +41,10 @@ const themeObj = (theme) =>
                 main: "#3f51b5",
             },
             secondary: {
-                main: "#f50057",
+                main: theme ? "#f50057" : "#03a9f4",
             },
-            info: {
-                main: "#03a9f4",
+            success: {
+                main: "#2CCB36",
             }
         },
     });
@@ -198,7 +198,7 @@ export default function App() {
                                 variant={
                                     indeterminate ? "indeterminate" : "determinate"
                                 }
-                                color={theme ? "secondary" : "info"}
+                                color="secondary"
                                 value={progressRef.current}
                             />
                         </Box>
