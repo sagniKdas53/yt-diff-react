@@ -26,8 +26,8 @@ const backend = [
     "http://localhost:8888",
     "http://192.168.0.106:8888",
     "http://192.168.0.103:8888",
-    null
-][2];
+    null,
+][0];
 
 const socket = io.connect(backend, {
     path: "/ytdiff/socket.io",
