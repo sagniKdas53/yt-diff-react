@@ -20,14 +20,16 @@ const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 
-//Find a way to pass it as evn variable during build process
-const backend = [
-    "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
-    "http://localhost:8888",
-    "http://192.168.0.106:8888",
-    "http://192.168.0.103:8888",
-    null,
-][0];
+/* 
+These 4 are the urls that are supposed to work, they are necessary for development
+"https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
+"http://localhost:8888",
+"http://192.168.0.106:8888",
+"http://192.168.0.103:8888",
+
+but in production they can be replaced with "" which will make the fetches work automatically
+*/
+const backend = import.meta.env.PROD ? "" : "http://localhost:8888";
 
 const socket = io.connect(backend, {
     path: "/ytdiff/socket.io",
@@ -178,8 +180,10 @@ export default function App() {
     return (
         <ThemeProvider theme={themeObj(theme)}>
             <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default', height: "100vh", position: "relative" }}>
-                {/* <Box sx={{ position: "absolute", left: "50%", top: 0, color: "white", font: "menu", zIndex: 200 }}>
+                {/* <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
                     table: {tableHeight + "px"}
+                    <br />
+                    env: {JSON.stringify(import.meta.env)}
                 </Box> */}
                 <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
                     <CircularProgress color="secondary" key="NavSus" /></Grid>}>

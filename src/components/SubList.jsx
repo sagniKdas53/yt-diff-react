@@ -246,6 +246,7 @@ export default function SubList({
                                         active={sort}
                                         direction={sort ? "asc" : "desc"}
                                         onClick={handleSort}
+                                        sx={{ paddingInlineStart: 2 }}
                                     >
                                         Saved
                                     </TableSortLabel>
@@ -314,7 +315,7 @@ export default function SubList({
                             zIndex: 50,
                             position: "absolute",
                             bottom: "10%",
-                            right: "5%",
+                            right: "10%",
                         }}
                     >
                         <SubListFab
