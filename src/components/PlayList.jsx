@@ -26,84 +26,6 @@ import TextField from "@mui/material/TextField";
 
 import debouce from "lodash.debounce";
 
-const columns = [
-  {
-    id: "id",
-    label: "ID",
-    align: "center",
-    searchable: false,
-    sortable: true,
-    idx: 1,
-    style: { minWidth: 10, paddingInlineEnd: "0px" }
-  },
-  {
-    id: "title",
-    label: "Title",
-    align: "left",
-    searchable: true,
-    sortable: false,
-    idx: 2,
-    style: { minWidth: 10, paddingInline: "0px" }
-  },
-  {
-    id: "watch",
-    label: "Updated",
-    align: "center",
-    searchable: false,
-    sortable: true,
-    idx: 3,
-    style: { minWidth: 10, paddingInlineEnd: "0px" }
-  },
-  {
-    id: "expand",
-    label: "Load",
-    align: "center",
-    searchable: false,
-    sortable: false,
-    idx: 4,
-    style: { minWidth: 10, paddingInlineEnd: "2px" }
-  },
-];
-
-function SortHeader({ lable, id, sortable, sort, order, setSort, setOrder }) {
-  const createSortHandler = (id) => {
-    if (id === sort) {
-      if (order === 1) setOrder(2);
-      else if (order === 2) setOrder(1);
-    } else {
-      if (sort === 1) setSort(3);
-      else if (sort === 3) setSort(1);
-    }
-  };
-  /* Note for myslef the sort for updated at isn't broken, 
-  when sorting by ascending we are loading the oldest time stamps (ie less in value)
-  and in descending we are loading the latest time stamps (ie greater in value) */
-
-  if (sortable) {
-    return (
-      <TableSortLabel
-        active={id === sort}
-        direction={order === 1 ? "asc" : "desc"}
-        onClick={() => createSortHandler(id)}
-      >
-        {lable}
-      </TableSortLabel>
-    );
-  } else {
-    return <>{lable}</>;
-  }
-}
-
-SortHeader.propTypes = {
-  lable: PropTypes.string.isRequired,
-  id: PropTypes.number.isRequired,
-  sort: PropTypes.number.isRequired,
-  order: PropTypes.number.isRequired,
-  setSort: PropTypes.func.isRequired,
-  setOrder: PropTypes.func.isRequired,
-  sortable: PropTypes.bool.isRequired,
-};
-
 export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack, reFetch, tableHeight }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -121,7 +43,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   // dialog stuff
   const [open, setOpen] = useState(false);
   const [urlList, setUrlList] = useState("");
-
+  const [watch, setWatch] = useState("1");
   const updateUrls = (event) => {
     setUrlList(event.target.value);
   };
@@ -137,6 +59,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   const clearUrlList = () => {
     setUrlList("");
     setOpen(false);
+    setWatch("1");
   };
 
   const downloadUrlList = async () => {
@@ -158,6 +81,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
       setSnack("Problem parsing url: " + error, "error");
     }
     setUrlList("");
+    setWatch("1");
   };
 
   const validate = (element) => {
@@ -191,7 +115,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           start: start,
           stop: stop,
           chunk: rowsPerPage,
-          watch: "1",
+          watch: watch,
           continuous: true,
         }),
       }
@@ -307,6 +231,16 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
     }
   };
 
+  const createSortHandler = (id) => {
+    if (id === sort) {
+      if (order === 1) updateOrder(2);
+      else if (order === 2) updateOrder(1);
+    } else {
+      if (sort === 1) updateSort(3);
+      else if (sort === 3) updateSort(1);
+    }
+  };
+
   return (
     <>
       <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
@@ -314,35 +248,55 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           <Table stickyHeader size="small" aria-label="a dense table">
             <TableHead>
               <TableRow>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    align={column.align}
-                    /*padding: top | right and bottom | left */
-                    style={column.style}
+                <TableCell
+                  key="play-head-order"
+                  align="justify"
+                  /*padding: top | right and bottom | left */
+                  style={{ paddingInlineEnd: "0px" }}
+                >
+                  <TableSortLabel
+                    active={1 === sort}
+                    direction={order === 1 ? "asc" : "desc"}
+                    onClick={() => createSortHandler(1)}
                   >
-                    {column.searchable ? (
-                      <TextField
-                        id="title-input"
-                        label="Title"
-                        variant="outlined"
-                        size="small"
-                        sx={{ width: "100%" }}
-                        onKeyUp={debouncedQuery}
-                      />
-                    ) : (
-                      <SortHeader
-                        sortable={column.sortable}
-                        lable={column.label}
-                        id={column.idx}
-                        sort={sort}
-                        setSort={updateSort}
-                        order={order}
-                        setOrder={updateOrder}
-                      />
-                    )}
-                  </TableCell>
-                ))}
+                    ID
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell
+                  key="play-head-title"
+                  align="left"
+                  sx={{ width: "75%" }}
+                  style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+                >
+                  <TextField
+                    id="title-input"
+                    label="Title"
+                    variant="outlined"
+                    size="small"
+                    sx={{ width: "100%" }}
+                    onKeyUp={debouncedQuery}
+                  />
+                </TableCell>
+                <TableCell
+                  key="play-head-watch"
+                  align="center"
+                  style={{ paddingInlineEnd: "0px" }}
+                >
+                  <TableSortLabel
+                    active={3 === sort}
+                    direction={order === 1 ? "asc" : "desc"}
+                    onClick={() => createSortHandler(3)}
+                  >
+                    Updated
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell
+                  key="play-head-expand"
+                  align="center"
+                  style={{ paddingInline: "8px" }}
+                >
+                  Load
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -445,7 +399,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
         <Dialog open={open} onClose={handleClose} fullWidth sx={{ zIndex: 100 }}>
-          <DialogTitle>Add</DialogTitle>
+          <DialogTitle sx={{ paddingBlockEnd: 0 }}>Add</DialogTitle>
           <DialogContent>
             <TextField
               id="standard-multiline-static"
@@ -459,8 +413,30 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
               variant="standard"
               onChange={updateUrls}
             />
+
           </DialogContent>
           <DialogActions>
+            <FormControl
+              variant="standard"
+              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "24px" }}
+              size="small"
+            >
+              <InputLabel id="dialog-watch-lable" sx={{ paddingInline: "24px" }}>
+                Watch mode:
+              </InputLabel>
+              <Select
+                labelId="dialog-watch-lable"
+                id="dialog-watch-select"
+                value={watch}
+                label="Watch"
+                onChange={(event) => setWatch(event.target.value)}
+              >
+                <MenuItem value={"1"}>NA</MenuItem>
+                <MenuItem value={"2"}>Full</MenuItem>
+                <MenuItem value={"3"}>Fast</MenuItem>
+              </Select>
+            </FormControl>
+            <Box sx={{ flexGrow: 1 }}></Box>
             <Button onClick={handleClose}>Cancel</Button>
             <Button onClick={clearUrlList}>Clear</Button>
             <Button onClick={downloadUrlList}>Submit</Button>

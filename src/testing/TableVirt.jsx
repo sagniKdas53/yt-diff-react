@@ -58,6 +58,7 @@ const rows = Array.from({ length: 200 }, (_, index) => {
 });
 
 const VirtuosoTableComponents = {
+    // eslint-disable-next-line react/display-name
     Scroller: React.forwardRef((props, ref) => (
         <TableContainer component={Paper} {...props} ref={ref} />
     )),
@@ -65,7 +66,9 @@ const VirtuosoTableComponents = {
         <Table {...props} sx={{ borderCollapse: 'separate', tableLayout: 'fixed' }} />
     ),
     TableHead,
+    // eslint-disable-next-line react/prop-types, no-unused-vars
     TableRow: ({ item: _item, ...props }) => <TableRow {...props} />,
+    // eslint-disable-next-line react/display-name
     TableBody: React.forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
 };
 
