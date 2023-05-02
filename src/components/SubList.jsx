@@ -27,17 +27,21 @@ export default function SubList({
     respIndex,
     disableBtns,
     downloaded,
-    backend = "",
+    backEnd,
     reFetch,
-    tableHeight
+    tableHeight,
+    rowsPerPage,
+    setRowsPerPage,
+    start, setStart,
+    stop, setStop
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
     // These are the controls
-    const [start, setStart] = useState(0);
-    const [stop, setStop] = useState(10);
+    // const [start, setStart] = useState(0);
+    // const [stop, setStop] = useState(10);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    // const [rowsPerPage, setRowsPerPage] = useState(10);
     // actual table data
     const [items, setItems] = useState([]);
     const [totalItems, setTotalItems] = useState(0);
@@ -47,7 +51,7 @@ export default function SubList({
     const memoizedFetch = useMemo(async () => {
         //console.log('Fetching Sublists');
         if (url !== "") {
-            const response = await fetch(backend + "/ytdiff/getsub", {
+            const response = await fetch(backEnd + "/ytdiff/getsub", {
                 method: "post",
                 headers: {
                     Accept: "application/json",
@@ -69,7 +73,7 @@ export default function SubList({
             return { count: 0, rows: [] };
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backend, start, stop, sort, url, query, reFetch]);
+    }, [backEnd, start, stop, sort, url, query, reFetch]);
 
     // use the memoized fetch result to set the items state
     useEffect(() => {
@@ -102,7 +106,7 @@ export default function SubList({
             setStart(newPage * rowsPerPage);
             setStop((newPage + 1) * rowsPerPage);
         },
-        [rowsPerPage]
+        [rowsPerPage, setStart, setStop]
     );
 
     const handleChangeRowsPerPage = (event) => {
@@ -183,7 +187,7 @@ export default function SubList({
     function downloadFunc() {
         const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
         //console.log(JSON.stringify({ id: data }));
-        fetch(backend + "/ytdiff/download", {
+        fetch(backEnd + "/ytdiff/download", {
             method: "post",
             headers: {
                 Accept: "application/json",
@@ -343,12 +347,18 @@ export default function SubList({
 SubList.propTypes = {
     setUrl: PropTypes.func.isRequired,
     url: PropTypes.string.isRequired,
-    backend: PropTypes.string,
+    backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
     disableBtns: PropTypes.bool.isRequired,
     downloaded: PropTypes.string.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,
+    rowsPerPage: PropTypes.number.isRequired,
+    setRowsPerPage: PropTypes.func.isRequired,
+    stop: PropTypes.number.isRequired,
+    setStop: PropTypes.func.isRequired,
+    start: PropTypes.number.isRequired,
+    setStart: PropTypes.func.isRequired
 };
 
 function SubListFab({ selectedItems, clear, download, disableBtns }) {

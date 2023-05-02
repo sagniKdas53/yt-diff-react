@@ -29,9 +29,9 @@ These 4 are the urls that are supposed to work, they are necessary for developme
 
 but in production they can be replaced with "" which will make the fetches work automatically
 */
-const backend = import.meta.env.PROD ? "" : "http://localhost:8888";
+const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
 
-const socket = io.connect(backend, {
+const socket = io.connect(backEnd, {
     path: "/ytdiff/socket.io",
 });
 
@@ -68,6 +68,9 @@ export default function App() {
     const [snackSeverity, setSnackSeverity] = useState("success");
     const [indeterminate, setIndeterminate] = useState(false);
     const [reFetch, setReFetch] = useState("");
+    const [startSubList, setStartSubList] = useState(0);
+    const [stopSubList, setStopSubList] = useState(10);
+    const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
     const downloaded = useRef("");
     // const tableHeight = "82vh";
@@ -177,6 +180,7 @@ export default function App() {
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
+
     return (
         <ThemeProvider theme={themeObj(theme)}>
             <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default', height: "100vh", position: "relative" }}>
@@ -215,13 +219,16 @@ export default function App() {
                             <PlayList
                                 url={listUrl}
                                 setUrl={setListUrl}
-                                backend={backend}
+                                backEnd={backEnd}
                                 setRespIndex={setRespIndex}
                                 disableBtns={disableBtns}
                                 setIndeterminate={setIndeterminate}
                                 setSnack={setSnack}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
+                                rowsPerPageSubList={rowsPerPageSubList}
+                                startSubList={startSubList}
+                                stopSubList={stopSubList} 
                             />
                         </Suspense>
                     </Grid>
@@ -231,12 +238,18 @@ export default function App() {
                             <SubList
                                 url={listUrl}
                                 setUrl={setListUrl}
-                                backend={backend}
+                                backEnd={backEnd}
                                 respIndex={respIndex}
                                 disableBtns={disableBtns}
                                 downloaded={downloaded.current}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
+                                rowsPerPage={rowsPerPageSubList}
+                                setRowsPerPage={setRowsPerPageSubList}
+                                start={startSubList}
+                                setStart={setStartSubList}
+                                stop={stopSubList} 
+                                setStop={setStopSubList}
                             />
                         </Suspense>
                     </Grid>

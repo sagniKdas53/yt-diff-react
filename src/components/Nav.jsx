@@ -29,15 +29,6 @@ export default function Navigation({
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         yt-diff
                     </Typography>
-                    {/* <Button color="inherit" onClick={() => toggleView(!showPlaylists)}>
-                        {showPlaylists ? <PlaylistAddIcon /> : <FormatListNumberedIcon />}
-                        <Typography
-                            variant="caption"
-                            display={{ xs: "none", sm: "none", md: "block" }}
-                        >
-                            {showPlaylists ? "Input" : "Playlists"}
-                        </Typography>
-                    </Button> */}
                     <Button color="inherit" onClick={() => setListUrl("None")}>
                         <ListAltIcon />
                         <Typography

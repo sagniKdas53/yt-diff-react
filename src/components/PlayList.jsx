@@ -26,7 +26,20 @@ import TextField from "@mui/material/TextField";
 
 import debouce from "lodash.debounce";
 
-export default function PlayList({ setUrl, url, backend = "", disableBtns, setRespIndex, setIndeterminate, setSnack, reFetch, tableHeight }) {
+export default function PlayList({
+  setUrl,
+  url,
+  backEnd,
+  disableBtns,
+  setRespIndex,
+  setIndeterminate,
+  setSnack,
+  reFetch,
+  tableHeight,
+  rowsPerPageSubList,
+  startSubList,
+  stopSubList
+}) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
   const [sort, updateSort] = useState(1);
@@ -101,7 +114,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   };
 
   const postUrl = (urlItem) => {
-    return fetch(backend +
+    return fetch(backEnd +
       "/ytdiff/list",
       {
         method: "post",
@@ -112,10 +125,13 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
         mode: "cors",
         body: JSON.stringify({
           url: urlItem,
-          start: start,
-          stop: stop,
-          chunk: rowsPerPage,
+          start: startSubList,
+          //in theory this will fetch enough results 
+          //for pagination to not get stuck
+          stop: stopSubList + 1,
+          chunk: rowsPerPageSubList + 1,
           watch: watch,
+          //find out what this did
           continuous: true,
         }),
       }
@@ -125,7 +141,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
     //console.log('Fetching Playlists');
-    const response = await fetch(backend + "/ytdiff/dbi", {
+    const response = await fetch(backEnd + "/ytdiff/dbi", {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -144,7 +160,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
     const json_data = JSON.parse(data);
     return json_data;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backend, start, stop, sort, order, query, reFetch]);
+  }, [backEnd, start, stop, sort, order, query, reFetch]);
 
   // use the memoized fetch result to set the items state
   useEffect(() => {
@@ -176,7 +192,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
   );
 
   const changeWatch = (event, url) => {
-    fetch(backend + "/ytdiff/watchlist", {
+    fetch(backEnd + "/ytdiff/watchlist", {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -398,7 +414,16 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
-        <Dialog open={open} onClose={handleClose} fullWidth sx={{ zIndex: 100 }}>
+        <Dialog open={open} onClose={handleClose} fullWidth sx={{
+          zIndex: 100, 
+          // this passes the width to the parent container and paper
+          "& .MuiDialog-container": {
+            "& .MuiPaper-root": {
+              width: "100%",
+              minWidth: "300px", 
+            },
+          },
+        }}>
           <DialogTitle sx={{ paddingBlockEnd: 0 }}>Add</DialogTitle>
           <DialogContent>
             <TextField
@@ -437,7 +462,7 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
               </Select>
             </FormControl>
             <Box sx={{ flexGrow: 1 }}></Box>
-            <Button onClick={handleClose}>Cancel</Button>
+            {/* <Button onClick={handleClose}>Cancel</Button> */}
             <Button onClick={clearUrlList}>Clear</Button>
             <Button onClick={downloadUrlList}>Submit</Button>
           </DialogActions>
@@ -450,11 +475,14 @@ export default function PlayList({ setUrl, url, backend = "", disableBtns, setRe
 PlayList.propTypes = {
   setUrl: PropTypes.func.isRequired,
   url: PropTypes.string.isRequired,
-  backend: PropTypes.string,
+  backEnd: PropTypes.string.isRequired,
   disableBtns: PropTypes.bool.isRequired,
   setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
+  rowsPerPageSubList: PropTypes.number.isRequired,
+  startSubList: PropTypes.number.isRequired,
+  stopSubList: PropTypes.number.isRequired
 };
