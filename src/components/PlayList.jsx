@@ -37,8 +37,6 @@ export default function PlayList({
   reFetch,
   tableHeight,
   rowsPerPageSubList,
-  startSubList,
-  stopSubList
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -125,10 +123,10 @@ export default function PlayList({
         mode: "cors",
         body: JSON.stringify({
           url: urlItem,
-          start: startSubList,
+          start: 0,
           //in theory this will fetch enough results 
           //for pagination to not get stuck
-          stop: stopSubList + 1,
+          stop: rowsPerPageSubList + 1,
           chunk: rowsPerPageSubList + 1,
           watch: watch,
           //find out what this did
@@ -432,7 +430,7 @@ export default function PlayList({
               fullWidth
               multiline
               rows={
-                urlList.split("\n").length < 12 ? (urlList.split("\n").length < 4 ? 4 : urlList.split("\n").length) : 12
+                urlList.split("\n").length < 12 ? (urlList.split("\n").length < 6 ? 6 : urlList.split("\n").length) : 12
               }
               value={urlList}
               variant="standard"
@@ -483,6 +481,7 @@ PlayList.propTypes = {
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
-  startSubList: PropTypes.number.isRequired,
-  stopSubList: PropTypes.number.isRequired
+  // resetSublistPage: PropTypes.bool.isRequired,
+  // startSubList: PropTypes.number.isRequired,
+  // stopSubList: PropTypes.number.isRequired
 };

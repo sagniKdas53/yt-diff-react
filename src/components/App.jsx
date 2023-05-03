@@ -29,7 +29,7 @@ These 4 are the urls that are supposed to work, they are necessary for developme
 
 but in production they can be replaced with "" which will make the fetches work automatically
 */
-const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
+const backEnd = import.meta.env.PROD ? "" : "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net";
 
 const socket = io.connect(backEnd, {
     path: "/ytdiff/socket.io",
@@ -68,13 +68,11 @@ export default function App() {
     const [snackSeverity, setSnackSeverity] = useState("success");
     const [indeterminate, setIndeterminate] = useState(false);
     const [reFetch, setReFetch] = useState("");
-    const [startSubList, setStartSubList] = useState(0);
-    const [stopSubList, setStopSubList] = useState(10);
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
     const downloaded = useRef("");
-    // const tableHeight = "82vh";
-    // 53px table top, 52 px table bottom 48 px app bar 2 px progress bar
+
+    // 53px table top, 52 px table pagination, 48 px app bar
     // Table top is included in the table height so no need to subtract it
     const progressHeight = 5;
     const adjust = 52 + 48 + progressHeight;
@@ -227,8 +225,6 @@ export default function App() {
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
                                 rowsPerPageSubList={rowsPerPageSubList}
-                                startSubList={startSubList}
-                                stopSubList={stopSubList} 
                             />
                         </Suspense>
                     </Grid>
@@ -246,10 +242,6 @@ export default function App() {
                                 tableHeight={tableHeight + "px"}
                                 rowsPerPage={rowsPerPageSubList}
                                 setRowsPerPage={setRowsPerPageSubList}
-                                start={startSubList}
-                                setStart={setStartSubList}
-                                stop={stopSubList} 
-                                setStop={setStopSubList}
                             />
                         </Suspense>
                     </Grid>

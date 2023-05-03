@@ -30,16 +30,13 @@ export default function SubList({
     backEnd,
     reFetch,
     tableHeight,
-    rowsPerPage,
-    setRowsPerPage,
-    start, setStart,
-    stop, setStop
+    rowsPerPage, setRowsPerPage,
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
     // These are the controls
-    // const [start, setStart] = useState(0);
-    // const [stop, setStop] = useState(10);
+    const [start, setStart] = useState(0);
+    const [stop, setStop] = useState(10);
     const [page, setPage] = useState(0);
     // const [rowsPerPage, setRowsPerPage] = useState(10);
     // actual table data
@@ -101,12 +98,12 @@ export default function SubList({
 
     const handleChangePage = useCallback(
         (event, newPage) => {
-            setPage(newPage);
             //console.log("Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
+            setPage(newPage);
             setStart(newPage * rowsPerPage);
             setStop((newPage + 1) * rowsPerPage);
         },
-        [rowsPerPage, setStart, setStop]
+        [rowsPerPage, setPage, setStart, setStop]
     );
 
     const handleChangeRowsPerPage = (event) => {
@@ -176,7 +173,8 @@ export default function SubList({
     };
 
     useEffect(() => {
-        //console.log(respIndex, Math.floor(respIndex / rowsPerPage))
+        // from what it seems to me the error was due to db indeing being wrong, need to write a maintanince function
+        //console.log(JSON.stringify({ respIndex: respIndex, page: Math.floor(respIndex / rowsPerPage) }));
         if (respIndex === -1) {
             handleChangePage(null, 0);
         } else {
@@ -355,10 +353,13 @@ SubList.propTypes = {
     tableHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
     setRowsPerPage: PropTypes.func.isRequired,
-    stop: PropTypes.number.isRequired,
-    setStop: PropTypes.func.isRequired,
-    start: PropTypes.number.isRequired,
-    setStart: PropTypes.func.isRequired
+    // resetSublistPage: PropTypes.bool.isRequired,
+    // stop: PropTypes.number.isRequired,
+    // setStop: PropTypes.func.isRequired,
+    // start: PropTypes.number.isRequired,
+    // setStart: PropTypes.func.isRequired,
+    // page: PropTypes.number.isRequired,
+    // setPage: PropTypes.func.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download, disableBtns }) {
