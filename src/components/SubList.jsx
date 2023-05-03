@@ -45,6 +45,7 @@ export default function SubList({
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
 
+    // const functions and normal functions
     const memoizedFetch = useMemo(async () => {
         //console.log('Fetching Sublists');
         if (url !== "") {
@@ -71,30 +72,6 @@ export default function SubList({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [backEnd, start, stop, sort, url, query, reFetch]);
-
-    // use the memoized fetch result to set the items state
-    useEffect(() => {
-        memoizedFetch.then((data) => {
-            setItems(data["rows"]);
-            setTotalItems(+data["count"]);
-        });
-    }, [memoizedFetch]);
-
-    useEffect(() => {
-        if (downloaded !== "") {
-            const updatedItems = [...items];
-            const itemIndex = updatedItems.findIndex(
-                (item) => item.id === downloaded
-            );
-            const updatedItem = {
-                ...updatedItems[itemIndex],
-                downloaded: true,
-            };
-            updatedItems[itemIndex] = updatedItem;
-            setItems(updatedItems);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [downloaded]);
 
     const handleChangePage = useCallback(
         (event, newPage) => {
@@ -129,6 +106,51 @@ export default function SubList({
     const handleSort = () => {
         updateSort(!sort);
     };
+
+    const clearList = () => {
+        setUrl("");
+        handleChangePage(null, 0);
+    };
+
+    function downloadFunc() {
+        const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
+        //console.log(JSON.stringify({ id: data }));
+        fetch(backEnd + "/ytdiff/download", {
+            method: "post",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            mode: "cors",
+            body: JSON.stringify({ id: data }),
+        });
+    }
+
+
+    // useEffects and useMemos
+    // use the memoized fetch to set the items state
+    useEffect(() => {
+        memoizedFetch.then((data) => {
+            setItems(data["rows"]);
+            setTotalItems(+data["count"]);
+        });
+    }, [memoizedFetch]);
+
+    useEffect(() => {
+        if (downloaded !== "") {
+            const updatedItems = [...items];
+            const itemIndex = updatedItems.findIndex(
+                (item) => item.id === downloaded
+            );
+            const updatedItem = {
+                ...updatedItems[itemIndex],
+                downloaded: true,
+            };
+            updatedItems[itemIndex] = updatedItem;
+            setItems(updatedItems);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [downloaded]);
 
     useEffect(() => {
         updateSelected({});
@@ -167,11 +189,6 @@ export default function SubList({
         []
     );
 
-    const clearList = () => {
-        setUrl("");
-        handleChangePage(null, 0);
-    };
-
     useEffect(() => {
         // from what it seems to me the error was due to db indeing being wrong, need to write a maintanince function
         //console.log(JSON.stringify({ respIndex: respIndex, page: Math.floor(respIndex / rowsPerPage) }));
@@ -181,20 +198,6 @@ export default function SubList({
             handleChangePage(null, Math.floor(respIndex / rowsPerPage));
         }
     }, [respIndex, handleChangePage, rowsPerPage]);
-
-    function downloadFunc() {
-        const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
-        //console.log(JSON.stringify({ id: data }));
-        fetch(backEnd + "/ytdiff/download", {
-            method: "post",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-            mode: "cors",
-            body: JSON.stringify({ id: data }),
-        });
-    }
 
     return (
         <>
