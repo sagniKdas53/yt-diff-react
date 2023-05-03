@@ -44,35 +44,9 @@ export default function SubList({
     const [totalItems, setTotalItems] = useState(0);
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
+    const [lastUrl, setLastUrl] = useState("");
 
     // const functions and normal functions
-    const memoizedFetch = useMemo(async () => {
-        //console.log('Fetching Sublists');
-        if (url !== "") {
-            const response = await fetch(backEnd + "/ytdiff/getsub", {
-                method: "post",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                mode: "cors",
-                body: JSON.stringify({
-                    start: start,
-                    stop: stop,
-                    sortDownloaded: sort,
-                    query: query,
-                    url: url,
-                }),
-            });
-            const data = await response.text();
-            const json_data = JSON.parse(data);
-            return json_data;
-        } else {
-            return { count: 0, rows: [] };
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, start, stop, sort, url, query, reFetch]);
-
     const handleChangePage = useCallback(
         (event, newPage) => {
             //console.log("Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
@@ -129,6 +103,39 @@ export default function SubList({
 
     // useEffects and useMemos
     // use the memoized fetch to set the items state
+    const memoizedFetch = useMemo(async () => {
+        //console.log('Fetching Sublists');
+        if (url !== "") {
+            if (url !== lastUrl) {
+                //console.log("changing page to zero")
+                setLastUrl(url);
+                handleChangePage(null, 0);
+            }
+            //console.log(url, lastUrl, start, stop, sort, query);
+            const response = await fetch(backEnd + "/ytdiff/getsub", {
+                method: "post",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+                mode: "cors",
+                body: JSON.stringify({
+                    start: start,
+                    stop: stop,
+                    sortDownloaded: sort,
+                    query: query,
+                    url: url,
+                }),
+            });
+            const data = await response.text();
+            const json_data = JSON.parse(data);
+            return json_data;
+        } else {
+            return { count: 0, rows: [] };
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [backEnd, start, stop, sort, url, query, reFetch]);
+
     useEffect(() => {
         memoizedFetch.then((data) => {
             setItems(data["rows"]);
