@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import ReactVirtualizedTable from './testing/TableVirt'
+import App from './components/App'
 import './style.scss';
 // ReactDOM.createRoot(document.getElementById('root')).render(
 //   <React.StrictMode>
@@ -21,5 +22,6 @@ if (rootElement._reactRootContainer) {
 root.render(
   <React.StrictMode>
     <ReactVirtualizedTable />
+    <App />
   </React.StrictMode>
 );

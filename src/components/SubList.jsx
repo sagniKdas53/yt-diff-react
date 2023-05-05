@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { TableVirtuoso } from 'react-virtuoso';
+import { useEffect, useMemo, useState, useCallback, forwardRef } from "react";
 import Box from "@mui/material/Box";
 import CancelIcon from "@mui/icons-material/Cancel";
 import Checkbox from "@mui/material/Checkbox";
@@ -100,6 +101,117 @@ export default function SubList({
         });
     }
 
+    function fixedHeaderContent() {
+        return (
+            <TableRow>
+                <TableCell
+                    padding="checkbox"
+                    key="check-head"
+                    align="center"
+                    style={{ minWidth: 10 }}
+                >
+                    <Checkbox
+                        color="primary"
+                        indeterminate={
+                            selectAll
+                                ? false
+                                : Object.values(selectedItems).filter((value) => value)
+                                    .length > 0
+                        }
+                        checked={selectAll}
+                        onChange={bulkAction}
+                        inputProps={{
+                            "aria-label": "select all items",
+                        }}
+                    />
+                </TableCell>
+                <TableCell
+                    key="title-head"
+                    align="center"
+                    style={{ minWidth: 10 }}
+                    sx={{ width: "75%" }}
+                >
+                    <TextField
+                        id="title-input"
+                        label="Title"
+                        variant="outlined"
+                        size="small"
+                        sx={{ width: "100%" }}
+                        onKeyUp={debouncedQuery}
+                    />
+                </TableCell>
+                <TableCell
+                    key="saved-head"
+                    align="center"
+                    style={{ minWidth: 10 }}
+                >
+                    <TableSortLabel
+                        active={sort}
+                        direction={sort ? "asc" : "desc"}
+                        onClick={handleSort}
+                        sx={{ paddingInlineStart: 2 }}
+                    >
+                        Saved
+                    </TableSortLabel>
+                </TableCell>
+            </TableRow>
+        );
+    }
+
+    function rowContent(_index, row) {
+        return (
+            <>
+                <TableCell
+                    padding="checkbox"
+                    key={_index + "-check"}
+                    align="center"
+                    style={{ minWidth: 10 }}
+                >
+                    <Checkbox
+                        color="primary"
+                        checked={selectedItems[row.id] || false}
+                        onChange={handleSelection}
+                        id={row.id}
+                    />
+                </TableCell>
+                <TableCell
+                    key={_index + "-title"}
+                    align="left"
+                    sx={{ width: "75%" }}
+                >
+                    <Link
+                        href={row.url}
+                        color={
+                            row.available
+                                ? "inherit"
+                                : row.title === "[Deleted video]"
+                                    ? "error"
+                                    : row.title === "[Private video]"
+                                        ? "#f57c00"
+                                        : "inherit"
+                        }
+                        underline="hover"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        {row.title}
+                    </Link>
+                </TableCell>
+                <TableCell
+                    key={_index + "-status"}
+                    padding="checkbox"
+                    align="center"
+                    style={{ minWidth: 10 }}
+                >
+                    {row.downloaded ? (
+                        <CheckCircleIcon color="success" />
+                    ) : (
+                        <CancelIcon color="error" />
+                    )}
+                </TableCell>
+            </>
+        );
+    }
 
     // useEffects and useMemos
     // use the memoized fetch to set the items state
@@ -206,122 +318,31 @@ export default function SubList({
         }
     }, [respIndex, handleChangePage, rowsPerPage]);
 
+    const VirtuosoTableComponents = {
+        // eslint-disable-next-line react/display-name
+        Scroller: forwardRef((props, ref) => (
+            <TableContainer component={Paper} {...props} ref={ref} />
+        )),
+        Table: (props) => (
+            <Table stickyHeader size="small" aria-label="sub-list videos table" {...props} />
+        ),
+        TableHead,
+        // eslint-disable-next-line react/prop-types, no-unused-vars
+        TableRow: ({ item: _item, ...props }) => <TableRow hover role="checkbox" tabIndex={-1} {...props} />,
+        // eslint-disable-next-line react/display-name
+        TableBody: forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
+    };
+
     return (
         <>
             <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
                 <TableContainer sx={{ height: tableHeight }}>
-                    <Table stickyHeader size="small" aria-label="sub-list table">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell
-                                    padding="checkbox"
-                                    key="check-head"
-                                    align="center"
-                                    style={{ minWidth: 10 }}
-                                >
-                                    <Checkbox
-                                        color="primary"
-                                        indeterminate={
-                                            selectAll
-                                                ? false
-                                                : Object.values(selectedItems).filter((value) => value)
-                                                    .length > 0
-                                        }
-                                        checked={selectAll}
-                                        onChange={bulkAction}
-                                        inputProps={{
-                                            "aria-label": "select all items",
-                                        }}
-                                    />
-                                </TableCell>
-                                <TableCell
-                                    key="title-head"
-                                    align="center"
-                                    style={{ minWidth: 10 }}
-                                    sx={{ width: "75%" }}
-                                >
-                                    <TextField
-                                        id="title-input"
-                                        label="Title"
-                                        variant="outlined"
-                                        size="small"
-                                        sx={{ width: "100%" }}
-                                        onKeyUp={debouncedQuery}
-                                    />
-                                </TableCell>
-                                <TableCell
-                                    key="saved-head"
-                                    align="center"
-                                    style={{ minWidth: 10 }}
-                                >
-                                    <TableSortLabel
-                                        active={sort}
-                                        direction={sort ? "asc" : "desc"}
-                                        onClick={handleSort}
-                                        sx={{ paddingInlineStart: 2 }}
-                                    >
-                                        Saved
-                                    </TableSortLabel>
-                                </TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {items.map((element, index) => {
-                                return (
-                                    <TableRow hover role="checkbox" tabIndex={-1} key={index}>
-                                        <TableCell
-                                            padding="checkbox"
-                                            key={index + "-check"}
-                                            align="center"
-                                            style={{ minWidth: 10 }}
-                                        >
-                                            <Checkbox
-                                                color="primary"
-                                                checked={selectedItems[element.id] || false}
-                                                onChange={handleSelection}
-                                                id={element.id}
-                                            />
-                                        </TableCell>
-                                        <TableCell
-                                            key={index + "-title"}
-                                            align="left"
-                                            sx={{ width: "75%" }}
-                                        >
-                                            <Link
-                                                href={element.url}
-                                                color={
-                                                    element.available
-                                                        ? "inherit"
-                                                        : element.title === "[Deleted video]"
-                                                            ? "error"
-                                                            : element.title === "[Private video]"
-                                                                ? "#f57c00"
-                                                                : "inherit"
-                                                }
-                                                underline="hover"
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                {element.title}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell
-                                            key={index + "-status"}
-                                            padding="checkbox"
-                                            align="center"
-                                            style={{ minWidth: 10 }}
-                                        >
-                                            {element.downloaded ? (
-                                                <CheckCircleIcon color="success" />
-                                            ) : (
-                                                <CancelIcon color="error" />
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+                    <TableVirtuoso
+                        data={items}
+                        components={VirtuosoTableComponents}
+                        fixedHeaderContent={fixedHeaderContent}
+                        itemContent={rowContent}
+                    />
                     <Box
                         sx={{
                             zIndex: 50,
@@ -339,7 +360,7 @@ export default function SubList({
                     </Box>
                 </TableContainer>
                 <TablePagination
-                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    rowsPerPageOptions={[10, 25, 50, 100, 500]}
                     component="div"
                     count={totalItems}
                     rowsPerPage={rowsPerPage}
@@ -363,13 +384,6 @@ SubList.propTypes = {
     tableHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
     setRowsPerPage: PropTypes.func.isRequired,
-    // resetSublistPage: PropTypes.bool.isRequired,
-    // stop: PropTypes.number.isRequired,
-    // setStop: PropTypes.func.isRequired,
-    // start: PropTypes.number.isRequired,
-    // setStart: PropTypes.func.isRequired,
-    // page: PropTypes.number.isRequired,
-    // setPage: PropTypes.func.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download, disableBtns }) {
