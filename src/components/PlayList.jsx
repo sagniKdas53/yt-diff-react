@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, forwardRef } from "react";
+import { TableVirtuoso } from 'react-virtuoso';
+import { useEffect, useMemo, useState, forwardRef, useRef } from "react";
 import AddIcon from '@mui/icons-material/Add';
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -24,7 +25,6 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 
-import { TableVirtuoso } from 'react-virtuoso';
 import debouce from "lodash.debounce";
 
 export default function PlayList({
@@ -397,8 +397,20 @@ export default function PlayList({
     TableBody: forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
   };
 
+  //scroll stuff
+  const virtuosoRef = useRef(null);
+  // const [scrollIndex, setScrollIndex] = useState(0);
+  // const handleScroll = (e) => {
+  //   //If only there was a way to get the First VisibleItem Index in TableVirtuoso, this doesn't work
+  //   //console.log(e.target.parentElement.children[0].children[0].children[0].children[1].children[1].dataset.index);
+  //   setScrollIndex(+e.target.parentElement.children[0].children[0].children[0].children[1].children[1].dataset.index);
+  // };
+
   return (
     <>
+      {/* <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
+        scrollIndex: {scrollIndex}
+      </Box> */}
       <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
         <TableContainer sx={{ height: tableHeight }}>
           <TableVirtuoso
@@ -406,6 +418,7 @@ export default function PlayList({
             components={VirtuosoTableComponents}
             fixedHeaderContent={fixedHeaderContent}
             itemContent={rowContent}
+            ref={virtuosoRef}
           />
           <Box
             sx={{
