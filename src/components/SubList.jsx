@@ -360,7 +360,7 @@ export default function SubList({
                     </Box>
                 </TableContainer>
                 <TablePagination
-                    rowsPerPageOptions={[10, 25, 50, 100, 500]}
+                    rowsPerPageOptions={[10, 25, 50, 100]}
                     component="div"
                     count={totalItems}
                     rowsPerPage={rowsPerPage}

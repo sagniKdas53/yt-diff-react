@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, forwardRef } from "react";
 import AddIcon from '@mui/icons-material/Add';
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -24,6 +24,7 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 
+import { TableVirtuoso } from 'react-virtuoso';
 import debouce from "lodash.debounce";
 
 export default function PlayList({
@@ -255,136 +256,157 @@ export default function PlayList({
     }
   };
 
+  function fixedHeaderContent() {
+    return (
+      <TableRow>
+        <TableCell
+          key="play-head-order"
+          align="justify"
+          /*padding: top | right and bottom | left */
+          style={{ paddingInlineEnd: "0px" }}
+        >
+          <TableSortLabel
+            active={1 === sort}
+            direction={order === 1 ? "asc" : "desc"}
+            onClick={() => createSortHandler(1)}
+          >
+            ID
+          </TableSortLabel>
+        </TableCell>
+        <TableCell
+          key="play-head-title"
+          align="left"
+          sx={{ width: "75%" }}
+          style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          <TextField
+            id="title-input"
+            label="Title"
+            variant="outlined"
+            size="small"
+            sx={{ width: "100%" }}
+            onKeyUp={debouncedQuery}
+          />
+        </TableCell>
+        <TableCell
+          key="play-head-watch"
+          align="center"
+          style={{ paddingInlineEnd: "0px" }}
+        >
+          <TableSortLabel
+            active={3 === sort}
+            direction={order === 1 ? "asc" : "desc"}
+            onClick={() => createSortHandler(3)}
+          >
+            Updated
+          </TableSortLabel>
+        </TableCell>
+        <TableCell
+          key="play-head-expand"
+          align="center"
+          style={{ paddingInline: "8px" }}
+        >
+          Load
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  function rowContent(_index, row) {
+    return (
+      <>
+        <TableCell
+          key={row.order_added + "-order"}
+          align="justify"
+          style={{ paddingInlineEnd: "0px" }}
+        >
+          {+row.order_added + 1}
+        </TableCell>
+        <TableCell
+          key={row.order_added + "-title"}
+          align="left"
+          sx={{ width: "75%" }}
+          style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          <Link
+            href={row.url}
+            color="inherit"
+            underline="hover"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {row.title}
+          </Link>
+        </TableCell>
+        <TableCell
+          key={row.order_added + "-watch"}
+          align="right"
+          style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
+        >
+          <FormControl
+            variant="standard"
+            sx={{ m: 0, minWidth: 80, minHeight: 45 }}
+            size="small"
+          >
+            <InputLabel id={row.order_added + "-label"}>
+              {lastUpdateCalc(row.updatedAt)}
+            </InputLabel>
+            <Select
+              labelId={row.order_added + "-label"}
+              id={row.order_added + "-select"}
+              value={row.watch}
+              label="Watch"
+              onChange={(e) => changeWatch(e, row.url)}
+            >
+              <MenuItem value={"1"}>NA</MenuItem>
+              <MenuItem value={"2"}>Full</MenuItem>
+              <MenuItem value={"3"}>Fast</MenuItem>
+            </Select>
+          </FormControl>
+        </TableCell>
+        <TableCell
+          key={row.order_added + "-button"}
+          align="center"
+          style={{ paddingInline: "8px" }}
+        >
+          <Button
+            size="small"
+            variant="contained"
+            color={url === row.url ? "success" : "secondary"}
+            onClick={() => handleLoad(row.url)}
+          >
+            {url === row.url ? "DONE" : "LIST"}
+          </Button>
+        </TableCell>
+      </>
+    );
+  }
+
+  const VirtuosoTableComponents = {
+    // eslint-disable-next-line react/display-name
+    Scroller: forwardRef((props, ref) => (
+      <TableContainer component={Paper} {...props} ref={ref} />
+    )),
+    Table: (props) => (
+      <Table stickyHeader size="small" aria-label="play-list vidoes table" {...props} />
+    ),
+    TableHead,
+    // eslint-disable-next-line react/prop-types, no-unused-vars
+    TableRow: ({ item: _item, ...props }) => <TableRow hover role="checkbox" tabIndex={-1} {...props} />,
+    // eslint-disable-next-line react/display-name
+    TableBody: forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
+  };
+
   return (
     <>
       <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
         <TableContainer sx={{ height: tableHeight }}>
-          <Table stickyHeader size="small" aria-label="a dense table">
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  key="play-head-order"
-                  align="justify"
-                  /*padding: top | right and bottom | left */
-                  style={{ paddingInlineEnd: "0px" }}
-                >
-                  <TableSortLabel
-                    active={1 === sort}
-                    direction={order === 1 ? "asc" : "desc"}
-                    onClick={() => createSortHandler(1)}
-                  >
-                    ID
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  key="play-head-title"
-                  align="left"
-                  sx={{ width: "75%" }}
-                  style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
-                >
-                  <TextField
-                    id="title-input"
-                    label="Title"
-                    variant="outlined"
-                    size="small"
-                    sx={{ width: "100%" }}
-                    onKeyUp={debouncedQuery}
-                  />
-                </TableCell>
-                <TableCell
-                  key="play-head-watch"
-                  align="center"
-                  style={{ paddingInlineEnd: "0px" }}
-                >
-                  <TableSortLabel
-                    active={3 === sort}
-                    direction={order === 1 ? "asc" : "desc"}
-                    onClick={() => createSortHandler(3)}
-                  >
-                    Updated
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  key="play-head-expand"
-                  align="center"
-                  style={{ paddingInline: "8px" }}
-                >
-                  Load
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((element, index) => {
-                return (
-                  <TableRow hover role="checkbox" tabIndex={-1} key={index}>
-                    <TableCell
-                      key={element.order_added + "-order"}
-                      align="justify"
-                      style={{ paddingInlineEnd: "0px" }}
-                    >
-                      {+element.order_added + 1}
-                    </TableCell>
-                    <TableCell
-                      key={element.order_added + "-title"}
-                      align="left"
-                      sx={{ width: "75%" }}
-                      style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
-                    >
-                      <Link
-                        href={element.url}
-                        color="inherit"
-                        underline="hover"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {element.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell
-                      key={element.order_added + "-watch"}
-                      align="right"
-                      style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
-                    >
-                      <FormControl
-                        variant="standard"
-                        sx={{ m: 0, minWidth: 80, minHeight: 45 }}
-                        size="small"
-                      >
-                        <InputLabel id={element.order_added + "-label"}>
-                          {lastUpdateCalc(element.updatedAt)}
-                        </InputLabel>
-                        <Select
-                          labelId={element.order_added + "-label"}
-                          id={element.order_added + "-select"}
-                          value={element.watch}
-                          label="Watch"
-                          onChange={(e) => changeWatch(e, element.url)}
-                        >
-                          <MenuItem value={"1"}>NA</MenuItem>
-                          <MenuItem value={"2"}>Full</MenuItem>
-                          <MenuItem value={"3"}>Fast</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </TableCell>
-                    <TableCell
-                      key={element.order_added + "-button"}
-                      align="center"
-                      style={{ paddingInline: "8px" }}
-                    >
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color={url === element.url ? "success" : "secondary"}
-                        onClick={() => handleLoad(element.url)}
-                      >
-                        {url === element.url ? "DONE" : "LIST"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <TableVirtuoso
+            data={items}
+            components={VirtuosoTableComponents}
+            fixedHeaderContent={fixedHeaderContent}
+            itemContent={rowContent}
+          />
           <Box
             sx={{
               zIndex: 50,
@@ -413,12 +435,12 @@ export default function PlayList({
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
         <Dialog open={open} onClose={handleClose} fullWidth sx={{
-          zIndex: 100, 
+          zIndex: 100,
           // this passes the width to the parent container and paper
           "& .MuiDialog-container": {
             "& .MuiPaper-root": {
               width: "100%",
-              minWidth: "300px", 
+              minWidth: "300px",
             },
           },
         }}>
@@ -481,7 +503,4 @@ PlayList.propTypes = {
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
-  // resetSublistPage: PropTypes.bool.isRequired,
-  // startSubList: PropTypes.number.isRequired,
-  // stopSubList: PropTypes.number.isRequired
 };

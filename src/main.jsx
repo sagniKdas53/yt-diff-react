@@ -1,6 +1,5 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import ReactVirtualizedTable from './testing/TableVirt'
 import App from './components/App'
 import './style.scss';
 // ReactDOM.createRoot(document.getElementById('root')).render(
@@ -21,7 +20,6 @@ if (rootElement._reactRootContainer) {
 
 root.render(
   <React.StrictMode>
-    <ReactVirtualizedTable />
     <App />
   </React.StrictMode>
 );
