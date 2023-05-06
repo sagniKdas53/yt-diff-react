@@ -399,18 +399,8 @@ export default function PlayList({
 
   //scroll stuff
   const virtuosoRef = useRef(null);
-  // const [scrollIndex, setScrollIndex] = useState(0);
-  // const handleScroll = (e) => {
-  //   //If only there was a way to get the First VisibleItem Index in TableVirtuoso, this doesn't work
-  //   //console.log(e.target.parentElement.children[0].children[0].children[0].children[1].children[1].dataset.index);
-  //   setScrollIndex(+e.target.parentElement.children[0].children[0].children[0].children[1].children[1].dataset.index);
-  // };
-
   return (
     <>
-      {/* <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
-        scrollIndex: {scrollIndex}
-      </Box> */}
       <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
         <TableContainer sx={{ height: tableHeight }}>
           <TableVirtuoso

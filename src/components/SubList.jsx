@@ -1,5 +1,5 @@
 import { TableVirtuoso } from 'react-virtuoso';
-import { useEffect, useMemo, useState, useCallback, forwardRef } from "react";
+import { useEffect, useMemo, useState, useCallback, forwardRef, useRef } from "react";
 import Box from "@mui/material/Box";
 import CancelIcon from "@mui/icons-material/Cancel";
 import Checkbox from "@mui/material/Checkbox";
@@ -333,8 +333,21 @@ export default function SubList({
         TableBody: forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
     };
 
+    //scroll stuff
+    const virtuosoRef = useRef(null);
+    const setScrollToIndex = () => {
+        virtuosoRef.current.scrollToIndex({
+            index: (rowsPerPage - 1),
+            align: "start",
+            behavior: "auto"
+        });
+    };
+
     return (
         <>
+            <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
+                <button onClick={setScrollToIndex} >Bottom </button>
+            </Box>
             <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
                 <TableContainer sx={{ height: tableHeight }}>
                     <TableVirtuoso
@@ -342,6 +355,7 @@ export default function SubList({
                         components={VirtuosoTableComponents}
                         fixedHeaderContent={fixedHeaderContent}
                         itemContent={rowContent}
+                        ref={virtuosoRef}
                     />
                     <Box
                         sx={{

@@ -1,6 +1,6 @@
 # TODO
 
-1. [] Use react virtuiso to speed things up, it's getting really slow when more data is available
+1. [ ] Use react virtuiso to speed things up, it's getting really slow when more data is available
    1. [x] It's implemented but i don't think its helpful at all, like 100 elements don't really need virtualization, also scrolling problems are there too.
    2. [ ] Now the task at hand is to figure out how to keep the table scroll state when a check box is clicked, button is clicked or a selection is made.
    3. [ ] There is no react way (that i know of to get the index of First VisibleItem Index in TableVirtuoso)
