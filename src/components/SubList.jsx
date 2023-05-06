@@ -177,7 +177,15 @@ export default function SubList({
                 <TableCell
                     key={_index + "-title"}
                     align="left"
-                    sx={{ width: "75%" }}
+                    sx={{
+                        width: "auto",
+                        maxHeight: "33px",
+                        overflow: "clip",
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 1,
+                        textOverflow: "ellipsis",
+                    }}
                 >
                     <Link
                         href={row.url}
@@ -335,7 +343,9 @@ export default function SubList({
 
     //scroll stuff
     const virtuosoRef = useRef(null);
-    const setScrollToIndex = () => {
+    const firstVisibleStartIndex = useRef(0);
+    const firstVisibleStartIndexHold = useRef(0);
+    const scrollToBottom = () => {
         virtuosoRef.current.scrollToIndex({
             index: (rowsPerPage - 1),
             align: "start",
@@ -343,10 +353,49 @@ export default function SubList({
         });
     };
 
+    const scrollToTop = () => {
+        virtuosoRef.current.scrollToIndex({
+            index: 1,
+            align: "start",
+            behavior: "auto"
+        });
+    };
+
+    const scrollToLastFirstVisibleStartIndex = () => {
+        virtuosoRef.current.scrollToIndex({
+            index: firstVisibleStartIndex.current,
+            align: "start",
+            behavior: "auto"
+        });
+    }
+
+    const scrollToLastPosition = () => {
+        console.log("scrollToLastPosition",firstVisibleStartIndexHold.current);
+        virtuosoRef.current.scrollToIndex({
+            index: firstVisibleStartIndexHold.current,
+            align: "start",
+            behavior: "auto"
+        });
+    }
+
+    const handleItemsRendered = (visibleStartIndex) => {
+        try {
+            if (firstVisibleStartIndex.current !== visibleStartIndex[0]) {
+                firstVisibleStartIndexHold.current = visibleStartIndex[0].index;
+            }
+            firstVisibleStartIndex.current = visibleStartIndex[0];
+            console.log(firstVisibleStartIndex.current.index, firstVisibleStartIndex.current);
+        } catch (err) {
+            //firstVisibleStartIndex.current = 0;
+        }
+    };
+
     return (
         <>
-            <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
-                <button onClick={setScrollToIndex} >Bottom </button>
+            <Box sx={{ position: "absolute", m: 1, left: "50%", top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
+                <button onClick={scrollToBottom} >Bottom </button>
+                <button onClick={scrollToTop} >Top </button>
+                <button onClick={scrollToLastPosition}>Last</button>
             </Box>
             <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
                 <TableContainer sx={{ height: tableHeight }}>
@@ -356,6 +405,9 @@ export default function SubList({
                         fixedHeaderContent={fixedHeaderContent}
                         itemContent={rowContent}
                         ref={virtuosoRef}
+                        height={33}
+                        onChange={scrollToLastFirstVisibleStartIndex}
+                        itemsRendered={handleItemsRendered}
                     />
                     <Box
                         sx={{

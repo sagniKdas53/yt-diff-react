@@ -3,8 +3,10 @@
 1. [ ] Use react virtuiso to speed things up, it's getting really slow when more data is available
    1. [x] It's implemented but i don't think its helpful at all, like 100 elements don't really need virtualization, also scrolling problems are there too.
    2. [ ] Now the task at hand is to figure out how to keep the table scroll state when a check box is clicked, button is clicked or a selection is made.
-   3. [ ] There is no react way (that i know of to get the index of First VisibleItem Index in TableVirtuoso)
-   4. [ ] There is a way to store the index and scroll state to it when the state updates, the only thing missing is the way to get such information.
+   3. [x] Find a way to get the index of the starting element of the table body,
+   4. [x] Save it as a ref, else it will cause unnecessary re-rendering
+   5. [ ] There is no react way (that i know of to get the index of First VisibleItem Index in TableVirtuoso)
+   6. [ ] There is a way to store the index and scroll state to it when the state updates, the only thing missing is the way to get such information.
 2. [x] Write a readme
 3. [x] Make playlist table header static and fix the alignments
 4. [x] Use build time variables to make building faster and easier.
