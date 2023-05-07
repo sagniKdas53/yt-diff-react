@@ -178,13 +178,11 @@ export default function SubList({
                     key={_index + "-title"}
                     align="left"
                     sx={{
-                        width: "auto",
+                        maxWidth: "100px",
                         maxHeight: "33px",
-                        overflow: "clip",
-                        display: "-webkit-box",
-                        WebkitBoxOrient: "vertical",
-                        WebkitLineClamp: 1,
+                        overflow: "hidden",
                         textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
                     }}
                 >
                     <Link
@@ -344,7 +342,6 @@ export default function SubList({
     //scroll stuff
     const virtuosoRef = useRef(null);
     const firstVisibleStartIndex = useRef(0);
-    const firstVisibleStartIndexHold = useRef(0);
     const scrollToBottom = () => {
         virtuosoRef.current.scrollToIndex({
             index: (rowsPerPage - 1),
@@ -361,32 +358,12 @@ export default function SubList({
         });
     };
 
-    const scrollToLastFirstVisibleStartIndex = () => {
-        virtuosoRef.current.scrollToIndex({
-            index: firstVisibleStartIndex.current,
-            align: "start",
-            behavior: "auto"
-        });
-    }
-
-    const scrollToLastPosition = () => {
-        console.log("scrollToLastPosition",firstVisibleStartIndexHold.current);
-        virtuosoRef.current.scrollToIndex({
-            index: firstVisibleStartIndexHold.current,
-            align: "start",
-            behavior: "auto"
-        });
-    }
-
     const handleItemsRendered = (visibleStartIndex) => {
         try {
-            if (firstVisibleStartIndex.current !== visibleStartIndex[0]) {
-                firstVisibleStartIndexHold.current = visibleStartIndex[0].index;
-            }
             firstVisibleStartIndex.current = visibleStartIndex[0];
-            console.log(firstVisibleStartIndex.current.index, firstVisibleStartIndex.current);
+            //console.log(firstVisibleStartIndex.current.index, firstVisibleStartIndex.current);
         } catch (err) {
-            //firstVisibleStartIndex.current = 0;
+            firstVisibleStartIndex.current = 0;
         }
     };
 
@@ -395,7 +372,6 @@ export default function SubList({
             <Box sx={{ position: "absolute", m: 1, left: "50%", top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
                 <button onClick={scrollToBottom} >Bottom </button>
                 <button onClick={scrollToTop} >Top </button>
-                <button onClick={scrollToLastPosition}>Last</button>
             </Box>
             <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
                 <TableContainer sx={{ height: tableHeight }}>
@@ -405,8 +381,7 @@ export default function SubList({
                         fixedHeaderContent={fixedHeaderContent}
                         itemContent={rowContent}
                         ref={virtuosoRef}
-                        height={33}
-                        onChange={scrollToLastFirstVisibleStartIndex}
+                        height={"33px"}
                         itemsRendered={handleItemsRendered}
                     />
                     <Box
