@@ -164,8 +164,9 @@ export default function PlayList({
   // use the memoized fetch result to set the items state
   useEffect(() => {
     memoizedFetch.then((data) => {
-      setItems(data["rows"]);
-      setTotalItems(+data["count"]);
+      const rows = data["rows"].filter((i)=>i.playlist_index >= 0);
+      setItems(rows);
+      setTotalItems(rows.length);
     });
   }, [memoizedFetch]);
 
@@ -316,14 +317,14 @@ export default function PlayList({
     return (
       <>
         <TableCell
-          key={row.order_added + "-order"}
+          key={row.playlist_index + "-order"}
           align="justify"
           style={{ paddingInlineEnd: "0px" }}
         >
-          {+row.order_added + 1}
+          {+row.playlist_index + 1}
         </TableCell>
         <TableCell
-          key={row.order_added + "-title"}
+          key={row.playlist_index + "-title"}
           align="left"
           sx={{ width: "75%" }}
           style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
@@ -339,7 +340,7 @@ export default function PlayList({
           </Link>
         </TableCell>
         <TableCell
-          key={row.order_added + "-watch"}
+          key={row.playlist_index + "-watch"}
           align="right"
           style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
         >
@@ -348,12 +349,12 @@ export default function PlayList({
             sx={{ m: 0, minWidth: 80, minHeight: 45 }}
             size="small"
           >
-            <InputLabel id={row.order_added + "-label"}>
+            <InputLabel id={row.playlist_index + "-label"}>
               {lastUpdateCalc(row.updatedAt)}
             </InputLabel>
             <Select
-              labelId={row.order_added + "-label"}
-              id={row.order_added + "-select"}
+              labelId={row.playlist_index + "-label"}
+              id={row.playlist_index + "-select"}
               value={row.watch}
               label="Watch"
               onChange={(e) => changeWatch(e, row.url)}
@@ -365,7 +366,7 @@ export default function PlayList({
           </FormControl>
         </TableCell>
         <TableCell
-          key={row.order_added + "-button"}
+          key={row.playlist_index + "-button"}
           align="center"
           style={{ paddingInline: "8px" }}
         >

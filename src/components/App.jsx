@@ -29,7 +29,7 @@ These 4 are the urls that are supposed to work, they are necessary for developme
 
 but in production they can be replaced with "" which will make the fetches work automatically
 */
-const backEnd = import.meta.env.PROD ? "" : "https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net";
+const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
 
 const socket = io.connect(backEnd, {
     path: "/ytdiff/socket.io",
