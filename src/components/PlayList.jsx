@@ -163,8 +163,9 @@ export default function PlayList({
   // use the memoized fetch result to set the items state
   useEffect(() => {
     memoizedFetch.then((data) => {
-      setItems(data["rows"]);
-      setTotalItems(+data["count"]);
+      const rows = data["rows"].filter((i)=>i.playlist_index >= 0);
+      setItems(rows);
+      setTotalItems(rows.length);
     });
   }, [memoizedFetch]);
 
@@ -318,20 +319,20 @@ export default function PlayList({
                 return (
                   <TableRow hover role="checkbox" tabIndex={-1} key={index}>
                     <TableCell
-                      key={element.order_added + "-order"}
+                      key={element.playlist_index + "-order"}
                       align="justify"
                       style={{ paddingInlineEnd: "0px" }}
                     >
-                      {+element.order_added + 1}
+                      {+element.playlist_index + 1}
                     </TableCell>
                     <TableCell
-                      key={element.order_added + "-title"}
+                      key={element.playlist_index + "-title"}
                       align="left"
                       sx={{ width: "75%" }}
                       style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
                     >
                       <Link
-                        href={element.url}
+                        href={element.playlist_url}
                         color="inherit"
                         underline="hover"
                         target="_blank"
@@ -341,7 +342,7 @@ export default function PlayList({
                       </Link>
                     </TableCell>
                     <TableCell
-                      key={element.order_added + "-watch"}
+                      key={element.playlist_index + "-watch"}
                       align="right"
                       style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
                     >
@@ -350,13 +351,13 @@ export default function PlayList({
                         sx={{ m: 0, minWidth: 80, minHeight: 45 }}
                         size="small"
                       >
-                        <InputLabel id={element.order_added + "-label"}>
+                        <InputLabel id={element.playlist_index + "-label"}>
                           {lastUpdateCalc(element.updatedAt)}
                         </InputLabel>
                         <Select
-                          labelId={element.order_added + "-label"}
-                          id={element.order_added + "-select"}
-                          value={element.watch}
+                          labelId={element.playlist_index + "-label"}
+                          id={element.playlist_index + "-select"}
+                          value={element.monitoring_type}
                           label="Watch"
                           onChange={(e) => changeWatch(e, element.url)}
                         >
@@ -367,17 +368,17 @@ export default function PlayList({
                       </FormControl>
                     </TableCell>
                     <TableCell
-                      key={element.order_added + "-button"}
+                      key={element.playlist_index + "-button"}
                       align="center"
                       style={{ paddingInline: "8px" }}
                     >
                       <Button
                         size="small"
                         variant="contained"
-                        color={url === element.url ? "success" : "secondary"}
-                        onClick={() => handleLoad(element.url)}
+                        color={url === element.playlist_url ? "success" : "secondary"}
+                        onClick={() => handleLoad(element.playlist_url)}
                       >
-                        {url === element.url ? "DONE" : "LIST"}
+                        {url === element.playlist_url ? "DONE" : "LIST"}
                       </Button>
                     </TableCell>
                   </TableRow>
