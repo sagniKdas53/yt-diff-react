@@ -71,7 +71,7 @@ export default function SubList({
     const bulkAction = () => {
         const tempState = {};
         items.forEach((element) => {
-            tempState[element.id] = !selectAll;
+            tempState[element.video_list.video_id] = !selectAll;
         });
         updateSelected((prevSelected) => ({ ...prevSelected, ...tempState }));
         setSelectAll(!selectAll);
@@ -147,7 +147,7 @@ export default function SubList({
         if (downloaded !== "") {
             const updatedItems = [...items];
             const itemIndex = updatedItems.findIndex(
-                (item) => item.id === downloaded
+                (item) => item.video_list.video_id === downloaded
             );
             const updatedItem = {
                 ...updatedItems[itemIndex],
@@ -167,10 +167,10 @@ export default function SubList({
 
     useEffect(() => {
         setSelectAll(false);
-        items.map((element) => (selectedItems[element.id] = false));
+        items.map((element) => (selectedItems[element.video_list.video_id] = false));
         // Remove keys not present in data
         Object.keys(selectedItems).forEach((key) => {
-            if (!items.find((element) => element.id === key)) {
+            if (!items.find((element) => element.video_list.video_id === key)) {
                 delete selectedItems[key];
             }
         });
@@ -277,9 +277,9 @@ export default function SubList({
                                         >
                                             <Checkbox
                                                 color="primary"
-                                                checked={selectedItems[element.id] || false}
+                                                checked={selectedItems[element.video_list.video_id] || false}
                                                 onChange={handleSelection}
-                                                id={element.id}
+                                                id={element.video_list.video_id}
                                             />
                                         </TableCell>
                                         <TableCell
@@ -288,7 +288,7 @@ export default function SubList({
                                             sx={{ width: "75%" }}
                                         >
                                             <Link
-                                                href={element.url}
+                                                href={element.video_list.video_url}
                                                 color={
                                                     element.available
                                                         ? "inherit"
@@ -302,7 +302,7 @@ export default function SubList({
                                                 target="_blank"
                                                 rel="noreferrer"
                                             >
-                                                {element.title}
+                                                {element.video_list.title}
                                             </Link>
                                         </TableCell>
                                         <TableCell
@@ -311,7 +311,7 @@ export default function SubList({
                                             align="center"
                                             style={{ minWidth: 10 }}
                                         >
-                                            {element.downloaded ? (
+                                            {element.video_list.downloaded ? (
                                                 <CheckCircleIcon color="success" />
                                             ) : (
                                                 <CancelIcon color="error" />
