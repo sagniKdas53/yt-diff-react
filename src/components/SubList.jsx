@@ -26,7 +26,7 @@ export default function SubList({
     url,
     respIndex,
     disableBtns,
-    downloaded,
+    downloadedID,
     backEnd,
     reFetch,
     tableHeight,
@@ -96,7 +96,7 @@ export default function SubList({
                 "Content-Type": "application/json",
             },
             mode: "cors",
-            body: JSON.stringify({ id: data }),
+            body: JSON.stringify({ id: data, url: url }),
         });
     }
 
@@ -144,20 +144,26 @@ export default function SubList({
     }, [memoizedFetch]);
 
     useEffect(() => {
-        if (downloaded !== "") {
-            const updatedItems = [...items];
-            const itemIndex = updatedItems.findIndex(
-                (item) => item.video_list.video_id === downloaded
-            );
-            const updatedItem = {
-                ...updatedItems[itemIndex],
-                downloaded: true,
-            };
-            updatedItems[itemIndex] = updatedItem;
-            setItems(updatedItems);
+        if (downloadedID !== "") {
+            //console.log(downloadedID);
+            setItems(prevItems => {
+                return prevItems.map(item => {
+                    if (item.video_list.video_id === downloadedID) {
+                        return {
+                            ...item,
+                            video_list: {
+                                ...item.video_list,
+                                downloaded: true
+                            }
+                        };
+                    }
+                    return item;
+                });
+            });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [downloaded]);
+    }, [downloadedID]);
+
 
     useEffect(() => {
         updateSelected({});
@@ -358,7 +364,7 @@ SubList.propTypes = {
     backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
     disableBtns: PropTypes.bool.isRequired,
-    downloaded: PropTypes.string.isRequired,
+    downloadedID: PropTypes.string.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,

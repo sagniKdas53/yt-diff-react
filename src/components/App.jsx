@@ -70,7 +70,7 @@ export default function App() {
     const [reFetch, setReFetch] = useState("");
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
-    const downloaded = useRef("");
+    const downloadedID = useRef("");
 
     // 53px table top, 52 px table pagination, 48 px app bar
     // Table top is included in the table height so no need to subtract it
@@ -153,8 +153,8 @@ export default function App() {
             toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
-            downloaded.current = data.id;
-            //console.log(downloaded.current);
+            downloadedID.current = data.id;
+            //console.log(downloadedID.current);
             setSnack(`${data.message}`, "success");
         });
         socket.on("download-failed", function (data) {
@@ -237,7 +237,7 @@ export default function App() {
                                 backEnd={backEnd}
                                 respIndex={respIndex}
                                 disableBtns={disableBtns}
-                                downloaded={downloaded.current}
+                                downloadedID={downloadedID.current}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
                                 rowsPerPage={rowsPerPageSubList}
