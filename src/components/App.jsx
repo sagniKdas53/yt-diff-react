@@ -61,7 +61,7 @@ export default function App() {
     const [respIndex, setRespIndex] = useState(0);
     const [showPlaylists, toggleView] = useState(true);
     const [connectionId, setConnectionId] = useState("");
-    const [disableBtns, toggleDisable] = useState(false);
+    const [disableButtons, toggleDisable] = useState(false);
     const [disableProgress, toggleProgress] = useState(false);
     const [showSnackbar, setSnackVisibility] = useState(false);
     const [snackMsg, setSnackMsgTxt] = useState("");
@@ -139,7 +139,7 @@ export default function App() {
                 progressRef.current = data.percentage;
             }
 
-            if (!disableBtns) {
+            if (!disableButtons) {
                 toggleDisableCallBack(true);
             }
         });
@@ -219,7 +219,7 @@ export default function App() {
                                 setUrl={setListUrl}
                                 backEnd={backEnd}
                                 setRespIndex={setRespIndex}
-                                disableBtns={disableBtns}
+                                disableButtons={disableButtons}
                                 setIndeterminate={setIndeterminate}
                                 setSnack={setSnack}
                                 reFetch={reFetch}
@@ -236,7 +236,7 @@ export default function App() {
                                 setUrl={setListUrl}
                                 backEnd={backEnd}
                                 respIndex={respIndex}
-                                disableBtns={disableBtns}
+                                disableButtons={disableButtons}
                                 downloadedID={downloadedID.current}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}

@@ -19,13 +19,13 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 
-import debouce from "lodash.debounce";
+import debounce from "lodash.debounce";
 
 export default function SubList({
     setUrl,
     url,
     respIndex,
-    disableBtns,
+    disableButtons,
     downloadedID,
     backEnd,
     reFetch,
@@ -104,7 +104,6 @@ export default function SubList({
     // useEffects and useMemos
     // use the memoized fetch to set the items state
     const memoizedFetch = useMemo(async () => {
-        //console.log('Fetching Sublists');
         if (url !== "") {
             if (url !== lastUrl) {
                 //console.log("changing page to zero")
@@ -198,12 +197,12 @@ export default function SubList({
     }, [selectedItems]);
 
     const debouncedQuery = useMemo(
-        () => debouce((event) => updateQuery(event.target.value.trim()), 1000),
+        () => debounce((event) => updateQuery(event.target.value.trim()), 1000),
         []
     );
 
     useEffect(() => {
-        // from what it seems to me the error was due to db indeing being wrong, need to write a maintanince function
+        // from what it seems to me the error was due to db indexing being wrong, need to write a maintenance function
         //console.log(JSON.stringify({ respIndex: respIndex, page: Math.floor(respIndex / rowsPerPage) }));
         if (respIndex === -1) {
             handleChangePage(null, 0);
@@ -340,7 +339,7 @@ export default function SubList({
                             selectedItems={selectedItems}
                             clear={clearList}
                             download={downloadFunc}
-                            disableBtns={disableBtns}
+                            disableButtons={disableButtons}
                         />
                     </Box>
                 </TableContainer>
@@ -363,7 +362,7 @@ SubList.propTypes = {
     url: PropTypes.string.isRequired,
     backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
-    disableBtns: PropTypes.bool.isRequired,
+    disableButtons: PropTypes.bool.isRequired,
     downloadedID: PropTypes.string.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,
@@ -378,7 +377,7 @@ SubList.propTypes = {
     // setPage: PropTypes.func.isRequired,
 };
 
-function SubListFab({ selectedItems, clear, download, disableBtns }) {
+function SubListFab({ selectedItems, clear, download, disableButtons }) {
     const isNoItemsSelected =
         Object.keys(selectedItems).length === 0 ||
         Object.values(selectedItems).every((val) => !val);
@@ -394,7 +393,7 @@ function SubListFab({ selectedItems, clear, download, disableBtns }) {
             color="primary"
             aria-label="action"
             onClick={handleClick}
-            disabled={isNoItemsSelected ? false : disableBtns}
+            disabled={isNoItemsSelected ? false : disableButtons}
         >
             {icon}
         </Fab>
@@ -403,7 +402,7 @@ function SubListFab({ selectedItems, clear, download, disableBtns }) {
 
 SubListFab.propTypes = {
     selectedItems: PropTypes.object.isRequired,
-    disableBtns: PropTypes.bool.isRequired,
+    disableButtons: PropTypes.bool.isRequired,
     download: PropTypes.func.isRequired,
     clear: PropTypes.func.isRequired,
 };

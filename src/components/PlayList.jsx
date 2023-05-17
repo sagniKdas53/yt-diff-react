@@ -24,13 +24,13 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 
-import debouce from "lodash.debounce";
+import debounce from "lodash.debounce";
 
 export default function PlayList({
   setUrl,
   url,
   backEnd,
-  disableBtns,
+  disableButtons,
   setRespIndex,
   setIndeterminate,
   setSnack,
@@ -162,7 +162,7 @@ export default function PlayList({
   // use the memoized fetch result to set the items state
   useEffect(() => {
     memoizedFetch.then((data) => {
-      const rows = data["rows"].filter((i)=>i.playlist_index >= 0);
+      const rows = data["rows"].filter((i) => i.playlist_index >= 0);
       setItems(rows);
       setTotalItems(rows.length);
     });
@@ -185,7 +185,7 @@ export default function PlayList({
   };
 
   const debouncedQuery = useMemo(
-    () => debouce((event) => updateQuery(event.target.value.trim()), 1000),
+    () => debounce((event) => updateQuery(event.target.value.trim()), 1000),
     []
   );
 
@@ -397,7 +397,7 @@ export default function PlayList({
               color="primary"
               aria-label="action"
               onClick={handleClickOpen}
-              disabled={disableBtns}
+              disabled={disableButtons}
             >
               <AddIcon />
             </Fab>
@@ -413,12 +413,12 @@ export default function PlayList({
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
         <Dialog open={open} onClose={handleClose} fullWidth sx={{
-          zIndex: 100, 
+          zIndex: 100,
           // this passes the width to the parent container and paper
           "& .MuiDialog-container": {
             "& .MuiPaper-root": {
               width: "100%",
-              minWidth: "300px", 
+              minWidth: "300px",
             },
           },
         }}>
@@ -444,11 +444,11 @@ export default function PlayList({
               sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "24px" }}
               size="small"
             >
-              <InputLabel id="dialog-watch-lable" sx={{ paddingInline: "24px" }}>
+              <InputLabel id="dialog-watch-label" sx={{ paddingInline: "24px" }}>
                 Watch mode:
               </InputLabel>
               <Select
-                labelId="dialog-watch-lable"
+                labelId="dialog-watch-label"
                 id="dialog-watch-select"
                 value={watch}
                 label="Watch"
@@ -474,14 +474,11 @@ PlayList.propTypes = {
   setUrl: PropTypes.func.isRequired,
   url: PropTypes.string.isRequired,
   backEnd: PropTypes.string.isRequired,
-  disableBtns: PropTypes.bool.isRequired,
+  disableButtons: PropTypes.bool.isRequired,
   setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
-  // resetSublistPage: PropTypes.bool.isRequired,
-  // startSubList: PropTypes.number.isRequired,
-  // stopSubList: PropTypes.number.isRequired
 };
