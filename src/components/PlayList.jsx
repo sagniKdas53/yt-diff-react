@@ -129,8 +129,7 @@ export default function PlayList({
           stop: rowsPerPageSubList + 1,
           chunk: rowsPerPageSubList + 1,
           watch: watch,
-          //find out what this did
-          continuous: true,
+          sleep: true,
         }),
       }
     );
@@ -139,7 +138,7 @@ export default function PlayList({
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
     //console.log('Fetching Playlists');
-    const response = await fetch(backEnd + "/ytdiff/dbi", {
+    const response = await fetch(backEnd + "/ytdiff/getplay", {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -191,7 +190,7 @@ export default function PlayList({
   );
 
   const changeWatch = (event, url) => {
-    fetch(backEnd + "/ytdiff/watchlist", {
+    fetch(backEnd + "/ytdiff/watch", {
       method: "post",
       headers: {
         Accept: "application/json",
