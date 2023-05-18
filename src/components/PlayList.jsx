@@ -162,9 +162,8 @@ export default function PlayList({
   // use the memoized fetch result to set the items state
   useEffect(() => {
     memoizedFetch.then((data) => {
-      const rows = data["rows"].filter((i) => i.playlist_index >= 0);
-      setItems(rows);
-      setTotalItems(rows.length);
+      setItems(data["rows"]);
+      setTotalItems(data["count"]);
     });
   }, [memoizedFetch]);
 
