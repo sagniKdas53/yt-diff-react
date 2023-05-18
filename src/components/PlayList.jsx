@@ -128,7 +128,7 @@ export default function PlayList({
           //for pagination to not get stuck
           stop: rowsPerPageSubList + 1,
           chunk: rowsPerPageSubList + 1,
-          watch: watch,
+          monitoring_type: watch,
           sleep: true,
         }),
       }
@@ -206,10 +206,10 @@ export default function PlayList({
       .then((d) => {
         if (d["Outcome"] === "Success") {
           const updatedItems = [...items];
-          const itemIndex = updatedItems.findIndex((item) => item.url === url);
+          const itemIndex = updatedItems.findIndex((item) => item.playlist_url === url);
           const updatedItem = {
             ...updatedItems[itemIndex],
-            watch: event.target.value,
+            monitoring_type: event.target.value,
           };
           updatedItems[itemIndex] = updatedItem;
           setItems(updatedItems);
@@ -358,7 +358,7 @@ export default function PlayList({
                           id={element.playlist_index + "-select"}
                           value={element.monitoring_type}
                           label="Watch"
-                          onChange={(e) => changeWatch(e, element.url)}
+                          onChange={(e) => changeWatch(e, element.playlist_url)}
                         >
                           <MenuItem value={"1"}>NA</MenuItem>
                           <MenuItem value={"2"}>Full</MenuItem>

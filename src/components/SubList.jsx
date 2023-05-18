@@ -297,9 +297,9 @@ export default function SubList({
                                                 color={
                                                     element.available
                                                         ? "inherit"
-                                                        : element.title === "[Deleted video]"
+                                                        : element.video_list.title === "[Deleted video]"
                                                             ? "error"
-                                                            : element.title === "[Private video]"
+                                                            : element.video_list.title === "[Private video]"
                                                                 ? "#f57c00"
                                                                 : "inherit"
                                                 }
