@@ -17,10 +17,6 @@ export default function Navigation({
     theme,
     connectionId,
     setListUrl,
-    // eslint-disable-next-line no-unused-vars
-    showPlaylists,
-    // eslint-disable-next-line no-unused-vars
-    toggleView,
 }) {
     return (
         <>
@@ -66,6 +62,4 @@ Navigation.propTypes = {
     theme: PropTypes.bool.isRequired,
     connectionId: PropTypes.string.isRequired,
     setListUrl: PropTypes.func.isRequired,
-    showPlaylists: PropTypes.bool.isRequired,
-    toggleView: PropTypes.func.isRequired,
 };

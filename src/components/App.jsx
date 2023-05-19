@@ -2,7 +2,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useState, useCallback, useEffect, forwardRef, useRef, lazy, Suspense } from "react";
 import Box from "@mui/material/Box";
 import CircularProgress from '@mui/material/CircularProgress';
-import CloseIcon from "@mui/icons-material/Close";
+import CloseIcon from "@mui/icons-material/Close.js";
 import Grid from "@mui/material/Unstable_Grid2";
 import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
@@ -12,23 +12,10 @@ import Stack from "@mui/material/Stack";
 
 import io from "socket.io-client";
 
-// import Navigation from "./Nav";
-// import PlayList from "./PlayList";
-// import SubList from "./SubList";
-
 const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 
-/* 
-These 4 are the urls that are supposed to work, they are necessary for development
-"https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
-"http://localhost:8888",
-"http://192.168.0.106:8888",
-"http://192.168.0.103:8888",
-
-but in production they can be replaced with "" which will make the fetches work automatically
-*/
 const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
 
 const socket = io.connect(backEnd, {
@@ -59,7 +46,6 @@ export default function App() {
     const [theme, themeSwitcher] = useState(true);
     const [listUrl, setListUrl] = useState("");
     const [respIndex, setRespIndex] = useState(0);
-    const [showPlaylists, toggleView] = useState(true);
     const [connectionId, setConnectionId] = useState("");
     const [disableButtons, toggleDisable] = useState(false);
     const [disableProgress, toggleProgress] = useState(false);
@@ -195,8 +181,6 @@ export default function App() {
                             theme={theme}
                             connectionId={connectionId}
                             setListUrl={setListUrl}
-                            showPlaylists={showPlaylists}
-                            toggleView={toggleView}
                         />
                         <Box sx={{ width: "100%", height: progressHeight + "px" }}>
                             <LinearProgress

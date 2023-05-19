@@ -1,13 +1,11 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './components/App'
-import './style.scss';
-// ReactDOM.createRoot(document.getElementById('root')).render(
-//   <React.StrictMode>
-//     <App />
-//   </React.StrictMode>,
-// )
-const rootElement = document.getElementById('root');
+import React from "react";
+import ReactDOM from "react-dom/client";
+
+import App from "./components/App";
+
+import "./style.scss";
+
+const rootElement = document.getElementById("root");
 let root;
 
 if (rootElement._reactRootContainer) {
