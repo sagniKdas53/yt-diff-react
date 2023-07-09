@@ -22,7 +22,7 @@ const SubList = lazy(() => import("./SubList.jsx"));
 
 /* 
 These 4 are the urls that are supposed to work, they are necessary for development
-"https://lenovo-ideapad-320-15ikb.tail9ece4.ts.net",
+"https://ideapad.tail9ece4.ts.net",
 "http://localhost:8888",
 "http://192.168.0.106:8888",
 "http://192.168.0.103:8888",
