@@ -23,6 +23,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
+import Grid from "@mui/material/Unstable_Grid2";
 
 import debounce from "lodash.debounce";
 
@@ -37,6 +38,7 @@ export default function PlayList({
   reFetch,
   tableHeight,
   rowsPerPageSubList,
+  setRowsPerPageSubList
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -124,7 +126,7 @@ export default function PlayList({
         body: JSON.stringify({
           url: urlItem,
           start: 0,
-          //in theory this will fetch enough results 
+          //in theory this will fetch enough results
           //for pagination to not get stuck
           stop: rowsPerPageSubList + 1,
           chunk: rowsPerPageSubList + 1,
@@ -422,7 +424,7 @@ export default function PlayList({
           },
         }}>
           <DialogTitle sx={{ paddingBlockEnd: 0 }}>Add</DialogTitle>
-          <DialogContent>
+          <DialogContent sx={{ m: 0, paddingBlockEnd: 0 }}>
             <TextField
               id="standard-multiline-static"
               label="Url List"
@@ -435,31 +437,57 @@ export default function PlayList({
               variant="standard"
               onChange={updateUrls}
             />
-
           </DialogContent>
           <DialogActions>
-            <FormControl
-              variant="standard"
-              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "24px" }}
-              size="small"
-            >
-              <InputLabel id="dialog-watch-label" sx={{ paddingInline: "24px" }}>
-                Watch mode:
-              </InputLabel>
-              <Select
-                labelId="dialog-watch-label"
-                id="dialog-watch-select"
-                value={watch}
-                label="Watch"
-                onChange={(event) => setWatch(event.target.value)}
+          <Grid container spacing={0} key="DialogActionsGrid">
+            
+          </Grid>
+            <Box>
+              <FormControl
+                variant="standard"
+                sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "24px" }}
+                size="small"
               >
-                <MenuItem value={"1"}>NA</MenuItem>
-                <MenuItem value={"2"}>Full</MenuItem>
-                <MenuItem value={"3"}>Fast</MenuItem>
-              </Select>
-            </FormControl>
+                <InputLabel id="dialog-watch-label" sx={{ paddingInline: "24px" }}>
+                  Watch mode:
+                </InputLabel>
+                <Select
+                  labelId="dialog-watch-label"
+                  id="dialog-watch-select"
+                  value={watch}
+                  label="Watch"
+                  onChange={(event) => setWatch(event.target.value)}
+                >
+                  <MenuItem value={"1"}>NA</MenuItem>
+                  <MenuItem value={"2"}>Full</MenuItem>
+                  <MenuItem value={"3"}>Fast</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box>
+              <FormControl
+                variant="standard"
+                sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "3px" }}
+                size="small"
+              >
+                <InputLabel id="dialog-watch-label" sx={{ paddingInline: "3px" }}>
+                  Chunk size:
+                </InputLabel>
+                <Select
+                  labelId="dialog-watch-label"
+                  id="dialog-watch-select"
+                  value={rowsPerPageSubList}
+                  label="Watch"
+                  onChange={(event) => setRowsPerPageSubList(event.target.value)}
+                >
+                  <MenuItem value={"10"}>10</MenuItem>
+                  <MenuItem value={"25"}>25</MenuItem>
+                  <MenuItem value={"50"}>50</MenuItem>
+                  <MenuItem value={"100"}>100</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
             <Box sx={{ flexGrow: 1 }}></Box>
-            {/* <Button onClick={handleClose}>Cancel</Button> */}
             <Button onClick={clearUrlList}>Clear</Button>
             <Button onClick={downloadUrlList}>Submit</Button>
           </DialogActions>
@@ -480,4 +508,5 @@ PlayList.propTypes = {
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
+  setRowsPerPageSubList: PropTypes.func.isRequired
 };

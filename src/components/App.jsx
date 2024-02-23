@@ -209,6 +209,7 @@ export default function App() {
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
                                 rowsPerPageSubList={rowsPerPageSubList}
+                                setRowsPerPageSubList={setRowsPerPageSubList}
                             />
                         </Suspense>
                     </Grid>
