@@ -73,6 +73,7 @@ export default function PlayList({
     setUrlList("");
     setOpen(false);
     setWatch("1");
+    setRowsPerPageSubList(10);
   };
 
   const downloadUrlList = async () => {
@@ -439,57 +440,67 @@ export default function PlayList({
             />
           </DialogContent>
           <DialogActions>
-          <Grid container spacing={0} key="DialogActionsGrid">
-            
-          </Grid>
-            <Box>
-              <FormControl
-                variant="standard"
-                sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "24px" }}
-                size="small"
-              >
-                <InputLabel id="dialog-watch-label" sx={{ paddingInline: "24px" }}>
-                  Watch mode:
-                </InputLabel>
-                <Select
-                  labelId="dialog-watch-label"
-                  id="dialog-watch-select"
-                  value={watch}
-                  label="Watch"
-                  onChange={(event) => setWatch(event.target.value)}
+            <Grid container rowSpacing={{ xs: 0.5, sm: 0 }} columnSpacing={0} key="DialogActionsGrid">
+              <Grid xs={12} sm={6}>
+                <FormControl
+                  variant="standard"
+                  sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: { xs: "24px" } }}
+                  size="small"
                 >
-                  <MenuItem value={"1"}>NA</MenuItem>
-                  <MenuItem value={"2"}>Full</MenuItem>
-                  <MenuItem value={"3"}>Fast</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-            <Box>
-              <FormControl
-                variant="standard"
-                sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: "3px" }}
-                size="small"
-              >
-                <InputLabel id="dialog-watch-label" sx={{ paddingInline: "3px" }}>
-                  Chunk size:
-                </InputLabel>
-                <Select
-                  labelId="dialog-watch-label"
-                  id="dialog-watch-select"
-                  value={rowsPerPageSubList}
-                  label="Watch"
-                  onChange={(event) => setRowsPerPageSubList(event.target.value)}
+                  <InputLabel id="dialog-watch-label" sx={{ paddingInline: { xs: "24px" } }}>
+                    Watch mode:
+                  </InputLabel>
+                  <Select
+                    labelId="dialog-watch-label"
+                    id="dialog-watch-select"
+                    value={watch}
+                    label="Watch"
+                    onChange={(event) => setWatch(event.target.value)}
+                  >
+                    <MenuItem value={"1"}>NA</MenuItem>
+                    <MenuItem value={"2"}>Full</MenuItem>
+                    <MenuItem value={"3"}>Fast</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid xs={12} sm={6}>
+                <FormControl
+                  variant="standard"
+                  sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: { xs: "24px", sm: "3px" } }}
+                  size="small"
                 >
-                  <MenuItem value={"10"}>10</MenuItem>
-                  <MenuItem value={"25"}>25</MenuItem>
-                  <MenuItem value={"50"}>50</MenuItem>
-                  <MenuItem value={"100"}>100</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+                  <InputLabel id="dialog-watch-label" sx={{ paddingInline: { xs: "24px", sm: "3px" } }}>
+                    Chunk size:
+                  </InputLabel>
+                  <Select
+                    labelId="dialog-watch-label"
+                    id="dialog-watch-select"
+                    value={rowsPerPageSubList}
+                    label="Watch"
+                    onChange={(event) => setRowsPerPageSubList(event.target.value)}
+                  >
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={25}>25</MenuItem>
+                    <MenuItem value={50}>50</MenuItem>
+                    <MenuItem value={100}>100</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
             <Box sx={{ flexGrow: 1 }}></Box>
-            <Button onClick={clearUrlList}>Clear</Button>
-            <Button onClick={downloadUrlList}>Submit</Button>
+            {/* <Button variant="contained" onClick={clearUrlList}>Clear</Button>
+            <Button variant="contained" onClick={downloadUrlList}>Submit</Button> */}
+            <Grid container rowSpacing={{ xs: 1, sm: 0 }} columnSpacing={1}
+              sx={{ m: 0, paddingInlineEnd: "24px" }} key="DialogActionsGridButtons">
+              <Grid xs={12} sm={6} sx={{ direction: "trl" }}>
+                <Box>
+                  <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
+                </Box>
+              </Grid>
+              <Grid xs={12} sm={6} >
+                <Button variant="contained" onClick={downloadUrlList} sx={{ float: "right" }}>Submit</Button>
+              </Grid>
+            </Grid>
           </DialogActions>
         </Dialog>
       </Paper>
