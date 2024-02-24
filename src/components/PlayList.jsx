@@ -23,7 +23,6 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
-import Grid from "@mui/material/Unstable_Grid2";
 
 import debounce from "lodash.debounce";
 
@@ -37,8 +36,6 @@ export default function PlayList({
   setSnack,
   reFetch,
   tableHeight,
-  rowsPerPageSubList,
-  setRowsPerPageSubList
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -73,7 +70,6 @@ export default function PlayList({
     setUrlList("");
     setOpen(false);
     setWatch("1");
-    setRowsPerPageSubList(10);
   };
 
   const downloadUrlList = async () => {
@@ -87,6 +83,19 @@ export default function PlayList({
           .then((data) => JSON.parse(data));
         // since listing may take a while having this here as an intermediate state can't hurt too much.
         setUrl(response.resp_url);
+        // Will add the playlist position update logic somewhere in here.
+        if (response.prev_playlist_index > 0) {
+          const start = Math.floor(response.prev_playlist_index / rowsPerPage) * rowsPerPage;
+          const end = start + rowsPerPage;
+          const page = Math.floor(response.prev_playlist_index / rowsPerPage);
+          // console.log("Moving to playlist index " + response.prev_playlist_index);
+          // console.log("Start: " + start);
+          // console.log("End: " + end);
+          // console.log("Page: " + page);
+          setPage(page);
+          setStart(start);
+          setStop(end);
+        }
         //console.log(+response.start);
         setRespIndex(+response.start);
       }
@@ -127,10 +136,9 @@ export default function PlayList({
         body: JSON.stringify({
           url: urlItem,
           start: 0,
-          //in theory this will fetch enough results
-          //for pagination to not get stuck
-          stop: rowsPerPageSubList + 1,
-          chunk: rowsPerPageSubList + 1,
+          // no longer needed
+          // stop: rowsPerPageSubList + 1,
+          // chunk: rowsPerPageSubList + 1,
           monitoring_type: watch,
           sleep: true,
         }),
@@ -440,67 +448,31 @@ export default function PlayList({
             />
           </DialogContent>
           <DialogActions>
-            <Grid container rowSpacing={{ xs: 0.5, sm: 0 }} columnSpacing={0} key="DialogActionsGrid">
-              <Grid xs={12} sm={6}>
-                <FormControl
-                  variant="standard"
-                  sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: { xs: "24px" } }}
-                  size="small"
-                >
-                  <InputLabel id="dialog-watch-label" sx={{ paddingInline: { xs: "24px" } }}>
-                    Watch mode:
-                  </InputLabel>
-                  <Select
-                    labelId="dialog-watch-label"
-                    id="dialog-watch-select"
-                    value={watch}
-                    label="Watch"
-                    onChange={(event) => setWatch(event.target.value)}
-                  >
-                    <MenuItem value={"1"}>NA</MenuItem>
-                    <MenuItem value={"2"}>Full</MenuItem>
-                    <MenuItem value={"3"}>Fast</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid xs={12} sm={6}>
-                <FormControl
-                  variant="standard"
-                  sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInline: { xs: "24px", sm: "3px" } }}
-                  size="small"
-                >
-                  <InputLabel id="dialog-watch-label" sx={{ paddingInline: { xs: "24px", sm: "3px" } }}>
-                    Chunk size:
-                  </InputLabel>
-                  <Select
-                    labelId="dialog-watch-label"
-                    id="dialog-watch-select"
-                    value={rowsPerPageSubList}
-                    label="Watch"
-                    onChange={(event) => setRowsPerPageSubList(event.target.value)}
-                  >
-                    <MenuItem value={10}>10</MenuItem>
-                    <MenuItem value={25}>25</MenuItem>
-                    <MenuItem value={50}>50</MenuItem>
-                    <MenuItem value={100}>100</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+            <FormControl
+              variant="standard"
+              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}
+              size="small"
+            >
+              <InputLabel id="dialog-watch-label" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
+                Watch mode:
+              </InputLabel>
+              <Select
+                labelId="dialog-watch-label"
+                id="dialog-watch-select"
+                value={watch}
+                label="Watch"
+                onChange={(event) => setWatch(event.target.value)}
+              >
+                <MenuItem value={"1"}>NA</MenuItem>
+                <MenuItem value={"2"}>Full</MenuItem>
+                <MenuItem value={"3"}>Fast</MenuItem>
+              </Select>
+            </FormControl>
             <Box sx={{ flexGrow: 1 }}></Box>
-            {/* <Button variant="contained" onClick={clearUrlList}>Clear</Button>
-            <Button variant="contained" onClick={downloadUrlList}>Submit</Button> */}
-            <Grid container rowSpacing={{ xs: 1, sm: 0 }} columnSpacing={1}
-              sx={{ m: 0, paddingInlineEnd: "24px" }} key="DialogActionsGridButtons">
-              <Grid xs={12} sm={6} sx={{ direction: "trl" }}>
-                <Box>
-                  <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
-                </Box>
-              </Grid>
-              <Grid xs={12} sm={6} >
-                <Button variant="contained" onClick={downloadUrlList} sx={{ float: "right" }}>Submit</Button>
-              </Grid>
-            </Grid>
+            <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
+            <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
+              <Button variant="contained" onClick={downloadUrlList} sx={{ float: "right" }}>Submit</Button>
+            </Box>
           </DialogActions>
         </Dialog>
       </Paper>
@@ -518,6 +490,4 @@ PlayList.propTypes = {
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
-  rowsPerPageSubList: PropTypes.number.isRequired,
-  setRowsPerPageSubList: PropTypes.func.isRequired
 };

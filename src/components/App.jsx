@@ -208,8 +208,8 @@ export default function App() {
                                 setSnack={setSnack}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
-                                rowsPerPageSubList={rowsPerPageSubList}
-                                setRowsPerPageSubList={setRowsPerPageSubList}
+                                // rowsPerPageSubList={rowsPerPageSubList}
+                                // setRowsPerPageSubList={setRowsPerPageSubList}
                             />
                         </Suspense>
                     </Grid>
