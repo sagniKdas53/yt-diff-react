@@ -18,6 +18,10 @@ export default function Navigation({
     connectionId,
     setListUrl,
 }) {
+    const themeSwitcherHandler = (themeMode) => {
+        localStorage.setItem('theme', themeMode);
+        themeSwitcher(themeMode);
+    };
     return (
         <>
             <AppBar position="static">
@@ -34,13 +38,13 @@ export default function Navigation({
                             Unlisted
                         </Typography>
                     </Button>
-                    <Button onClick={() => themeSwitcher(!theme)} color="inherit">
-                        {!theme ? <DarkModeIcon /> : <LightModeIcon />}
+                    <Button onClick={() => themeSwitcherHandler(!theme)} color="inherit">
+                        {theme ? <DarkModeIcon /> : <LightModeIcon />}
                         <Typography
                             variant="caption"
                             display={{ xs: "none", sm: "none", md: "block" }}
                         >
-                            {!theme ? "Dark" : "Light"}
+                            {theme ? "Dark" : "Light"}
                         </Typography>
                     </Button>
                     <Button color="inherit">

@@ -25,12 +25,12 @@ const socket = io.connect(backEnd, {
 const themeObj = (theme) =>
     createTheme({
         palette: {
-            mode: theme ? "dark" : "light",
+            mode: theme ? "light" : "dark",
             primary: {
                 main: "#3f51b5",
             },
             secondary: {
-                main: theme ? "#f50057" : "#03a9f4",
+                main: theme ? "#03a9f4" : "#f50057",
             },
             success: {
                 main: "#2CCB36",
@@ -43,7 +43,10 @@ const Alert = forwardRef(function Alert(props, ref) {
 });
 
 export default function App() {
-    const [theme, themeSwitcher] = useState(true);
+    // if it's not set in localStorage value is null, then !! will set as false
+    const initialState = !!JSON.parse(localStorage.getItem('theme'))
+    // If theme is unset it uses dark mode by default
+    const [theme, themeSwitcher] = useState(initialState);
     const [listUrl, setListUrl] = useState("");
     const [respIndex, setRespIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
@@ -208,8 +211,8 @@ export default function App() {
                                 setSnack={setSnack}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
-                                // rowsPerPageSubList={rowsPerPageSubList}
-                                // setRowsPerPageSubList={setRowsPerPageSubList}
+                            // rowsPerPageSubList={rowsPerPageSubList}
+                            // setRowsPerPageSubList={setRowsPerPageSubList}
                             />
                         </Suspense>
                     </Grid>
