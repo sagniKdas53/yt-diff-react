@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import AddIcon from '@mui/icons-material/Add';
+import AddIcon from "@mui/icons-material/Add";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
@@ -81,7 +81,7 @@ export default function PlayList({
         const response = await postUrl(element)
           .then((response) => response.text())
           .then((data) => JSON.parse(data));
-        // since listing may take a while having this here as an intermediate state can't hurt too much.
+        // since listing may take a while having this here as an intermediate state can not hurt too much.
         setUrl(response.resp_url);
         // Will add the playlist position update logic somewhere in here.
         if (response.prev_playlist_index > 0) {
@@ -148,7 +148,7 @@ export default function PlayList({
 
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
-    //console.log('Fetching Playlists');
+    //console.log("Fetching Playlists");
     const response = await fetch(backEnd + "/ytdiff/getplay", {
       method: "post",
       headers: {

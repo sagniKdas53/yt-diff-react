@@ -1,7 +1,7 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { useState, useCallback, useEffect, forwardRef, useRef, lazy, Suspense } from "react";
 import Box from "@mui/material/Box";
-import CircularProgress from '@mui/material/CircularProgress';
+import CircularProgress from "@mui/material/CircularProgress";
 import CloseIcon from "@mui/icons-material/Close.js";
 import Grid from "@mui/material/Unstable_Grid2";
 import IconButton from "@mui/material/IconButton";
@@ -43,8 +43,8 @@ const Alert = forwardRef(function Alert(props, ref) {
 });
 
 export default function App() {
-    // if it's not set in localStorage value is null, then !! will set as false
-    const initialState = !!JSON.parse(localStorage.getItem('theme'))
+    // if it is not set in localStorage value is null, then !! will set as false
+    const initialState = !!JSON.parse(localStorage.getItem("theme"))
     // If theme is unset it uses dark mode by default
     const [theme, themeSwitcher] = useState(initialState);
     const [listUrl, setListUrl] = useState("");
@@ -71,10 +71,10 @@ export default function App() {
             setTableHeight(window.innerHeight - adjust)
         }
 
-        window.addEventListener('resize', handleResize);
+        window.addEventListener("resize", handleResize);
 
         return () => {
-            window.removeEventListener('resize', handleResize);
+            window.removeEventListener("resize", handleResize);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -161,7 +161,7 @@ export default function App() {
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");
-            // use this to update the playlists, which will inturn update the sublist if it's selected
+            // use this to update the playlists, which will inturn update the sublist if it is selected
             //reFetch.current = !reFetch.current;
             setReFetch(data.id);
         });
@@ -170,7 +170,7 @@ export default function App() {
 
     return (
         <ThemeProvider theme={themeObj(theme)}>
-            <Box sx={{ margin: "0px", padding: "0px", bgcolor: 'background.default', height: "100vh", position: "relative" }}>
+            <Box sx={{ margin: "0px", padding: "0px", bgcolor: "background.default", height: "100vh", position: "relative" }}>
                 {/* <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
                     table: {tableHeight + "px"}
                     <br />
