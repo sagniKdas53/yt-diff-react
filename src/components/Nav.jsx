@@ -19,7 +19,7 @@ export default function Navigation({
     setListUrl,
 }) {
     const themeSwitcherHandler = (themeMode) => {
-        localStorage.setItem("theme", themeMode);
+        localStorage.setItem("ytdiff_theme", themeMode);
         themeSwitcher(themeMode);
     };
     return (

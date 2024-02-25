@@ -44,7 +44,7 @@ const Alert = forwardRef(function Alert(props, ref) {
 
 export default function App() {
     // if it is not set in localStorage value is null, then !! will set as false
-    const initialState = !!JSON.parse(localStorage.getItem("theme"))
+    const initialState = !!JSON.parse(localStorage.getItem("ytdiff_theme"))
     // If theme is unset it uses dark mode by default
     const [theme, themeSwitcher] = useState(initialState);
     const [listUrl, setListUrl] = useState("");
