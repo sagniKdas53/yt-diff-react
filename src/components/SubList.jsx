@@ -30,7 +30,9 @@ export default function SubList({
     backEnd,
     reFetch,
     tableHeight,
-    rowsPerPage, setRowsPerPage,
+    rowsPerPage,
+    setRowsPerPage,
+    token,
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
@@ -96,7 +98,7 @@ export default function SubList({
                 "Content-Type": "application/json",
             },
             mode: "cors",
-            body: JSON.stringify({ id: data, url: url }),
+            body: JSON.stringify({ id: data, url: url, token: token }),
         });
     }
 
@@ -124,11 +126,28 @@ export default function SubList({
                     sortDownloaded: sort,
                     query: query,
                     url: url,
+                    token: token
                 }),
             });
-            const data = await response.text();
-            const json_data = JSON.parse(data);
-            return json_data;
+            if (response.ok) {
+                const data = await response.text();
+                const json_data = JSON.parse(data);
+                return json_data;
+            } else {
+                return {
+                    "count": 1, "rows": [{
+                        "index_in_playlist": 1,
+                        "playlist_url": url,
+                        "video_list": {
+                            "title": "Error in fetching sub-lists",
+                            "video_id": "",
+                            "video_url": "",
+                            "downloaded": false,
+                            "available": false
+                        }
+                    }]
+                };
+            }
         } else {
             return { count: 0, rows: [] };
         }
@@ -368,13 +387,7 @@ SubList.propTypes = {
     tableHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
     setRowsPerPage: PropTypes.func.isRequired,
-    // resetSublistPage: PropTypes.bool.isRequired,
-    // stop: PropTypes.number.isRequired,
-    // setStop: PropTypes.func.isRequired,
-    // start: PropTypes.number.isRequired,
-    // setStart: PropTypes.func.isRequired,
-    // page: PropTypes.number.isRequired,
-    // setPage: PropTypes.func.isRequired,
+    token: PropTypes.string.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download, disableButtons }) {

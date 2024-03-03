@@ -36,6 +36,7 @@ export default function PlayList({
   setSnack,
   reFetch,
   tableHeight,
+  token
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -53,7 +54,7 @@ export default function PlayList({
   // dialog stuff
   const [open, setOpen] = useState(false);
   const [urlList, setUrlList] = useState("");
-  const [watch, setWatch] = useState("1");
+  const [watch, setWatch] = useState("N/A");
   const updateUrls = (event) => {
     setUrlList(event.target.value);
   };
@@ -136,11 +137,9 @@ export default function PlayList({
         body: JSON.stringify({
           url: urlItem,
           start: 0,
-          // no longer needed
-          // stop: rowsPerPageSubList + 1,
-          // chunk: rowsPerPageSubList + 1,
           monitoring_type: watch,
           sleep: true,
+          token: token
         }),
       }
     );
@@ -162,11 +161,26 @@ export default function PlayList({
         sort: sort,
         order: order,
         query: query,
+        token: token
       }),
     });
-    const data = await response.text();
-    const json_data = JSON.parse(data);
-    return json_data;
+    if (response.ok) {
+      const data = await response.text();
+      const json_data = JSON.parse(data);
+      return json_data;
+    } else {
+      return {
+        "count": 1, "rows": [{
+          "playlist_url": "",
+          "title": "Error in fetching playlists",
+          "playlist_index": 0,
+          "monitoring_type": "N/A",
+          "save_dir": "",
+          "createdAt": new Date().toISOString(),
+          "updatedAt": new Date().toISOString()
+        }]
+      };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backEnd, start, stop, sort, order, query, reFetch]);
 
@@ -200,6 +214,7 @@ export default function PlayList({
   );
 
   const changeWatch = (event, url) => {
+    // add some error handling here for gods sake
     fetch(backEnd + "/ytdiff/watch", {
       method: "post",
       headers: {
@@ -210,6 +225,7 @@ export default function PlayList({
       body: JSON.stringify({
         url: url,
         watch: event.target.value,
+        token: token
       }),
     })
       .then((r) => r.json())
@@ -370,9 +386,9 @@ export default function PlayList({
                           label="Watch"
                           onChange={(e) => changeWatch(e, element.playlist_url)}
                         >
-                          <MenuItem value={"1"}>NA</MenuItem>
-                          <MenuItem value={"2"}>Full</MenuItem>
-                          <MenuItem value={"3"}>Fast</MenuItem>
+                          <MenuItem value={"N/A"}>N/A</MenuItem>
+                          <MenuItem value={"Full"}>Full</MenuItem>
+                          <MenuItem value={"Fast"}>Fast</MenuItem>
                         </Select>
                       </FormControl>
                     </TableCell>
@@ -463,9 +479,9 @@ export default function PlayList({
                 label="Watch"
                 onChange={(event) => setWatch(event.target.value)}
               >
-                <MenuItem value={"1"}>NA</MenuItem>
-                <MenuItem value={"2"}>Full</MenuItem>
-                <MenuItem value={"3"}>Fast</MenuItem>
+                <MenuItem value={"N/A"}>N/A</MenuItem>
+                <MenuItem value={"Full"}>Full</MenuItem>
+                <MenuItem value={"Fast"}>Fast</MenuItem>
               </Select>
             </FormControl>
             <Box sx={{ flexGrow: 1 }}></Box>
@@ -490,4 +506,5 @@ PlayList.propTypes = {
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
+  token: PropTypes.string.isRequired,
 };

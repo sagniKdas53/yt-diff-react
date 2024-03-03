@@ -44,9 +44,14 @@ const Alert = forwardRef(function Alert(props, ref) {
 
 export default function App() {
     // if it is not set in localStorage value is null, then !! will set as false
-    const initialState = !!JSON.parse(localStorage.getItem("ytdiff_theme"))
+    const initialState = !!JSON.parse(localStorage.getItem("ytdiff_theme"));
     // If theme is unset it uses dark mode by default
     const [theme, themeSwitcher] = useState(initialState);
+    // if it is not set in localStorage value is null, then !! will set as false
+    //const localToken = !!JSON.parse(localStorage.getItem("ytdiff_token"));
+    // now this will be done later
+    const [token,] = useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRiMTE4NTU0LTBlNzQtNDVjNC05ZTJlLTljMTQ1Y2UzY2E0OSIsImxhc3RQYXNzd29yZENoYW5nZSI6IjIwMjQtMDMtMDNUMTI6NDI6NTUuMjUxWiIsImlhdCI6MTcwOTQ2OTc3NSwiZXhwIjoxNzEyMDYxNzc1fQ.sJEYGy0w01lAXAKV-0mGX7bCgPZaUmX7xTDP1VCu1JY");
+    //setToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRiMTE4NTU0LTBlNzQtNDVjNC05ZTJlLTljMTQ1Y2UzY2E0OSIsImxhc3RQYXNzd29yZENoYW5nZSI6IjIwMjQtMDMtMDNUMTI6NDI6NTUuMjUxWiIsImlhdCI6MTcwOTQ2OTc3NSwiZXhwIjoxNzEyMDYxNzc1fQ.sJEYGy0w01lAXAKV-0mGX7bCgPZaUmX7xTDP1VCu1JY");
     const [listUrl, setListUrl] = useState("");
     const [respIndex, setRespIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
@@ -211,8 +216,7 @@ export default function App() {
                                 setSnack={setSnack}
                                 reFetch={reFetch}
                                 tableHeight={tableHeight + "px"}
-                            // rowsPerPageSubList={rowsPerPageSubList}
-                            // setRowsPerPageSubList={setRowsPerPageSubList}
+                                token={token}
                             />
                         </Suspense>
                     </Grid>
@@ -230,6 +234,7 @@ export default function App() {
                                 tableHeight={tableHeight + "px"}
                                 rowsPerPage={rowsPerPageSubList}
                                 setRowsPerPage={setRowsPerPageSubList}
+                                token={token}
                             />
                         </Suspense>
                     </Grid>
