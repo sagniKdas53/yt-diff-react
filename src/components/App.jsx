@@ -11,6 +11,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 
 import io from "socket.io-client";
+import Login from "./Login.jsx";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
@@ -48,10 +49,10 @@ export default function App() {
     // If theme is unset it uses dark mode by default
     const [theme, themeSwitcher] = useState(initialState);
     // if it is not set in localStorage value is null, then !! will set as false
-    //const localToken = !!JSON.parse(localStorage.getItem("ytdiff_token"));
+    const localToken = localStorage.getItem("ytdiff_token") === "null" ?
+        null : localStorage.getItem("ytdiff_token");
     // now this will be done later
-    const [token,] = useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRiMTE4NTU0LTBlNzQtNDVjNC05ZTJlLTljMTQ1Y2UzY2E0OSIsImxhc3RQYXNzd29yZENoYW5nZSI6IjIwMjQtMDMtMDNUMTI6NDI6NTUuMjUxWiIsImlhdCI6MTcwOTQ2OTc3NSwiZXhwIjoxNzEyMDYxNzc1fQ.sJEYGy0w01lAXAKV-0mGX7bCgPZaUmX7xTDP1VCu1JY");
-    //setToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRiMTE4NTU0LTBlNzQtNDVjNC05ZTJlLTljMTQ1Y2UzY2E0OSIsImxhc3RQYXNzd29yZENoYW5nZSI6IjIwMjQtMDMtMDNUMTI6NDI6NTUuMjUxWiIsImlhdCI6MTcwOTQ2OTc3NSwiZXhwIjoxNzEyMDYxNzc1fQ.sJEYGy0w01lAXAKV-0mGX7bCgPZaUmX7xTDP1VCu1JY");
+    const [token, setToken] = useState(localToken);
     const [listUrl, setListUrl] = useState("");
     const [respIndex, setRespIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
@@ -166,21 +167,82 @@ export default function App() {
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");
-            // use this to update the playlists, which will inturn update the sublist if it is selected
+            // use this to update the playlists, which will inturn update the sub-list if it is selected
             //reFetch.current = !reFetch.current;
             setReFetch(data.id);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
 
+    function MainApp() {
+        if (token === null) {
+            return (
+                <Grid
+                    container
+                    justifyContent="center" // Centers horizontally
+                    alignItems="center" // Centers vertically
+                    sx={{ height: tableHeight + 52 + "px" }} // Adjust the height as needed
+                >
+                    <Grid item xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                        <Suspense fallback={
+                            <Grid container justifyContent="center" key="LogSusGrid">
+                                <CircularProgress color="secondary" key="LogSus" />
+                            </Grid>
+                        }>
+                            <Login
+                                backEnd={backEnd}
+                                setToken={setToken}
+                                height={tableHeight + "px"}
+                            />
+                        </Suspense>
+                    </Grid>
+                </Grid>
+            );
+        }
+        return (
+            <Grid container spacing={0} key="MainGrid">
+                <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                    <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
+                        <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
+                        <PlayList
+                            url={listUrl}
+                            setUrl={setListUrl}
+                            backEnd={backEnd}
+                            setRespIndex={setRespIndex}
+                            disableButtons={disableButtons}
+                            setIndeterminate={setIndeterminate}
+                            setSnack={setSnack}
+                            reFetch={reFetch}
+                            tableHeight={tableHeight + "px"}
+                            token={token}
+                        />
+                    </Suspense>
+                </Grid>
+                <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                    <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
+                        <CircularProgress color="secondary" key="SubSus" /></Grid>}>
+                        <SubList
+                            url={listUrl}
+                            setUrl={setListUrl}
+                            backEnd={backEnd}
+                            respIndex={respIndex}
+                            disableButtons={disableButtons}
+                            downloadedID={downloadedID.current}
+                            reFetch={reFetch}
+                            tableHeight={tableHeight + "px"}
+                            rowsPerPage={rowsPerPageSubList}
+                            setRowsPerPage={setRowsPerPageSubList}
+                            token={token}
+                        />
+                    </Suspense>
+                </Grid>
+            </Grid>
+        );
+    }
+
     return (
         <ThemeProvider theme={themeObj(theme)}>
             <Box sx={{ margin: "0px", padding: "0px", bgcolor: "background.default", height: "100vh", position: "relative" }}>
-                {/* <Box sx={{ position: "absolute", m: 1, left: 0, top: 0, bgcolor: "white", color: "black", font: "menu", zIndex: 200 }}>
-                    table: {tableHeight + "px"}
-                    <br />
-                    env: {JSON.stringify(import.meta.env)}
-                </Box> */}
                 <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
                     <CircularProgress color="secondary" key="NavSus" /></Grid>}>
                     <Box sx={{ position: "sticky", top: 0, left: 0, zIndex: 100 }}>
@@ -189,6 +251,8 @@ export default function App() {
                             theme={theme}
                             connectionId={connectionId}
                             setListUrl={setListUrl}
+                            token={token}
+                            setToken={setToken}
                         />
                         <Box sx={{ width: "100%", height: progressHeight + "px" }}>
                             <LinearProgress
@@ -202,43 +266,7 @@ export default function App() {
                         </Box>
                     </Box>
                 </Suspense>
-                <Grid container spacing={0} key="MainGrid">
-                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid" sx={{ height: tableHeight + 52 + "px" }}>
-                        <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
-                            <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
-                            <PlayList
-                                url={listUrl}
-                                setUrl={setListUrl}
-                                backEnd={backEnd}
-                                setRespIndex={setRespIndex}
-                                disableButtons={disableButtons}
-                                setIndeterminate={setIndeterminate}
-                                setSnack={setSnack}
-                                reFetch={reFetch}
-                                tableHeight={tableHeight + "px"}
-                                token={token}
-                            />
-                        </Suspense>
-                    </Grid>
-                    <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid" sx={{ height: tableHeight + 52 + "px" }}>
-                        <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
-                            <CircularProgress color="secondary" key="SubSus" /></Grid>}>
-                            <SubList
-                                url={listUrl}
-                                setUrl={setListUrl}
-                                backEnd={backEnd}
-                                respIndex={respIndex}
-                                disableButtons={disableButtons}
-                                downloadedID={downloadedID.current}
-                                reFetch={reFetch}
-                                tableHeight={tableHeight + "px"}
-                                rowsPerPage={rowsPerPageSubList}
-                                setRowsPerPage={setRowsPerPageSubList}
-                                token={token}
-                            />
-                        </Suspense>
-                    </Grid>
-                </Grid>
+                <MainApp />
                 <Stack spacing={2} sx={{ maxWidth: 600 }}>
                     <Snackbar
                         open={showSnackbar}

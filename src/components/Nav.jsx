@@ -1,27 +1,32 @@
 import AppBar from "@mui/material/AppBar";
 import Button from "@mui/material/Button";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-
-//import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import LeakAddIcon from "@mui/icons-material/LeakAdd";
 import LeakRemoveIcon from "@mui/icons-material/LeakRemove";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import ListAltIcon from "@mui/icons-material/ListAlt";
-//import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+import LogoutIcon from '@mui/icons-material/Logout';
 import PropTypes from "prop-types";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
+import LoginIcon from '@mui/icons-material/Login';
 
 export default function Navigation({
     themeSwitcher,
     theme,
     connectionId,
     setListUrl,
+    token,
+    setToken
 }) {
     const themeSwitcherHandler = (themeMode) => {
         localStorage.setItem("ytdiff_theme", themeMode);
         themeSwitcher(themeMode);
     };
+    const logoutHandler = () => {
+        setToken(null);
+        localStorage.setItem("ytdiff_token", "null");
+    }
     return (
         <>
             <AppBar position="static">
@@ -56,6 +61,15 @@ export default function Navigation({
                             {connectionId ? "Connected" : "Disconnected"}
                         </Typography>
                     </Button>
+                    <Button onClick={() => logoutHandler()} color="inherit">
+                        {token ? <LogoutIcon /> : <LoginIcon />}
+                        <Typography
+                            variant="caption"
+                            display={{ xs: "none", sm: "none", md: "block" }}
+                        >
+                            {token ? "Logout" : "Login"}
+                        </Typography>
+                    </Button>
                 </Toolbar>
             </AppBar>
         </>
@@ -66,4 +80,6 @@ Navigation.propTypes = {
     theme: PropTypes.bool.isRequired,
     connectionId: PropTypes.string.isRequired,
     setListUrl: PropTypes.func.isRequired,
+    token: PropTypes.string,
+    setToken: PropTypes.func.isRequired
 };
