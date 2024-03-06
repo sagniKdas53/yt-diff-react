@@ -11,11 +11,11 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 
 import io from "socket.io-client";
-import Login from "./Login.jsx";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
+const Login = lazy(() => import("./Login.jsx"));
 
 const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
 
@@ -192,7 +192,7 @@ export default function App() {
                             <Login
                                 backEnd={backEnd}
                                 setToken={setToken}
-                                height={tableHeight + "px"}
+                                height={tableHeight + 52 + "px"}
                             />
                         </Suspense>
                     </Grid>

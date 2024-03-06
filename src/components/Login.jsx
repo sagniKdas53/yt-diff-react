@@ -8,7 +8,8 @@ import Box from "@mui/material/Box";
 
 export default function Login({
     backEnd,
-    setToken
+    setToken,
+    height
 }) {
     const [user_name, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -40,31 +41,36 @@ export default function Login({
 
     return (
         <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-            <Grid container spacing={1} sx={{ m: 2, p: 0 }}>
-                <Grid item xs={12}>
-                    <TextField
-                        fullWidth
-                        label="Username"
-                        placeholder="Username"
-                        value={user_name}
-                        onChange={(e) => setUsername(e.target.value)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <TextField
-                        fullWidth
-                        label="Password"
-                        placeholder="Password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <Box sx={{ flexGrow: 1 }}></Box>
-                    <Button variant="contained" color="primary" sx={{ float: "right" }} onClick={handleLogin}>
-                        Login
-                    </Button>
+            <Grid container
+                justifyContent="center" // Centers horizontally
+                alignItems="center" // Centers vertically
+                spacing={0} sx={{ my: 0, p: 0, height: height }}>
+                <Grid container spacing={3} sx={{m:1}}>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Username"
+                            placeholder="Username"
+                            value={user_name}
+                            onChange={(e) => setUsername(e.target.value)}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Password"
+                            placeholder="Password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Box sx={{ flexGrow: 1 }}></Box>
+                        <Button variant="contained" color="primary" sx={{ float: "right" }} onClick={handleLogin}>
+                            Login
+                        </Button>
+                    </Grid>
                 </Grid>
             </Grid>
         </Paper>
@@ -74,4 +80,5 @@ export default function Login({
 Login.propTypes = {
     backEnd: PropTypes.string.isRequired,
     setToken: PropTypes.func.isRequired,
+    height: PropTypes.string.isRequired,
 };
