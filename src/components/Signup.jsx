@@ -1,24 +1,30 @@
 // SignUpForm.js
-import React, { useState } from 'react';
+import { useState } from "react";
+import PropTypes from "prop-types";
 
-const SignUpForm = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+const SignUpForm = ({
+  backEnd,
+  height
+}) => {
+  const [user_name, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSignUp = async () => {
     // Send sign up request to backend
-    const response = await fetch('/api/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    // Handle response (e.g., store token)
-    const data = await response.json();
-    // Store token in localStorage or sessionStorage
-    localStorage.setItem('token', data.token);
+    return await fetch(backEnd +
+      "/ytdiff/login",
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          user_name, password
+        }),
+      }
+    );
   };
 
   return (
@@ -31,3 +37,10 @@ const SignUpForm = () => {
 };
 
 export default SignUpForm;
+
+SignUpForm.propTypes = {
+  backEnd: PropTypes.string.isRequired,
+  setToken: PropTypes.func.isRequired,
+  height: PropTypes.string.isRequired,
+};
+

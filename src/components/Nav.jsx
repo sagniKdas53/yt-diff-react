@@ -5,11 +5,11 @@ import LeakAddIcon from "@mui/icons-material/LeakAdd";
 import LeakRemoveIcon from "@mui/icons-material/LeakRemove";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import ListAltIcon from "@mui/icons-material/ListAlt";
-import LogoutIcon from '@mui/icons-material/Logout';
+import LogoutIcon from "@mui/icons-material/Logout";
 import PropTypes from "prop-types";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import LoginIcon from '@mui/icons-material/Login';
+import LoginIcon from "@mui/icons-material/Login";
 
 export default function Navigation({
     themeSwitcher,

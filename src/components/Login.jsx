@@ -45,8 +45,8 @@ export default function Login({
                 justifyContent="center" // Centers horizontally
                 alignItems="center" // Centers vertically
                 spacing={0} sx={{ my: 0, p: 0, height: height }}>
-                <Grid container spacing={3} sx={{m:1}}>
-                    <Grid item xs={12}>
+                <Grid container spacing={3} sx={{ m: 1 }}>
+                    <Grid xs={12}>
                         <TextField
                             fullWidth
                             label="Username"
@@ -55,7 +55,7 @@ export default function Login({
                             onChange={(e) => setUsername(e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid xs={12}>
                         <TextField
                             fullWidth
                             label="Password"
@@ -65,7 +65,7 @@ export default function Login({
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid xs={12}>
                         <Box sx={{ flexGrow: 1 }}></Box>
                         <Button variant="contained" color="primary" sx={{ float: "right" }} onClick={handleLogin}>
                             Login

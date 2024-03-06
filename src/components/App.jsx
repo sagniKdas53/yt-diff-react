@@ -183,7 +183,7 @@ export default function App() {
                     alignItems="center" // Centers vertically
                     sx={{ height: tableHeight + 52 + "px" }} // Adjust the height as needed
                 >
-                    <Grid item xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                    <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid" sx={{ height: tableHeight + 52 + "px" }}>
                         <Suspense fallback={
                             <Grid container justifyContent="center" key="LogSusGrid">
                                 <CircularProgress color="secondary" key="LogSus" />
@@ -196,6 +196,19 @@ export default function App() {
                             />
                         </Suspense>
                     </Grid>
+                    {/* <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="RegGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                        <Suspense fallback={
+                            <Grid container justifyContent="center" key="RegSusGrid">
+                                <CircularProgress color="secondary" key="RegSus" />
+                            </Grid>
+                        }>
+                            <SignUpForm
+                                backEnd={backEnd}
+                                setToken={setToken}
+                                height={tableHeight + 52 + "px"}
+                            />
+                        </Suspense>
+                    </Grid> */}
                 </Grid>
             );
         }
