@@ -9,6 +9,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import MuiAlert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
+import Paper from "@mui/material/Paper";
 
 import io from "socket.io-client";
 
@@ -171,45 +172,44 @@ export default function App() {
             //reFetch.current = !reFetch.current;
             setReFetch(data.id);
         });
+        // when token expires this receives the event and sets the token to null
+        // also removes it from localStorage, there is reason to suspect that saving
+        // the token as a ref would be better
+        socket.on("token-expired", function () {
+            setSnack("Token Expired", "error");
+            setToken(null);
+            localStorage.setItem("ytdiff_token", "null");
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
 
     function MainApp() {
         if (token === null) {
             return (
-                <Grid
-                    container
-                    justifyContent="center" // Centers horizontally
-                    alignItems="center" // Centers vertically
-                    sx={{ height: tableHeight + 52 + "px" }} // Adjust the height as needed
-                >
-                    <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid" sx={{ height: tableHeight + 52 + "px" }}>
-                        <Suspense fallback={
-                            <Grid container justifyContent="center" key="LogSusGrid">
-                                <CircularProgress color="secondary" key="LogSus" />
-                            </Grid>
-                        }>
-                            <Login
-                                backEnd={backEnd}
-                                setToken={setToken}
-                                height={tableHeight + 52 + "px"}
-                            />
-                        </Suspense>
+                <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
+                    <Grid
+                        container
+                        justifyContent="center" // Centers horizontally
+                        alignItems="center" // Centers vertically
+                        sx={{ height: tableHeight + 52 + "px" }} // Adjust the height as needed
+                    >
+                        <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                            <Suspense fallback={
+                                <Grid container justifyContent="center" key="LogSusGrid">
+                                    <CircularProgress color="secondary" key="LogSus" />
+                                </Grid>
+                            }>
+                                <Login
+                                    backEnd={backEnd}
+                                    setToken={setToken}
+                                    setSnack={setSnack}
+                                    height={tableHeight + 52 + "px"}
+                                />
+                            </Suspense>
+                        </Grid>
+
                     </Grid>
-                    {/* <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="RegGrid" sx={{ height: tableHeight + 52 + "px" }}>
-                        <Suspense fallback={
-                            <Grid container justifyContent="center" key="RegSusGrid">
-                                <CircularProgress color="secondary" key="RegSus" />
-                            </Grid>
-                        }>
-                            <SignUpForm
-                                backEnd={backEnd}
-                                setToken={setToken}
-                                height={tableHeight + 52 + "px"}
-                            />
-                        </Suspense>
-                    </Grid> */}
-                </Grid>
+                </Paper>
             );
         }
         return (
