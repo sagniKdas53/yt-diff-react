@@ -193,7 +193,8 @@ export default function App() {
                         alignItems="center" // Centers vertically
                         sx={{ height: tableHeight + 52 + "px" }} // Adjust the height as needed
                     >
-                        <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                        <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid"
+                            sx={{ height: tableHeight + 52 + "px" }}>
                             <Suspense fallback={
                                 <Grid container justifyContent="center" key="LogSusGrid">
                                     <CircularProgress color="secondary" key="LogSus" />
@@ -255,7 +256,7 @@ export default function App() {
 
     return (
         <ThemeProvider theme={themeObj(theme)}>
-            <Box sx={{ margin: "0px", padding: "0px", bgcolor: "background.default", height: "100vh", position: "relative" }}>
+            <Box sx={{ margin: "0px", padding: "0px", bgcolor: "background.default", height: "100%", position: "relative" }}>
                 <Suspense fallback={<Grid container justifyContent="center" key="NavSusGrid">
                     <CircularProgress color="secondary" key="NavSus" /></Grid>}>
                     <Box sx={{ position: "sticky", top: 0, left: 0, zIndex: 100 }}>
