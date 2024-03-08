@@ -2,7 +2,6 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Unstable_Grid2";
 import Button from "@mui/material/Button";
-import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
@@ -77,81 +76,73 @@ export default function Login({
     };
 
     return (
-        <Paper elevation={4} sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-            <Grid container
-                justifyContent="center" // Centers horizontally
-                alignItems="center" // Centers vertically
-                spacing={0} sx={{ my: 0, p: 0, height: height }}>
-                <Grid container spacing={3} sx={{ m: 1 }}>
-                    <Grid xs={12} sx={{ alignItems: "center" }}>
-                        <Typography component="h1" variant="h5">
-                            Sign in
-                        </Typography>
-                    </Grid>
-                    <Grid xs={12}>
-                        <FormControl sx={{ m: 0, width: "100%" }} variant="outlined">
-                            <InputLabel htmlFor="outlined-adornment-password">Password</InputLabel>
-                            <OutlinedInput
-                                autoComplete="username"
-                                required={true}
-                                fullWidth
-                                id="outlined-username"
-                                type="text"
-                                label="Username"
-                                value={user_name}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Username"
-                            />
-                        </FormControl>
-                    </Grid>
-                    <Grid xs={12}>
-                        <FormControl sx={{ m: 0, width: "100%" }} variant="outlined">
-                            <InputLabel htmlFor="outlined-adornment-password">Password</InputLabel>
-                            <OutlinedInput
-                                autoComplete="current-password"
-                                required={true}
-                                fullWidth
-                                id="outlined-adornment-password"
-                                type={showPassword ? "text" : "password"}
-                                endAdornment={
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="toggle password visibility"
-                                            onClick={handleClickShowPassword}
-                                            onMouseDown={handleMouseDownPassword}
-                                            edge="end"
-                                        >
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                }
-                                label="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
-                            />
-                        </FormControl>
-                    </Grid>
-                    <Grid xs={12}>
-                        <FormControlLabel
-                            control={
-                                <Checkbox value="remember"
-                                    checked={rememberMe}
-                                    onChange={handleRemembered}
-                                    color="primary" />
+        <Grid container
+            justifyContent="center" // Centers horizontally
+            alignItems="center" // Centers vertically
+            spacing={0} sx={{ my: 0, p: 0, height: height }}>
+            <Grid container spacing={3} sx={{ m: 1 }}>
+                <Grid xs={12} sx={{ alignItems: "center" }}>
+                    <Typography component="h1" variant="h5">
+                        Sign in
+                    </Typography>
+                </Grid>
+                <Grid xs={12}>
+                    <FormControl sx={{ m: 0, width: "100%" }} variant="outlined" autoComplete="username">
+                        <InputLabel htmlFor="outlined-username">Username</InputLabel>
+                        <OutlinedInput
+                            id="outlined-username"
+                            type="text"
+                            label="Username"
+                            value={user_name}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Username"
+                        />
+                    </FormControl>
+                </Grid>
+                <Grid xs={12}>
+                    <FormControl sx={{ m: 0, width: "100%" }} variant="outlined" autoComplete="current-password">
+                        <InputLabel htmlFor="outlined-password">Password</InputLabel>
+                        <OutlinedInput
+                            id="outlined-password"
+                            type={showPassword ? "text" : "password"}
+                            endAdornment={
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        aria-label="toggle password visibility"
+                                        onClick={handleClickShowPassword}
+                                        onMouseDown={handleMouseDownPassword}
+                                        edge="end"
+                                    >
+                                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                </InputAdornment>
                             }
-                            label="Remember me"
-                        /></Grid>
-                    <Grid xs={12}>
-                        <Box sx={{ flexGrow: 1 }}></Box>
-                        <Button fullWidth variant="contained" color="primary"
-                            sx={{ float: "right" }} onClick={handleLogin}>
-                            Login
-                        </Button>
-                    </Grid>
+                            label="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Password"
+                        />
+                    </FormControl>
+                </Grid>
+                <Grid xs={12}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox value="remember"
+                                checked={rememberMe}
+                                onChange={handleRemembered}
+                                color="primary" />
+                        }
+                        label="Remember me"
+                    /></Grid>
+                <Grid xs={12}>
+                    <Box sx={{ flexGrow: 1 }}></Box>
+                    <Button fullWidth variant="contained" color="primary"
+                        sx={{ float: "right" }} onClick={handleLogin}>
+                        Login
+                    </Button>
                 </Grid>
             </Grid>
-        </Paper>
+        </Grid>
     );
 }
 

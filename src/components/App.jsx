@@ -10,6 +10,7 @@ import MuiAlert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
 
 import io from "socket.io-client";
 
@@ -211,20 +212,15 @@ export default function App() {
                     </Box>
                 </Suspense>
                 {/* main grid */}
-                {token === null ?
-                    <Grid container spacing={0} key="LoginGrid">
-                        <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-                            <Grid
-                                container
-                                justifyContent="center" // Centers horizontally
-                                alignItems="center" // Centers vertically
-                                sx={{ height: tableHeight + 52 + "px" }} // Adjust the height as needed
-                            >
-                                <Grid xl={4} lg={4} md={6} sm={12} xs={12} key="LogGrid"
+                <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
+                    <Grid container spacing={0} key={token === null ? "LoginSignUpGrid" : "MainGrid"}>
+                        {token === null ?
+                            <>
+                                <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="LoginGrid"
                                     sx={{ height: tableHeight + 52 + "px" }}>
                                     <Suspense fallback={
-                                        <Grid container justifyContent="center" key="LogSusGrid">
-                                            <CircularProgress color="secondary" key="LogSus" />
+                                        <Grid container justifyContent="center" key="LoginSusGrid">
+                                            <CircularProgress color="secondary" key="LoginSus" />
                                         </Grid>
                                     }>
                                         <Login
@@ -235,49 +231,63 @@ export default function App() {
                                         />
                                     </Suspense>
                                 </Grid>
-
-                            </Grid>
-                        </Paper>
+                                <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SignUpGrid"
+                                    sx={{
+                                        height: tableHeight + 52 + "px",
+                                        display: { xs: "none", sm: "none", md: "block" }
+                                    }}
+                                >
+                                    <Grid xs={12} sx={{ alignItems: "center" }}>
+                                        <Typography component="h3" variant="h3">
+                                            Sign Up
+                                        </Typography>
+                                        <Typography component="h5" variant="h5">
+                                            Coming Soon...
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            </>
+                            :
+                            <>
+                                <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                                    <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
+                                        <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
+                                        <PlayList
+                                            url={listUrl}
+                                            setUrl={setListUrl}
+                                            backEnd={backEnd}
+                                            setRespIndex={setRespIndex}
+                                            disableButtons={disableButtons}
+                                            setIndeterminate={setIndeterminate}
+                                            setSnack={setSnack}
+                                            reFetch={reFetch}
+                                            tableHeight={tableHeight + "px"}
+                                            token={token}
+                                        />
+                                    </Suspense>
+                                </Grid>
+                                <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid" sx={{ height: tableHeight + 52 + "px" }}>
+                                    <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
+                                        <CircularProgress color="secondary" key="SubSus" /></Grid>}>
+                                        <SubList
+                                            url={listUrl}
+                                            setUrl={setListUrl}
+                                            backEnd={backEnd}
+                                            respIndex={respIndex}
+                                            disableButtons={disableButtons}
+                                            downloadedID={downloadedID.current}
+                                            reFetch={reFetch}
+                                            tableHeight={tableHeight + "px"}
+                                            rowsPerPage={rowsPerPageSubList}
+                                            setRowsPerPage={setRowsPerPageSubList}
+                                            token={token}
+                                        />
+                                    </Suspense>
+                                </Grid>
+                            </>
+                        }
                     </Grid>
-                    :
-                    <Grid container spacing={0} key="MainGrid">
-                        <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="PlayGrid" sx={{ height: tableHeight + 52 + "px" }}>
-                            <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
-                                <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
-                                <PlayList
-                                    url={listUrl}
-                                    setUrl={setListUrl}
-                                    backEnd={backEnd}
-                                    setRespIndex={setRespIndex}
-                                    disableButtons={disableButtons}
-                                    setIndeterminate={setIndeterminate}
-                                    setSnack={setSnack}
-                                    reFetch={reFetch}
-                                    tableHeight={tableHeight + "px"}
-                                    token={token}
-                                />
-                            </Suspense>
-                        </Grid>
-                        <Grid xl={6} lg={6} md={12} sm={12} xs={12} key="SubGrid" sx={{ height: tableHeight + 52 + "px" }}>
-                            <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
-                                <CircularProgress color="secondary" key="SubSus" /></Grid>}>
-                                <SubList
-                                    url={listUrl}
-                                    setUrl={setListUrl}
-                                    backEnd={backEnd}
-                                    respIndex={respIndex}
-                                    disableButtons={disableButtons}
-                                    downloadedID={downloadedID.current}
-                                    reFetch={reFetch}
-                                    tableHeight={tableHeight + "px"}
-                                    rowsPerPage={rowsPerPageSubList}
-                                    setRowsPerPage={setRowsPerPageSubList}
-                                    token={token}
-                                />
-                            </Suspense>
-                        </Grid>
-                    </Grid>
-                }
+                </Paper>
                 {/* snack bar */}
                 <Stack spacing={2} sx={{ maxWidth: 600 }}>
                     <Snackbar

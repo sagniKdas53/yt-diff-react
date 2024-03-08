@@ -11,7 +11,6 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
 import PropTypes from "prop-types";
 import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
@@ -283,215 +282,213 @@ export default function PlayList({
 
   return (
     <>
-      <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
-        <TableContainer sx={{ height: tableHeight }}>
-          <Table stickyHeader size="small" aria-label="a dense table">
-            <TableHead>
-              <TableRow>
-                <TableCell
-                  key="play-head-order"
-                  align="justify"
-                  /*padding: top | right and bottom | left */
-                  style={{ paddingInlineEnd: "0px" }}
-                >
-                  <TableSortLabel
-                    active={1 === sort}
-                    direction={order === 1 ? "asc" : "desc"}
-                    onClick={() => createSortHandler(1)}
-                  >
-                    ID
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  key="play-head-title"
-                  align="left"
-                  sx={{ width: "75%" }}
-                  style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
-                >
-                  <TextField
-                    id="title-input"
-                    label="Title"
-                    variant="outlined"
-                    size="small"
-                    sx={{ width: "100%" }}
-                    onKeyUp={debouncedQuery}
-                  />
-                </TableCell>
-                <TableCell
-                  key="play-head-watch"
-                  align="center"
-                  style={{ paddingInlineEnd: "0px" }}
-                >
-                  <TableSortLabel
-                    active={3 === sort}
-                    direction={order === 1 ? "asc" : "desc"}
-                    onClick={() => createSortHandler(3)}
-                  >
-                    Updated
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  key="play-head-expand"
-                  align="center"
-                  style={{ paddingInline: "8px" }}
-                >
-                  Load
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((element, index) => {
-                return (
-                  <TableRow hover role="checkbox" tabIndex={-1} key={index}>
-                    <TableCell
-                      key={element.playlist_index + "-order"}
-                      align="justify"
-                      style={{ paddingInlineEnd: "0px" }}
-                    >
-                      {+element.playlist_index + 1}
-                    </TableCell>
-                    <TableCell
-                      key={element.playlist_index + "-title"}
-                      align="left"
-                      sx={{ width: "75%" }}
-                      style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
-                    >
-                      <Link
-                        href={element.playlist_url}
-                        color="inherit"
-                        underline="hover"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {element.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell
-                      key={element.playlist_index + "-watch"}
-                      align="right"
-                      style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
-                    >
-                      <FormControl
-                        variant="standard"
-                        sx={{ m: 0, minWidth: 80, minHeight: 45 }}
-                        size="small"
-                      >
-                        <InputLabel id={element.playlist_index + "-label"}>
-                          {lastUpdateCalc(element.updatedAt)}
-                        </InputLabel>
-                        <Select
-                          labelId={element.playlist_index + "-label"}
-                          id={element.playlist_index + "-select"}
-                          value={element.monitoring_type}
-                          label="Watch"
-                          onChange={(e) => changeWatch(e, element.playlist_url)}
-                        >
-                          <MenuItem value={"N/A"}>N/A</MenuItem>
-                          <MenuItem value={"Full"}>Full</MenuItem>
-                          <MenuItem value={"Fast"}>Fast</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </TableCell>
-                    <TableCell
-                      key={element.playlist_index + "-button"}
-                      align="center"
-                      style={{ paddingInline: "8px" }}
-                    >
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color={url === element.playlist_url ? "success" : "secondary"}
-                        onClick={() => handleLoad(element.playlist_url)}
-                      >
-                        {url === element.playlist_url ? "DONE" : "LIST"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          <Box
-            sx={{
-              zIndex: 50,
-              position: "absolute",
-              bottom: "10%",
-              right: "10%",
-            }}
-          >
-            <Fab
-              color="primary"
-              aria-label="action"
-              onClick={handleClickOpen}
-              disabled={disableButtons}
-            >
-              <AddIcon />
-            </Fab>
-          </Box>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[10, 25, 50, 100]}
-          component="div"
-          count={totalItems}
-          rowsPerPage={rowsPerPage}
-          page={!totalItems || totalItems <= 0 ? 0 : page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-        <Dialog open={open} onClose={handleClose} fullWidth sx={{
-          zIndex: 100,
-          // this passes the width to the parent container and paper
-          "& .MuiDialog-container": {
-            "& .MuiPaper-root": {
-              width: "100%",
-              minWidth: "300px",
-            },
-          },
-        }}>
-          <DialogTitle sx={{ paddingBlockEnd: 0 }}>Add</DialogTitle>
-          <DialogContent sx={{ m: 0, paddingBlockEnd: 0 }}>
-            <TextField
-              id="standard-multiline-static"
-              label="Url List"
-              fullWidth
-              multiline
-              rows={
-                urlList.split("\n").length < 12 ? (urlList.split("\n").length < 6 ? 6 : urlList.split("\n").length) : 12
-              }
-              value={urlList}
-              variant="standard"
-              onChange={updateUrls}
-            />
-          </DialogContent>
-          <DialogActions>
-            <FormControl
-              variant="standard"
-              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}
-              size="small"
-            >
-              <InputLabel id="dialog-watch-label" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-                Watch mode:
-              </InputLabel>
-              <Select
-                labelId="dialog-watch-label"
-                id="dialog-watch-select"
-                value={watch}
-                label="Watch"
-                onChange={(event) => setWatch(event.target.value)}
+      <TableContainer sx={{ height: tableHeight }}>
+        <Table stickyHeader size="small" aria-label="a dense table">
+          <TableHead>
+            <TableRow>
+              <TableCell
+                key="play-head-order"
+                align="justify"
+                /*padding: top | right and bottom | left */
+                style={{ paddingInlineEnd: "0px" }}
               >
-                <MenuItem value={"N/A"}>N/A</MenuItem>
-                <MenuItem value={"Full"}>Full</MenuItem>
-                <MenuItem value={"Fast"}>Fast</MenuItem>
-              </Select>
-            </FormControl>
-            <Box sx={{ flexGrow: 1 }}></Box>
-            <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
-            <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-              <Button variant="contained" onClick={downloadUrlList} sx={{ float: "right" }}>Submit</Button>
-            </Box>
-          </DialogActions>
-        </Dialog>
-      </Paper>
+                <TableSortLabel
+                  active={1 === sort}
+                  direction={order === 1 ? "asc" : "desc"}
+                  onClick={() => createSortHandler(1)}
+                >
+                  ID
+                </TableSortLabel>
+              </TableCell>
+              <TableCell
+                key="play-head-title"
+                align="left"
+                sx={{ width: "75%" }}
+                style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+              >
+                <TextField
+                  id="title-input"
+                  label="Title"
+                  variant="outlined"
+                  size="small"
+                  sx={{ width: "100%" }}
+                  onKeyUp={debouncedQuery}
+                />
+              </TableCell>
+              <TableCell
+                key="play-head-watch"
+                align="center"
+                style={{ paddingInlineEnd: "0px" }}
+              >
+                <TableSortLabel
+                  active={3 === sort}
+                  direction={order === 1 ? "asc" : "desc"}
+                  onClick={() => createSortHandler(3)}
+                >
+                  Updated
+                </TableSortLabel>
+              </TableCell>
+              <TableCell
+                key="play-head-expand"
+                align="center"
+                style={{ paddingInline: "8px" }}
+              >
+                Load
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map((element, index) => {
+              return (
+                <TableRow hover role="checkbox" tabIndex={-1} key={index}>
+                  <TableCell
+                    key={element.playlist_index + "-order"}
+                    align="justify"
+                    style={{ paddingInlineEnd: "0px" }}
+                  >
+                    {+element.playlist_index + 1}
+                  </TableCell>
+                  <TableCell
+                    key={element.playlist_index + "-title"}
+                    align="left"
+                    sx={{ width: "75%" }}
+                    style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+                  >
+                    <Link
+                      href={element.playlist_url}
+                      color="inherit"
+                      underline="hover"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {element.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell
+                    key={element.playlist_index + "-watch"}
+                    align="right"
+                    style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
+                  >
+                    <FormControl
+                      variant="standard"
+                      sx={{ m: 0, minWidth: 80, minHeight: 45 }}
+                      size="small"
+                    >
+                      <InputLabel id={element.playlist_index + "-label"}>
+                        {lastUpdateCalc(element.updatedAt)}
+                      </InputLabel>
+                      <Select
+                        labelId={element.playlist_index + "-label"}
+                        id={element.playlist_index + "-select"}
+                        value={element.monitoring_type}
+                        label="Watch"
+                        onChange={(e) => changeWatch(e, element.playlist_url)}
+                      >
+                        <MenuItem value={"N/A"}>N/A</MenuItem>
+                        <MenuItem value={"Full"}>Full</MenuItem>
+                        <MenuItem value={"Fast"}>Fast</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                  <TableCell
+                    key={element.playlist_index + "-button"}
+                    align="center"
+                    style={{ paddingInline: "8px" }}
+                  >
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color={url === element.playlist_url ? "success" : "secondary"}
+                      onClick={() => handleLoad(element.playlist_url)}
+                    >
+                      {url === element.playlist_url ? "DONE" : "LIST"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        <Box
+          sx={{
+            zIndex: 50,
+            position: "absolute",
+            bottom: "10%",
+            right: "10%",
+          }}
+        >
+          <Fab
+            color="primary"
+            aria-label="action"
+            onClick={handleClickOpen}
+            disabled={disableButtons}
+          >
+            <AddIcon />
+          </Fab>
+        </Box>
+      </TableContainer>
+      <TablePagination
+        rowsPerPageOptions={[10, 25, 50, 100]}
+        component="div"
+        count={totalItems}
+        rowsPerPage={rowsPerPage}
+        page={!totalItems || totalItems <= 0 ? 0 : page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
+      <Dialog open={open} onClose={handleClose} fullWidth sx={{
+        zIndex: 100,
+        // this passes the width to the parent container and paper
+        "& .MuiDialog-container": {
+          "& .MuiPaper-root": {
+            width: "100%",
+            minWidth: "300px",
+          },
+        },
+      }}>
+        <DialogTitle sx={{ paddingBlockEnd: 0 }}>Add</DialogTitle>
+        <DialogContent sx={{ m: 0, paddingBlockEnd: 0 }}>
+          <TextField
+            id="standard-multiline-static"
+            label="Url List"
+            fullWidth
+            multiline
+            rows={
+              urlList.split("\n").length < 12 ? (urlList.split("\n").length < 6 ? 6 : urlList.split("\n").length) : 12
+            }
+            value={urlList}
+            variant="standard"
+            onChange={updateUrls}
+          />
+        </DialogContent>
+        <DialogActions>
+          <FormControl
+            variant="standard"
+            sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}
+            size="small"
+          >
+            <InputLabel id="dialog-watch-label" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
+              Watch mode:
+            </InputLabel>
+            <Select
+              labelId="dialog-watch-label"
+              id="dialog-watch-select"
+              value={watch}
+              label="Watch"
+              onChange={(event) => setWatch(event.target.value)}
+            >
+              <MenuItem value={"N/A"}>N/A</MenuItem>
+              <MenuItem value={"Full"}>Full</MenuItem>
+              <MenuItem value={"Fast"}>Fast</MenuItem>
+            </Select>
+          </FormControl>
+          <Box sx={{ flexGrow: 1 }}></Box>
+          <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
+          <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
+            <Button variant="contained" onClick={downloadUrlList} sx={{ float: "right" }}>Submit</Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
