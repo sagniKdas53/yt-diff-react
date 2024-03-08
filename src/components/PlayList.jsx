@@ -281,7 +281,7 @@ export default function PlayList({
   };
 
   return (
-    <>
+    <Box sx={{ width: "100%", overflow: "hidden", position: "relative", m:0 , p:0 }}>
       <TableContainer sx={{ height: tableHeight }}>
         <Table stickyHeader size="small" aria-label="a dense table">
           <TableHead>
@@ -489,7 +489,7 @@ export default function PlayList({
           </Box>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   );
 }
 

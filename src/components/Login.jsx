@@ -3,9 +3,7 @@ import PropTypes from "prop-types";
 import Grid from "@mui/material/Unstable_Grid2";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import OutlinedInput from "@mui/material/OutlinedInput";
+import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import Visibility from "@mui/icons-material/Visibility";
@@ -87,25 +85,28 @@ export default function Login({
                     </Typography>
                 </Grid>
                 <Grid xs={12}>
-                    <FormControl sx={{ m: 0, width: "100%" }} variant="outlined" autoComplete="username">
-                        <InputLabel htmlFor="outlined-username">Username</InputLabel>
-                        <OutlinedInput
-                            id="outlined-username"
-                            type="text"
-                            label="Username"
-                            value={user_name}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder="Username"
-                        />
-                    </FormControl>
+                    <TextField
+                        sx={{ m: 0, width: "100%" }}
+                        label="Username"
+                        variant="outlined"
+                        autoComplete="username"
+                        value={user_name}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Username"
+                    />
                 </Grid>
                 <Grid xs={12}>
-                    <FormControl sx={{ m: 0, width: "100%" }} variant="outlined" autoComplete="current-password">
-                        <InputLabel htmlFor="outlined-password">Password</InputLabel>
-                        <OutlinedInput
-                            id="outlined-password"
-                            type={showPassword ? "text" : "password"}
-                            endAdornment={
+                    <TextField
+                        sx={{ m: 0, width: "100%" }}
+                        label="Password"
+                        variant="outlined"
+                        autoComplete="current-password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Password"
+                        InputProps={{
+                            endAdornment: (
                                 <InputAdornment position="end">
                                     <IconButton
                                         aria-label="toggle password visibility"
@@ -116,13 +117,8 @@ export default function Login({
                                         {showPassword ? <VisibilityOff /> : <Visibility />}
                                     </IconButton>
                                 </InputAdornment>
-                            }
-                            label="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password"
-                        />
-                    </FormControl>
+                            ),
+                        }} />
                 </Grid>
                 <Grid xs={12}>
                     <FormControlLabel
