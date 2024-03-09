@@ -69,7 +69,7 @@ export default function PlayList({
   const clearUrlList = () => {
     setUrlList("");
     setOpen(false);
-    setWatch("1");
+    setWatch("N/A");
   };
 
   const downloadUrlList = async () => {
@@ -101,10 +101,10 @@ export default function PlayList({
       }
     } catch (error) {
       //console.error(error);
-      setSnack("Problem parsing url: " + error, "error");
+      setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
     }
     setUrlList("");
-    setWatch("1");
+    setWatch("N/A");
   };
 
   const validate = (element) => {
@@ -117,7 +117,7 @@ export default function PlayList({
       }
     } catch (error) {
       setIndeterminate(false);
-      setSnack("Problem parsing url: " + element, "error");
+      setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
       return false;
     }
     return true;
