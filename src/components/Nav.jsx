@@ -17,7 +17,8 @@ export default function Navigation({
     connectionId,
     setListUrl,
     token,
-    setToken
+    setToken,
+    setConnectionId
 }) {
     const themeSwitcherHandler = (themeMode) => {
         localStorage.setItem("ytdiff_theme", themeMode);
@@ -25,6 +26,7 @@ export default function Navigation({
     };
     const logoutHandler = () => {
         setToken(null);
+        setConnectionId("");
         localStorage.setItem("ytdiff_token", "null");
     }
     return (
@@ -81,5 +83,6 @@ Navigation.propTypes = {
     connectionId: PropTypes.string.isRequired,
     setListUrl: PropTypes.func.isRequired,
     token: PropTypes.string,
-    setToken: PropTypes.func.isRequired
+    setToken: PropTypes.func.isRequired,
+    setConnectionId: PropTypes.func.isRequired
 };

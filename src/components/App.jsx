@@ -65,7 +65,6 @@ export default function App() {
     const progressRef = useRef(0);
     const downloadedID = useRef("");
     const socket = useMemo(() => {
-        console.log(`token: ${token}`);
         const sock = io.connect(backEnd, {
             path: "/ytdiff/socket.io",
         });
@@ -190,6 +189,9 @@ export default function App() {
             setToken(null);
             localStorage.setItem("ytdiff_token", "null");
         });
+        socket.on("connection-error", function () {
+            setSnack("Max web-sockets reached", "error");
+        })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
 
@@ -207,6 +209,7 @@ export default function App() {
                             setListUrl={setListUrl}
                             token={token}
                             setToken={setToken}
+                            setConnectionId={setConnectionId}
                         />
                         <Box sx={{ width: "100%", height: progressHeight + "px" }}>
                             <LinearProgress
