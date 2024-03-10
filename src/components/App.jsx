@@ -1,5 +1,5 @@
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { useState, useCallback, useEffect, forwardRef, useRef, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, forwardRef, useRef, lazy, Suspense, useMemo } from "react";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import CloseIcon from "@mui/icons-material/Close.js";
@@ -20,10 +20,6 @@ const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 
 const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
-
-const socket = io.connect(backEnd, {
-    path: "/ytdiff/socket.io",
-});
 
 const themeObj = (theme) =>
     createTheme({
@@ -68,6 +64,19 @@ export default function App() {
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
     const downloadedID = useRef("");
+    const socket = useMemo(() => {
+        console.log(`token: ${token}`);
+        const sock = io.connect(backEnd, {
+            path: "/ytdiff/socket.io",
+        });
+
+        if (token) {
+            sock.auth = { token };
+            sock.connect();
+        }
+
+        return sock;
+    }, [token]);
 
     // 53px table top, 52 px table pagination, 48 px app bar
     // Table top is included in the table height so no need to subtract it
