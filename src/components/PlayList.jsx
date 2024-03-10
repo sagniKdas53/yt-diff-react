@@ -35,6 +35,7 @@ export default function PlayList({
   setSnack,
   reFetch,
   tableHeight,
+  rowsPerPageSubList,
   token
 }) {
   const [query, updateQuery] = useState("");
@@ -136,6 +137,7 @@ export default function PlayList({
         body: JSON.stringify({
           url: urlItem,
           start: 0,
+          chunk_size: rowsPerPageSubList,
           monitoring_type: watch,
           sleep: true,
           token: token
@@ -503,5 +505,6 @@ PlayList.propTypes = {
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   tableHeight: PropTypes.string.isRequired,
+  rowsPerPageSubList: PropTypes.number.isRequired,
   token: PropTypes.string.isRequired,
 };
