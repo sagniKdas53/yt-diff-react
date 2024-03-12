@@ -126,7 +126,7 @@ export default function PlayList({
 
   const postUrl = (urlItem) => {
     return fetch(backEnd +
-      "/ytdiff/list",
+      "/list",
       {
         method: "post",
         headers: {
@@ -149,7 +149,7 @@ export default function PlayList({
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
     //console.log("Fetching Playlists");
-    const response = await fetch(backEnd + "/ytdiff/getplay", {
+    const response = await fetch(backEnd + "/getplay", {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -216,7 +216,7 @@ export default function PlayList({
 
   const changeWatch = (event, url) => {
     // add some error handling here for gods sake
-    fetch(backEnd + "/ytdiff/watch", {
+    fetch(backEnd + "/watch", {
       method: "post",
       headers: {
         Accept: "application/json",

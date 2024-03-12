@@ -90,7 +90,7 @@ export default function SubList({
     function downloadFunc() {
         const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
         //console.log(JSON.stringify({ id: data }));
-        fetch(backEnd + "/ytdiff/download", {
+        fetch(backEnd + "/download", {
             method: "post",
             headers: {
                 Accept: "application/json",
@@ -112,7 +112,7 @@ export default function SubList({
                 handleChangePage(null, 0);
             }
             //console.log(url, lastUrl, start, stop, sort, query);
-            const response = await fetch(backEnd + "/ytdiff/getsub", {
+            const response = await fetch(backEnd + "/getsub", {
                 method: "post",
                 headers: {
                     Accept: "application/json",
@@ -178,7 +178,6 @@ export default function SubList({
                 });
             });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [downloadedID]);
 
 

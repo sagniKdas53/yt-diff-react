@@ -19,7 +19,9 @@ const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 
-const backEnd = import.meta.env.PROD ? "" : "http://localhost:8888";
+const base = import.meta.env.PROD ? "" : "http://localhost:8888";
+const path = import.meta.env.VITE_BASE_PATH || "/ytdiff";
+const backEnd = base + path;
 
 const themeObj = (theme) =>
     createTheme({
@@ -65,8 +67,9 @@ export default function App() {
     const progressRef = useRef(0);
     const downloadedID = useRef("");
     const socket = useMemo(() => {
-        const sock = io.connect(backEnd, {
-            path: "/ytdiff/socket.io",
+        // for some reason socket.io likes to take base and path separately
+        const sock = io.connect(base, {
+            path: path + "/socket.io",
         });
 
         if (token) {

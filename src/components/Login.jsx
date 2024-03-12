@@ -41,7 +41,7 @@ export default function Login({
             return;
         }
         const response = await fetch(backEnd +
-            "/ytdiff/login",
+            "/login",
             {
                 method: "post",
                 headers: {
