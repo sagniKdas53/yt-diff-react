@@ -278,6 +278,7 @@ export default function App() {
                                         tableHeight={tableHeight + "px"}
                                         rowsPerPageSubList={rowsPerPageSubList}
                                         token={token}
+                                        setToken={setToken}
                                     />
                                 </Suspense>
                             </Grid>
@@ -297,6 +298,8 @@ export default function App() {
                                         rowsPerPage={rowsPerPageSubList}
                                         setRowsPerPage={setRowsPerPageSubList}
                                         token={token}
+                                        setToken={setToken}
+                                        setSnack={setSnack}
                                     />
                                 </Suspense>
                             </Grid>

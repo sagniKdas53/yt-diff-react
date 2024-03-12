@@ -36,7 +36,8 @@ export default function PlayList({
   reFetch,
   tableHeight,
   rowsPerPageSubList,
-  token
+  token,
+  setToken
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -79,9 +80,7 @@ export default function PlayList({
     const valid = new Set(urlList.trim().split("\n").filter(validate));
     try {
       for (const element of valid) {
-        const response = await postUrl(element)
-          .then((response) => response.text())
-          .then((data) => JSON.parse(data));
+        const response = await postUrl(element);
         // since listing may take a while having this here as an intermediate state can not hurt too much.
         setUrl(response.resp_url);
         // Will add the playlist position update logic somewhere in here.
@@ -124,8 +123,8 @@ export default function PlayList({
     return true;
   };
 
-  const postUrl = (urlItem) => {
-    return fetch(backEnd +
+  const postUrl = async (urlItem) => {
+    const response = await fetch(backEnd +
       "/list",
       {
         method: "post",
@@ -144,6 +143,18 @@ export default function PlayList({
         }),
       }
     );
+    if (response.ok) {
+      const data = await response.text();
+      const json_data = JSON.parse(data);
+      return json_data;
+    } else {
+      if (response.status === 401) {
+        setSnack("Token expired please re-login", "error");
+        setToken(null);
+        setIndeterminate(false);
+      }
+      return {};
+    }
   };
 
   // memoize the fetch result using useMemo
@@ -170,10 +181,15 @@ export default function PlayList({
       const json_data = JSON.parse(data);
       return json_data;
     } else {
+      if (response.status === 401) {
+        setSnack("Token expired please re-login", "error");
+        setToken(null);
+      }
+
       return {
         "count": 1, "rows": [{
           "playlist_url": "",
-          "title": "Error in fetching playlists",
+          "title": `Error in fetching playlists: ${response.status} ${response.statusText}`,
           "playlist_index": 0,
           "monitoring_type": "N/A",
           "save_dir": "",
@@ -214,9 +230,9 @@ export default function PlayList({
     []
   );
 
-  const changeWatch = (event, url) => {
+  const changeWatch = async (event, url) => {
     // add some error handling here for gods sake
-    fetch(backEnd + "/watch", {
+    const response = await fetch(backEnd + "/watch", {
       method: "post",
       headers: {
         Accept: "application/json",
@@ -228,20 +244,26 @@ export default function PlayList({
         watch: event.target.value,
         token: token
       }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d["Outcome"] === "Success") {
-          const updatedItems = [...items];
-          const itemIndex = updatedItems.findIndex((item) => item.playlist_url === url);
-          const updatedItem = {
-            ...updatedItems[itemIndex],
-            monitoring_type: event.target.value,
-          };
-          updatedItems[itemIndex] = updatedItem;
-          setItems(updatedItems);
-        }
-      });
+    });
+    if (response.ok) {
+      const data = await response.text();
+      const json_data = JSON.parse(data);
+      if (json_data["Outcome"] === "Success") {
+        const updatedItems = [...items];
+        const itemIndex = updatedItems.findIndex((item) => item.playlist_url === url);
+        const updatedItem = {
+          ...updatedItems[itemIndex],
+          monitoring_type: event.target.value,
+        };
+        updatedItems[itemIndex] = updatedItem;
+        setItems(updatedItems);
+      }
+    } else {
+      if (response.status === 401) {
+        setSnack("Token expired please re-login", "error");
+        setToken(null);
+      }
+    }
   };
 
   const lastUpdateCalc = (lastStamp) => {
@@ -283,7 +305,7 @@ export default function PlayList({
   };
 
   return (
-    <Box sx={{ width: "100%", overflow: "hidden", position: "relative", m:0 , p:0 }}>
+    <Box sx={{ width: "100%", overflow: "hidden", position: "relative", m: 0, p: 0 }}>
       <TableContainer sx={{ height: tableHeight }}>
         <Table stickyHeader size="small" aria-label="a dense table">
           <TableHead>
@@ -507,4 +529,5 @@ PlayList.propTypes = {
   tableHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
   token: PropTypes.string.isRequired,
+  setToken: PropTypes.func.isRequired
 };

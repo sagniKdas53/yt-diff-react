@@ -32,6 +32,8 @@ export default function SubList({
     rowsPerPage,
     setRowsPerPage,
     token,
+    setToken,
+    setSnack
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
@@ -98,7 +100,15 @@ export default function SubList({
             },
             mode: "cors",
             body: JSON.stringify({ id: data, url: url, token: token }),
-        });
+        }).then((response) => {
+            if (response.ok) {
+                setSnack("Download started", "success");
+            }
+            if (response.status === 401) {
+                setSnack("Token expired please re-login", "error");
+                setToken(null);
+            }
+        })
     }
 
 
@@ -133,12 +143,16 @@ export default function SubList({
                 const json_data = JSON.parse(data);
                 return json_data;
             } else {
+                if (response.status === 401) {
+                    setSnack("Token expired please re-login", "error");
+                    setToken(null);
+                }
                 return {
                     "count": 1, "rows": [{
                         "index_in_playlist": 1,
                         "playlist_url": url,
                         "video_list": {
-                            "title": "Error in fetching sub-lists",
+                            "title": `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
                             "video_id": "",
                             "video_url": "",
                             "downloaded": false,
@@ -385,6 +399,8 @@ SubList.propTypes = {
     rowsPerPage: PropTypes.number.isRequired,
     setRowsPerPage: PropTypes.func.isRequired,
     token: PropTypes.string.isRequired,
+    setToken: PropTypes.func.isRequired,
+    setSnack: PropTypes.func.isRequired
 };
 
 function SubListFab({ selectedItems, clear, download, disableButtons }) {
