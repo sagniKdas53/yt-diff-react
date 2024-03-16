@@ -25,7 +25,7 @@ export default function SubList({
     url,
     respIndex,
     disableButtons,
-    downloadedID,
+    downloadedUrl,
     backEnd,
     reFetch,
     tableHeight,
@@ -74,7 +74,7 @@ export default function SubList({
     const bulkAction = () => {
         const tempState = {};
         items.forEach((element) => {
-            tempState[element.video_list.video_id] = !selectAll;
+            tempState[element.video_list.video_url] = !selectAll;
         });
         updateSelected((prevSelected) => ({ ...prevSelected, ...tempState }));
         setSelectAll(!selectAll);
@@ -91,7 +91,7 @@ export default function SubList({
 
     function downloadFunc() {
         const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
-        //console.log(JSON.stringify({ id: data }));
+        //console.log(JSON.stringify({ urls: data }));
         fetch(backEnd + "/download", {
             method: "post",
             headers: {
@@ -99,7 +99,7 @@ export default function SubList({
                 "Content-Type": "application/json",
             },
             mode: "cors",
-            body: JSON.stringify({ id: data, url: url, token: token }),
+            body: JSON.stringify({ urlList: data, playListUrl: url, token: token }),
         }).then((response) => {
             if (response.ok) {
                 setSnack("Download started", "success");
@@ -175,11 +175,11 @@ export default function SubList({
     }, [memoizedFetch]);
 
     useEffect(() => {
-        if (downloadedID !== "") {
-            //console.log(downloadedID);
+        if (downloadedUrl !== "") {
+            //console.log(downloadedUrl);
             setItems(prevItems => {
                 return prevItems.map(item => {
-                    if (item.video_list.video_id === downloadedID) {
+                    if (item.video_list.video_url === downloadedUrl) {
                         return {
                             ...item,
                             video_list: {
@@ -192,7 +192,7 @@ export default function SubList({
                 });
             });
         }
-    }, [downloadedID]);
+    }, [downloadedUrl]);
 
 
     useEffect(() => {
@@ -203,10 +203,10 @@ export default function SubList({
 
     useEffect(() => {
         setSelectAll(false);
-        items.map((element) => (selectedItems[element.video_list.video_id] = false));
+        items.map((element) => (selectedItems[element.video_list.video_url] = false));
         // Remove keys not present in data
         Object.keys(selectedItems).forEach((key) => {
-            if (!items.find((element) => element.video_list.video_id === key)) {
+            if (!items.find((element) => element.video_list.video_url === key)) {
                 delete selectedItems[key];
             }
         });
@@ -312,9 +312,9 @@ export default function SubList({
                                     >
                                         <Checkbox
                                             color="primary"
-                                            checked={selectedItems[element.video_list.video_id] || false}
+                                            checked={selectedItems[element.video_list.video_url] || false}
                                             onChange={handleSelection}
-                                            id={element.video_list.video_id}
+                                            id={element.video_list.video_url}
                                         />
                                     </TableCell>
                                     <TableCell
@@ -393,7 +393,7 @@ SubList.propTypes = {
     backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
     disableButtons: PropTypes.bool.isRequired,
-    downloadedID: PropTypes.string.isRequired,
+    downloadedUrl: PropTypes.string.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
