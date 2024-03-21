@@ -25,7 +25,7 @@ export default function SubList({
     url,
     respIndex,
     disableButtons,
-    downloadedUrl,
+    downloadedItem,
     backEnd,
     reFetch,
     tableHeight,
@@ -175,16 +175,17 @@ export default function SubList({
     }, [memoizedFetch]);
 
     useEffect(() => {
-        if (downloadedUrl !== "") {
-            //console.log(downloadedUrl);
+        if (downloadedItem !== "") {
+            //console.log(downloadedItem);
             setItems(prevItems => {
                 return prevItems.map(item => {
-                    if (item.video_list.video_url === downloadedUrl) {
+                    if (item.video_list.video_url === downloadedItem.url) {
                         return {
                             ...item,
                             video_list: {
                                 ...item.video_list,
-                                downloaded: true
+                                downloaded: true,
+                                title: downloadedItem.title
                             }
                         };
                     }
@@ -192,7 +193,7 @@ export default function SubList({
                 });
             });
         }
-    }, [downloadedUrl]);
+    }, [downloadedItem]);
 
 
     useEffect(() => {
@@ -393,7 +394,7 @@ SubList.propTypes = {
     backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
     disableButtons: PropTypes.bool.isRequired,
-    downloadedUrl: PropTypes.string.isRequired,
+    downloadedItem: PropTypes.object.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,

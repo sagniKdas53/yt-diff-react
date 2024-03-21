@@ -65,7 +65,7 @@ export default function App() {
     const [reFetch, setReFetch] = useState("");
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
-    const downloadedUrl = useRef("");
+    const downloadedItem = useRef("");
     const socket = useMemo(() => {
         // for some reason socket.io likes to take base and path separately
         const sock = io.connect(base, {
@@ -161,8 +161,8 @@ export default function App() {
             toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
-            downloadedUrl.current = data.url;
-            //console.log(downloadedUrl.current);
+            downloadedItem.current = { "url": data.url, "title": data.title };
+            //console.log(downloadedItem.current);
             setSnack(`${data.message}`, "success");
         });
         socket.on("download-failed", function (data) {
@@ -292,7 +292,7 @@ export default function App() {
                                         backEnd={backEnd}
                                         respIndex={respIndex}
                                         disableButtons={disableButtons}
-                                        downloadedUrl={downloadedUrl.current}
+                                        downloadedItem={downloadedItem.current}
                                         reFetch={reFetch}
                                         tableHeight={tableHeight + "px"}
                                         rowsPerPage={rowsPerPageSubList}
