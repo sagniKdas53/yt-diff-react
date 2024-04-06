@@ -22,6 +22,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
+import TablePaginationActions from "./Pagination.jsx";
 
 import debounce from "lodash.debounce";
 
@@ -96,7 +97,7 @@ export default function PlayList({
           setStart(start);
           setStop(end);
         }
-        //console.log(+response.start);
+        //console.log("Response start: ",+response.start);
         setRespIndex(+response.start);
       }
     } catch (error) {
@@ -459,6 +460,7 @@ export default function PlayList({
         page={!totalItems || totalItems <= 0 ? 0 : page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        ActionsComponent={TablePaginationActions}
       />
       <Dialog open={open} onClose={handleClose} fullWidth sx={{
         zIndex: 100,

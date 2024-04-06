@@ -17,6 +17,7 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
+import TablePaginationActions from "./Pagination.jsx";
 
 import debounce from "lodash.debounce";
 
@@ -44,7 +45,7 @@ export default function SubList({
     // const [rowsPerPage, setRowsPerPage] = useState(10);
     // actual table data
     const [items, setItems] = useState([]);
-    const [totalItems, setTotalItems] = useState(0);
+    const [itemCount, setItemCount] = useState(0);
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
     const [lastUrl, setLastUrl] = useState("");
@@ -52,7 +53,7 @@ export default function SubList({
     // const functions and normal functions
     const handleChangePage = useCallback(
         (event, newPage) => {
-            //console.log("Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
+            //console.log("Page: ", newPage, "Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
             setPage(newPage);
             setStart(newPage * rowsPerPage);
             setStop((newPage + 1) * rowsPerPage);
@@ -61,9 +62,12 @@ export default function SubList({
     );
 
     const handleChangeRowsPerPage = (event) => {
-        setStop(start + +event.target.value);
-        setRowsPerPage(+event.target.value);
+        //console.log("handleChangeRowsPerPage: Page: ", page, "Start: ", start, "Stop: ", start + event.target.value, "Rows: ", event.target.value);
+        // I plan to persist he relative page when rows change but not now
         setPage(0);
+        setStart(0);
+        setStop(parseInt(event.target.value));
+        setRowsPerPage(parseInt(event.target.value));
     };
 
     const handleSelection = (event) => {
@@ -170,12 +174,12 @@ export default function SubList({
     useEffect(() => {
         memoizedFetch.then((data) => {
             setItems(data["rows"]);
-            setTotalItems(+data["count"]);
+            setItemCount(parseInt(data["count"]));
         });
     }, [memoizedFetch]);
 
     useEffect(() => {
-        if (downloadedItem !== "") {
+        if (downloadedItem.url !== null) {
             //console.log(downloadedItem);
             setItems(prevItems => {
                 return prevItems.map(item => {
@@ -234,14 +238,15 @@ export default function SubList({
     );
 
     useEffect(() => {
-        // from what it seems to me the error was due to db indexing being wrong, need to write a maintenance function
-        //console.log(JSON.stringify({ respIndex: respIndex, page: Math.floor(respIndex / rowsPerPage) }));
         if (respIndex === -1) {
-            handleChangePage(null, 0);
+            handleChangePage(null, 0); // Reset to the first page if respIndex is -1
         } else {
-            handleChangePage(null, Math.floor(respIndex / rowsPerPage));
+            const currentIndex = respIndex < itemCount ? respIndex : itemCount - 1;
+            const calculatedPage = Math.floor(currentIndex / rowsPerPage);
+            //console.log("currentIndex: ", currentIndex, "calculatedPage: ", calculatedPage);
+            handleChangePage(null, calculatedPage);
         }
-    }, [respIndex, handleChangePage, rowsPerPage]);
+    }, [respIndex, handleChangePage, rowsPerPage, itemCount]);
 
     return (
         <>
@@ -377,11 +382,12 @@ export default function SubList({
             <TablePagination
                 rowsPerPageOptions={[10, 25, 50, 100]}
                 component="div"
-                count={totalItems}
+                count={itemCount}
                 rowsPerPage={rowsPerPage}
-                page={!totalItems || totalItems <= 0 ? 0 : page}
+                page={page}
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
+                ActionsComponent={TablePaginationActions}
             />
 
         </>

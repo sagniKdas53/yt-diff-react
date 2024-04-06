@@ -65,7 +65,7 @@ export default function App() {
     const [reFetch, setReFetch] = useState("");
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
-    const downloadedItem = useRef("");
+    const downloadedItem = useRef({ "url": null, "title": null });
     const socket = useMemo(() => {
         // for some reason socket.io likes to take base and path separately
         const sock = io.connect(base, {
