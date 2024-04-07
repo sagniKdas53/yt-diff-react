@@ -53,10 +53,12 @@ export default function SubList({
     // const functions and normal functions
     const handleChangePage = useCallback(
         (event, newPage) => {
-            //console.log("Page: ", newPage, "Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
-            setPage(newPage);
-            setStart(newPage * rowsPerPage);
-            setStop((newPage + 1) * rowsPerPage);
+            if (newPage >= 0) {
+                //console.log("Page: ", newPage, "Start: ", newPage * rowsPerPage, "Stop: ", (newPage + 1) * rowsPerPage)
+                setPage(newPage);
+                setStart(newPage * rowsPerPage);
+                setStop((newPage + 1) * rowsPerPage);
+            }
         },
         [rowsPerPage, setPage, setStart, setStop]
     );
