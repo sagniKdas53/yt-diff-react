@@ -124,7 +124,7 @@ export default function PlayList({
   };
 
   const postUrlList = async (urlList) => {
-    console.log("Posting urlList: " + urlList);
+    //console.log("Posting urlList: " + urlList);
     const response = await fetch(backEnd +
       "/list",
       {
