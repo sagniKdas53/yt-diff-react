@@ -175,13 +175,15 @@ export default function App() {
         // shows when listing is done
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
-            //console.log(data);
+            //console.log("playlist-done: ", data);
             toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");
             // use this to update the playlists, which will inturn update the sub-list if it is selected
             //reFetch.current = !reFetch.current;
+            // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
+            // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
             setReFetch(data.id);
         });
         // when token expires this receives the event and sets the token to null

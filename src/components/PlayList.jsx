@@ -75,13 +75,13 @@ export default function PlayList({
     setWatch("N/A");
   };
 
-  const downloadUrlList = async () => {
+  const submitUrlList = async () => {
     setIndeterminate(true);
     setOpen(false);
-    const valid = new Set(urlList.trim().split("\n").filter(validate));
+    const valid = Array.from(new Set(urlList.trim().split("\n").filter(validate)));
     try {
-      for (const element of valid) {
-        const response = await postUrl(element);
+        // This response is sent for only the first item ie: 0th item
+        const response = await postUrlList(valid);
         // since listing may take a while having this here as an intermediate state can not hurt too much.
         setUrl(response.resp_url);
         // Will add the playlist position update logic somewhere in here.
@@ -99,7 +99,6 @@ export default function PlayList({
         }
         //console.log("Response start: ",+response.start);
         setRespIndex(+response.start);
-      }
     } catch (error) {
       //console.error(error);
       setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
@@ -124,7 +123,8 @@ export default function PlayList({
     return true;
   };
 
-  const postUrl = async (urlItem) => {
+  const postUrlList = async (urlList) => {
+    console.log("Posting urlList: " + urlList);
     const response = await fetch(backEnd +
       "/list",
       {
@@ -135,7 +135,7 @@ export default function PlayList({
         },
         mode: "cors",
         body: JSON.stringify({
-          url: urlItem,
+          url_list: urlList,
           start: 0,
           chunk_size: rowsPerPageSubList,
           monitoring_type: watch,
@@ -147,6 +147,7 @@ export default function PlayList({
     if (response.ok) {
       const data = await response.text();
       const json_data = JSON.parse(data);
+      //console.log("postUrl response: ", json_data);
       return json_data;
     } else {
       if (response.status === 401) {
@@ -511,7 +512,7 @@ export default function PlayList({
           <Box sx={{ flexGrow: 1 }}></Box>
           <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
           <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-            <Button variant="contained" onClick={downloadUrlList} sx={{ float: "right" }}>Submit</Button>
+            <Button variant="contained" onClick={submitUrlList} sx={{ float: "right" }}>Submit</Button>
           </Box>
         </DialogActions>
       </Dialog>

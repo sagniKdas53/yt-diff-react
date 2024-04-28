@@ -121,6 +121,10 @@ export default function SubList({
     // useEffects and useMemos
     // use the memoized fetch to set the items state
     const memoizedFetch = useMemo(async () => {
+        // TODO: Use refetch to get the updates of the list operation from the backend
+        // the socket one not the http one
+        //console.log("start: ", start, "stop: ", stop, "sort: ",
+        //    sort, "query: ", query, "url: ", url, "query: ", query, "lastUrl: ", lastUrl, "reFetch: ", reFetch);
         if (url !== "") {
             if (url !== lastUrl) {
                 //console.log("changing page to zero")
