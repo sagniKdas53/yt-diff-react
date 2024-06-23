@@ -21,7 +21,7 @@
     "react-dom": "^18.2.0",
     "react-virtuoso": "^4.3.4",
     "sass": "^1.62.1",
-    "socket.io-client": "^4.6.1",
+    "socket.io-client": "^4.7.5",
     "vite-plugin-compression2": "^1.0.0"
   },
   "devDependencies": {
