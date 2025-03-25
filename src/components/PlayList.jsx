@@ -30,7 +30,6 @@ export default function PlayList({
   setUrl,
   url,
   backEnd,
-  disableButtons,
   setRespIndex,
   setIndeterminate,
   setSnack,
@@ -80,25 +79,25 @@ export default function PlayList({
     setOpen(false);
     const valid = Array.from(new Set(urlList.trim().split("\n").filter(validate)));
     try {
-        // This response is sent for only the first item ie: 0th item
-        const response = await postUrlList(valid);
-        // since listing may take a while having this here as an intermediate state can not hurt too much.
-        setUrl(response.resp_url);
-        // Will add the playlist position update logic somewhere in here.
-        if (response.prev_playlist_index > 0) {
-          const start = Math.floor(response.prev_playlist_index / rowsPerPage) * rowsPerPage;
-          const end = start + rowsPerPage;
-          const page = Math.floor(response.prev_playlist_index / rowsPerPage);
-          // console.log("Moving to playlist index " + response.prev_playlist_index);
-          // console.log("Start: " + start);
-          // console.log("End: " + end);
-          // console.log("Page: " + page);
-          setPage(page);
-          setStart(start);
-          setStop(end);
-        }
-        //console.log("Response start: ",+response.start);
-        setRespIndex(+response.start);
+      // This response is sent for only the first item ie: 0th item
+      const response = await postUrlList(valid);
+      // since listing may take a while having this here as an intermediate state can not hurt too much.
+      setUrl(response.resp_url);
+      // Will add the playlist position update logic somewhere in here.
+      if (response.prev_playlist_index > 0) {
+        const start = Math.floor(response.prev_playlist_index / rowsPerPage) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const page = Math.floor(response.prev_playlist_index / rowsPerPage);
+        // console.log("Moving to playlist index " + response.prev_playlist_index);
+        // console.log("Start: " + start);
+        // console.log("End: " + end);
+        // console.log("Page: " + page);
+        setPage(page);
+        setStart(start);
+        setStop(end);
+      }
+      //console.log("Response start: ",+response.start);
+      setRespIndex(+response.start);
     } catch (error) {
       //console.error(error);
       setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
@@ -447,7 +446,6 @@ export default function PlayList({
             color="primary"
             aria-label="action"
             onClick={handleClickOpen}
-            disabled={disableButtons}
           >
             <AddIcon />
           </Fab>
@@ -524,7 +522,6 @@ PlayList.propTypes = {
   setUrl: PropTypes.func.isRequired,
   url: PropTypes.string.isRequired,
   backEnd: PropTypes.string.isRequired,
-  disableButtons: PropTypes.bool.isRequired,
   setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,

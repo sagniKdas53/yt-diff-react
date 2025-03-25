@@ -56,7 +56,6 @@ export default function App() {
     const [listUrl, setListUrl] = useState("");
     const [respIndex, setRespIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
-    const [disableButtons, toggleDisable] = useState(false);
     const [disableProgress, toggleProgress] = useState(false);
     const [showSnackbar, setSnackVisibility] = useState(false);
     const [snackMsg, setSnackMsgTxt] = useState("");
@@ -98,10 +97,6 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const toggleDisableCallBack = useCallback((next) => {
-        toggleDisable(next);
-    }, []);
-
     const toggleProgressCallBack = useCallback((next) => {
         toggleProgress(next);
     }, []);
@@ -119,7 +114,6 @@ export default function App() {
             setIndeterminate(false);
             progressRef.current = 0;
             toggleProgressCallBack(false);
-            toggleDisableCallBack(false);
             setSnack("Connected: " + data.id, "success");
             socket.emit("acknowledge", { data: "Connected", id: data.id });
         });
@@ -130,8 +124,6 @@ export default function App() {
             progressRef.current = 101;
             // if socket is set to be disregarded then set it back to listen
             toggleProgressCallBack(false);
-            // if buttons are not disabled then disable them
-            toggleDisableCallBack(true);
         });
         // gives incremental progress updates at 10% intervals also
         // used to keep the state updated of background activity
@@ -147,9 +139,10 @@ export default function App() {
                 progressRef.current = data.percentage;
             }
 
-            if (!disableButtons) {
-                toggleDisableCallBack(true);
-            }
+            // removing this temporarily to test parallel downloads [25-03-2025]
+            // if (!disableButtons) {
+            //     toggleButtonsCallBack(true);
+            // }
         });
         // shows errors
         socket.on("error", function (data) {
@@ -157,8 +150,6 @@ export default function App() {
         });
         // shows when a download is done
         socket.on("download-done", function (data) {
-            // enable the buttons and reset progress
-            toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
             downloadedItem.current = { "url": data.url, "title": data.title };
@@ -166,8 +157,6 @@ export default function App() {
             setSnack(`${data.message}`, "success");
         });
         socket.on("download-failed", function (data) {
-            // enable the buttons and reset progress
-            toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "error");
@@ -176,7 +165,6 @@ export default function App() {
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
             //console.log("playlist-done: ", data);
-            toggleDisableCallBack(false);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");
@@ -198,7 +186,7 @@ export default function App() {
             setSnack("Max web-sockets reached", "error");
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [socket, toggleDisableCallBack, toggleProgressCallBack]);
+    }, [socket, toggleProgressCallBack]);
 
     return (
         <ThemeProvider theme={themeObj(theme)}>
@@ -273,7 +261,7 @@ export default function App() {
                                         setUrl={setListUrl}
                                         backEnd={backEnd}
                                         setRespIndex={setRespIndex}
-                                        disableButtons={disableButtons}
+                                        disableButtons={false}
                                         setIndeterminate={setIndeterminate}
                                         setSnack={setSnack}
                                         reFetch={reFetch}
@@ -293,7 +281,6 @@ export default function App() {
                                         setUrl={setListUrl}
                                         backEnd={backEnd}
                                         respIndex={respIndex}
-                                        disableButtons={disableButtons}
                                         downloadedItem={downloadedItem.current}
                                         reFetch={reFetch}
                                         tableHeight={tableHeight + "px"}

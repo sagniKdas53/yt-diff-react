@@ -25,7 +25,6 @@ export default function SubList({
     setUrl,
     url,
     respIndex,
-    disableButtons,
     downloadedItem,
     backEnd,
     reFetch,
@@ -381,7 +380,6 @@ export default function SubList({
                         selectedItems={selectedItems}
                         clear={clearList}
                         download={downloadFunc}
-                        disableButtons={disableButtons}
                     />
                 </Box>
             </TableContainer>
@@ -405,7 +403,6 @@ SubList.propTypes = {
     url: PropTypes.string.isRequired,
     backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
-    disableButtons: PropTypes.bool.isRequired,
     downloadedItem: PropTypes.object.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,
@@ -416,7 +413,7 @@ SubList.propTypes = {
     setSnack: PropTypes.func.isRequired
 };
 
-function SubListFab({ selectedItems, clear, download, disableButtons }) {
+function SubListFab({ selectedItems, clear, download }) {
     const isNoItemsSelected =
         Object.keys(selectedItems).length === 0 ||
         Object.values(selectedItems).every((val) => !val);
@@ -432,7 +429,6 @@ function SubListFab({ selectedItems, clear, download, disableButtons }) {
             color="primary"
             aria-label="action"
             onClick={handleClick}
-            disabled={isNoItemsSelected ? false : disableButtons}
         >
             {icon}
         </Fab>
@@ -441,7 +437,6 @@ function SubListFab({ selectedItems, clear, download, disableButtons }) {
 
 SubListFab.propTypes = {
     selectedItems: PropTypes.object.isRequired,
-    disableButtons: PropTypes.bool.isRequired,
     download: PropTypes.func.isRequired,
     clear: PropTypes.func.isRequired,
 };
