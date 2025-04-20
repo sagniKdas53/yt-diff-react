@@ -81,6 +81,7 @@ export default function PlayList({
     try {
       // This response is sent for only the first item ie: 0th item
       const response = await postUrlList(valid);
+      //console.log("Response: ", response);
       // since listing may take a while having this here as an intermediate state can not hurt too much.
       setUrl(response.resp_url);
       // Will add the playlist position update logic somewhere in here.
@@ -96,7 +97,7 @@ export default function PlayList({
         setStart(start);
         setStop(end);
       }
-      //console.log("Response start: ",+response.start);
+      //console.log("Response start: ", +response.start);
       setRespIndex(+response.start);
     } catch (error) {
       //console.error(error);

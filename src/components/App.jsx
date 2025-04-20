@@ -61,6 +61,10 @@ export default function App() {
     const [snackMsg, setSnackMsgTxt] = useState("");
     const [snackSeverity, setSnackSeverity] = useState("success");
     const [indeterminate, setIndeterminate] = useState(false);
+    // so the basic idea of reFetch is to use the socket to trigger a re-fetch of the playlist 
+    // and sub-list when an event needs to let the user know that something has changed
+    // this is a bit of a hack, but it works, without it the app would need to poll 
+    // the server for changes, which is not ideal, will fix this later
     const [reFetch, setReFetch] = useState("");
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
     const progressRef = useRef(0);
@@ -164,7 +168,7 @@ export default function App() {
         // shows when listing is done
         socket.on("playlist-done", function (data) {
             // enable the buttons and reset progress
-            //console.log("playlist-done: ", data);
+            console.log("playlist-done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.message}`, "success");

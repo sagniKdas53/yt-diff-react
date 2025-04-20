@@ -246,6 +246,8 @@ export default function SubList({
         if (respIndex === -1) {
             handleChangePage(null, 0); // Reset to the first page if respIndex is -1
         } else {
+            //console.log("respIndex: ", respIndex, "itemCount: ", itemCount);
+            // Calculate the current page based on the response index
             const currentIndex = respIndex < itemCount ? respIndex : itemCount - 1;
             const calculatedPage = Math.floor(currentIndex / rowsPerPage);
             //console.log("currentIndex: ", currentIndex, "calculatedPage: ", calculatedPage);
