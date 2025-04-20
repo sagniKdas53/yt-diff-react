@@ -121,62 +121,9 @@ export default function App() {
             setSnack("Connected: " + data.id, "success");
             socket.emit("acknowledge", { data: "Connected", id: data.id });
         });
-        // triggered when a download starts, as progress my not start right away
-        socket.on("download-start", function () {
-            // put the progress bar in an indeterminate state
-            setIndeterminate(true);
-            progressRef.current = 101;
-            // if socket is set to be disregarded then set it back to listen
-            toggleProgressCallBack(false);
-        });
-        // gives incremental progress updates at 10% intervals also
-        // used to keep the state updated of background activity
-        socket.on("listing-or-downloading", function (data) {
-            //console.log(data.percentage);
-            if (data.percentage >= 99) {
-                setIndeterminate(true);
-                progressRef.current = 101;
-                toggleProgressCallBack(true);
-            } else if (!disableProgress) {
-                // if the disableProgress is false then update percentage
-                //setProgress(data.percentage);
-                progressRef.current = data.percentage;
-            }
-
-            // removing this temporarily to test parallel downloads [25-03-2025]
-            // if (!disableButtons) {
-            //     toggleButtonsCallBack(true);
-            // }
-        });
         // shows errors
         socket.on("error", function (data) {
             setSnack(`${data.message}`, "error");
-        });
-        // shows when a download is done
-        socket.on("download-done", function (data) {
-            setIndeterminate(false);
-            progressRef.current = 0;
-            downloadedItem.current = { "url": data.url, "title": data.title };
-            //console.log(downloadedItem.current);
-            setSnack(`${data.message}`, "success");
-        });
-        socket.on("download-failed", function (data) {
-            setIndeterminate(false);
-            progressRef.current = 0;
-            setSnack(`${data.message}`, "error");
-        });
-        // shows when listing is done
-        socket.on("playlist-done", function (data) {
-            // enable the buttons and reset progress
-            console.log("playlist-done: ", data);
-            setIndeterminate(false);
-            progressRef.current = 0;
-            setSnack(`${data.message}`, "success");
-            // use this to update the playlists, which will inturn update the sub-list if it is selected
-            //reFetch.current = !reFetch.current;
-            // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
-            // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
-            setReFetch(data.id);
         });
         // when token expires this receives the event and sets the token to null
         // also removes it from localStorage, there is reason to suspect that saving
@@ -189,6 +136,67 @@ export default function App() {
         socket.on("connection-error", function () {
             setSnack("Max web-sockets reached", "error");
         })
+        // Download events
+        // triggered when a download starts, as progress my not start right away
+        socket.on("download-started", function (data) {
+            // put the progress bar in an indeterminate state
+            setIndeterminate(true);
+            progressRef.current = +data.percentage;
+            // if socket is set to be disregarded then set it back to listen
+            toggleProgressCallBack(false);
+        });
+        socket.on("download-done", function (data) {
+            setIndeterminate(false);
+            progressRef.current = 0;
+            downloadedItem.current = { "url": data.url, "title": data.title };
+            setSnack(`${data.title}`, "success");
+        });
+        socket.on("download-failed", function (data) {
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setSnack(`${data.title}`, "error");
+        });
+        // gives incremental progress updates at 10% intervals also
+        // used to keep the state updated of background activity
+        socket.on("downloading-percent-update", function (data) {
+            //console.log(data.percentage);
+            if (data.percentage >= 99) {
+                setIndeterminate(true);
+                progressRef.current = 101;
+                toggleProgressCallBack(true);
+            } else if (!disableProgress) {
+                // if the disableProgress is false then update percentage
+                //setProgress(data.percentage);
+                progressRef.current = data.percentage;
+            }
+        });
+        // Listing events
+        // Earlier this was not needed but now it may actually be needed
+        socket.on("listing-started", function (data) {
+            // put the progress bar in an indeterminate state
+            setIndeterminate(true);
+            progressRef.current = +data.percentage;
+            // if socket is set to be disregarded then set it back to listen
+            toggleProgressCallBack(false);
+        });
+        socket.on("playlist-done", function (data) {
+            // enable the buttons and reset progress
+            // console.log("playlist-done: ", data);
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setSnack(`${data.message}`, "success");
+            // use this to update the playlists, which will inturn update the sub-list if it is selected
+            //reFetch.current = !reFetch.current;
+            // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
+            // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
+            setReFetch(data.url);
+        });
+        socket.on("listing-failed", function (data) {
+            // enable the buttons and reset progress
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setSnack(`${data.url}`, "error");
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleProgressCallBack]);
 

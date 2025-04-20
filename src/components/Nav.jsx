@@ -10,6 +10,7 @@ import PropTypes from "prop-types";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import LoginIcon from "@mui/icons-material/Login";
+import Badge from '@mui/material/Badge';
 
 export default function Navigation({
     themeSwitcher,
@@ -54,14 +55,20 @@ export default function Navigation({
                             {theme ? "Dark" : "Light"}
                         </Typography>
                     </Button>
-                    <Button color="inherit">
-                        {connectionId ? <LeakAddIcon /> : <LeakRemoveIcon />}
-                        <Typography
-                            variant="caption"
-                            display={{ xs: "none", sm: "none", md: "block" }}
-                        >
-                            {connectionId ? "Connected" : "Disconnected"}
-                        </Typography>
+                    <Button onClick={() => alert("will add the notification drawer")} color="inherit">
+                        <Badge color={theme ? "success" : "secondary"} badgeContent={3}
+                            variant="dot" anchorOrigin={{
+                                vertical: 'top',
+                                horizontal: 'right',
+                            }}>
+                            {connectionId ? <LeakAddIcon /> : <LeakRemoveIcon />}
+                            <Typography
+                                variant="caption"
+                                display={{ xs: "none", sm: "none", md: "block" }}
+                            >
+                                {connectionId ? "Connected" : "Disconnected"}
+                            </Typography>
+                        </Badge>
                     </Button>
                     <Button onClick={() => logoutHandler()} color="inherit">
                         {token ? <LogoutIcon /> : <LoginIcon />}
