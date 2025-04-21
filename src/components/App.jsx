@@ -67,7 +67,9 @@ export default function App() {
     // the server for changes, which is not ideal, will fix this later
     const [reFetch, setReFetch] = useState("");
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(10);
+    const [notifications, setNotifications] = useState([]);
     const progressRef = useRef(0);
+    const notificationRef = useRef(0);
     const downloadedItem = useRef({ "url": null, "title": null });
     const socket = useMemo(() => {
         // for some reason socket.io likes to take base and path separately
@@ -111,6 +113,19 @@ export default function App() {
         setSnackVisibility(true);
     };
 
+    const addNotification = (message) => {
+        const newNotification = {
+            id: Date.now() + "-" + notificationRef.current.toString(),
+            message
+        };
+        notificationRef.current += 1;
+        setNotifications(prev => [...prev, newNotification]);
+    };
+
+    const dismissNotification = (id) => {
+        setNotifications(prev => prev.filter(note => note.id !== id));
+    };
+
     useEffect(() => {
         // this one sets up sockets
         socket.on("init", function (data) {
@@ -150,11 +165,13 @@ export default function App() {
             progressRef.current = 0;
             downloadedItem.current = { "url": data.url, "title": data.title };
             setSnack(`${data.title}`, "success");
+            addNotification(`Downloaded: ${data.title}`);
         });
         socket.on("download-failed", function (data) {
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.title}`, "error");
+            addNotification(`Failed: ${data.title}`);
         });
         // gives incremental progress updates at 10% intervals also
         // used to keep the state updated of background activity
@@ -179,23 +196,26 @@ export default function App() {
             // if socket is set to be disregarded then set it back to listen
             toggleProgressCallBack(false);
         });
-        socket.on("playlist-done", function (data) {
+        socket.on("listing-done", function (data) {
             // enable the buttons and reset progress
             // console.log("playlist-done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
-            setSnack(`${data.message}`, "success");
+            setSnack(`${data.url}`, "success");
             // use this to update the playlists, which will inturn update the sub-list if it is selected
             //reFetch.current = !reFetch.current;
             // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
             // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
             setReFetch(data.url);
+            addNotification(`Successful Listing: ${data.url}`);
+            //console.log("Listing done: ", data);
         });
         socket.on("listing-failed", function (data) {
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.url}`, "error");
+            addNotification(`Failed Listing: ${data.url}`);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleProgressCallBack]);
@@ -215,6 +235,8 @@ export default function App() {
                             token={token}
                             setToken={setToken}
                             setConnectionId={setConnectionId}
+                            notifications={notifications}
+                            onDismissNotification={dismissNotification}
                         />
                         <Box sx={{ width: "100%", height: progressHeight + "px" }}>
                             <LinearProgress

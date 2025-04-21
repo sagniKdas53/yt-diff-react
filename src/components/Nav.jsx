@@ -25,7 +25,9 @@ export default function Navigation({
     setListUrl,
     token,
     setToken,
-    setConnectionId
+    setConnectionId,
+    notifications,
+    onDismissNotification
 }) {
     const themeSwitcherHandler = (themeMode) => {
         localStorage.setItem("ytdiff_theme", themeMode);
@@ -64,6 +66,8 @@ export default function Navigation({
                     <NotificationDrawer
                         connectionId={connectionId}
                         badgeColor={theme ? "success" : "secondary"}
+                        notifications={notifications}
+                        onDismissNotification={onDismissNotification}
                     />
                     <Button onClick={() => logoutHandler()} color="inherit">
                         {token ? <LogoutIcon /> : <LoginIcon />}
@@ -86,20 +90,23 @@ Navigation.propTypes = {
     setListUrl: PropTypes.func.isRequired,
     token: PropTypes.string,
     setToken: PropTypes.func.isRequired,
-    setConnectionId: PropTypes.func.isRequired
+    setConnectionId: PropTypes.func.isRequired,
+    notifications: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            message: PropTypes.string.isRequired
+        })
+    ).isRequired,
+    onDismissNotification: PropTypes.func.isRequired
 };
 
 function NotificationDrawer({
     connectionId,
-    badgeColor
+    badgeColor,
+    notifications,
+    onDismissNotification
 }) {
     const [open, setOpen] = useState(false);
-
-    const notifications = [
-        { id: 1, message: 'New message from Alice' },
-        { id: 2, message: 'Server restarted at 3:21 PM' },
-        { id: 3, message: 'Backup completed successfully' },
-    ];
 
     return (
         <>
@@ -126,7 +133,18 @@ function NotificationDrawer({
                     <Divider />
                     <List>
                         {notifications.map((note) => (
-                            <ListItem key={note.id} divider>
+                            <ListItem
+                                key={note.id}
+                                divider
+                                secondaryAction={
+                                    <Button
+                                        onClick={() => onDismissNotification(note.id)}
+                                        size="small"
+                                    >
+                                        Dismiss
+                                    </Button>
+                                }
+                            >
                                 <ListItemText primary={note.message} />
                             </ListItem>
                         ))}
@@ -139,5 +157,12 @@ function NotificationDrawer({
 
 NotificationDrawer.propTypes = {
     badgeColor: PropTypes.string.isRequired,
-    connectionId: PropTypes.string.isRequired
+    connectionId: PropTypes.string.isRequired,
+    notifications: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            message: PropTypes.string.isRequired
+        })
+    ).isRequired,
+    onDismissNotification: PropTypes.func.isRequired
 };
