@@ -11,6 +11,12 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import LoginIcon from "@mui/icons-material/Login";
 import Badge from '@mui/material/Badge';
+import Drawer from "@mui/material/Drawer";
+import Divider from "@mui/material/Divider";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import { useState } from 'react';
 
 export default function Navigation({
     themeSwitcher,
@@ -55,21 +61,10 @@ export default function Navigation({
                             {theme ? "Dark" : "Light"}
                         </Typography>
                     </Button>
-                    <Button onClick={() => alert("will add the notification drawer")} color="inherit">
-                        <Badge color={theme ? "success" : "secondary"} badgeContent={3}
-                            variant="dot" anchorOrigin={{
-                                vertical: 'top',
-                                horizontal: 'right',
-                            }}>
-                            {connectionId ? <LeakAddIcon /> : <LeakRemoveIcon />}
-                            <Typography
-                                variant="caption"
-                                display={{ xs: "none", sm: "none", md: "block" }}
-                            >
-                                {connectionId ? "Connected" : "Disconnected"}
-                            </Typography>
-                        </Badge>
-                    </Button>
+                    <NotificationDrawer
+                        connectionId={connectionId}
+                        badgeColor={theme ? "success" : "secondary"}
+                    />
                     <Button onClick={() => logoutHandler()} color="inherit">
                         {token ? <LogoutIcon /> : <LoginIcon />}
                         <Typography
@@ -92,4 +87,57 @@ Navigation.propTypes = {
     token: PropTypes.string,
     setToken: PropTypes.func.isRequired,
     setConnectionId: PropTypes.func.isRequired
+};
+
+function NotificationDrawer({
+    connectionId,
+    badgeColor
+}) {
+    const [open, setOpen] = useState(false);
+
+    const notifications = [
+        { id: 1, message: 'New message from Alice' },
+        { id: 2, message: 'Server restarted at 3:21 PM' },
+        { id: 3, message: 'Backup completed successfully' },
+    ];
+
+    return (
+        <>
+            <Button onClick={() => setOpen(true)} color="inherit">
+                <Badge color={badgeColor} badgeContent={notifications.length}
+                    variant="dot" anchorOrigin={{
+                        vertical: 'top',
+                        horizontal: 'right',
+                    }}>
+                    {connectionId ? <LeakAddIcon /> : <LeakRemoveIcon />}
+                </Badge>
+                <Typography
+                    variant="caption"
+                    display={{ xs: "none", sm: "none", md: "block" }}
+                >
+                    {connectionId ? "Connected" : "Disconnected"}
+                </Typography>
+            </Button>
+            <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
+                <div style={{ width: 300, padding: 16 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Notifications
+                    </Typography>
+                    <Divider />
+                    <List>
+                        {notifications.map((note) => (
+                            <ListItem key={note.id} divider>
+                                <ListItemText primary={note.message} />
+                            </ListItem>
+                        ))}
+                    </List>
+                </div>
+            </Drawer>
+        </>
+    );
+}
+
+NotificationDrawer.propTypes = {
+    badgeColor: PropTypes.string.isRequired,
+    connectionId: PropTypes.string.isRequired
 };
