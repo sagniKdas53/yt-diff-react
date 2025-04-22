@@ -22,7 +22,7 @@ export default function Navigation({
     themeSwitcher,
     theme,
     connectionId,
-    setListUrl,
+    setPlayListUrl,
     token,
     setToken,
     setConnectionId,
@@ -45,7 +45,7 @@ export default function Navigation({
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         yt-diff
                     </Typography>
-                    <Button color="inherit" onClick={() => setListUrl("None")}>
+                    <Button color="inherit" onClick={() => setPlayListUrl("None")}>
                         <ListAltIcon />
                         <Typography
                             variant="caption"
@@ -87,7 +87,7 @@ Navigation.propTypes = {
     themeSwitcher: PropTypes.func.isRequired,
     theme: PropTypes.bool.isRequired,
     connectionId: PropTypes.string.isRequired,
-    setListUrl: PropTypes.func.isRequired,
+    setPlayListUrl: PropTypes.func.isRequired,
     token: PropTypes.string,
     setToken: PropTypes.func.isRequired,
     setConnectionId: PropTypes.func.isRequired,

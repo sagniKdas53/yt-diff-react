@@ -28,7 +28,7 @@ import debounce from "lodash.debounce";
 
 export default function PlayList({
   setUrl,
-  url,
+  playListUrl,
   backEnd,
   setRespIndex,
   setIndeterminate,
@@ -85,14 +85,14 @@ export default function PlayList({
       // since listing may take a while having this here as an intermediate state can not hurt too much.
       setUrl(response.resp_url);
       // Will add the playlist position update logic somewhere in here.
-      if (response.prev_playlist_index > 0) {
-        const start = Math.floor(response.prev_playlist_index / rowsPerPage) * rowsPerPage;
+      if (response.prev_sortOrder > 0) {
+        const start = Math.floor(response.prev_sortOrder / rowsPerPage) * rowsPerPage;
         const end = start + rowsPerPage;
-        const page = Math.floor(response.prev_playlist_index / rowsPerPage);
-        // console.log("Moving to playlist index " + response.prev_playlist_index);
-        // console.log("Start: " + start);
-        // console.log("End: " + end);
-        // console.log("Page: " + page);
+        const page = Math.floor(response.prev_sortOrder / rowsPerPage);
+        //console.log("Moving to playlist index " + response.prev_sortOrder);
+        //console.log("Start: " + start);
+        //console.log("End: " + end);
+        //console.log("Page: " + page);
         setPage(page);
         setStart(start);
         setStop(end);
@@ -138,7 +138,7 @@ export default function PlayList({
           url_list: urlList,
           start: 0,
           chunk_size: rowsPerPageSubList,
-          monitoring_type: watch,
+          monitoringType: watch,
           sleep: true,
           token: token
         }),
@@ -190,11 +190,11 @@ export default function PlayList({
 
       return {
         "count": 1, "rows": [{
-          "playlist_url": "",
+          "playlistUrl": "",
           "title": `Error in fetching playlists: ${response.status} ${response.statusText}`,
-          "playlist_index": 0,
-          "monitoring_type": "N/A",
-          "save_dir": "",
+          "sortOrder": 0,
+          "monitoringType": "N/A",
+          "saveDirectory": "",
           "createdAt": new Date().toISOString(),
           "updatedAt": new Date().toISOString()
         }]
@@ -250,12 +250,12 @@ export default function PlayList({
     if (response.ok) {
       const data = await response.text();
       const json_data = JSON.parse(data);
-      if (json_data["Outcome"] === "Success") {
+      if (json_data["status"] === "success") {
         const updatedItems = [...items];
-        const itemIndex = updatedItems.findIndex((item) => item.playlist_url === url);
+        const itemIndex = updatedItems.findIndex((item) => item.playlistUrl === url);
         const updatedItem = {
           ...updatedItems[itemIndex],
-          monitoring_type: event.target.value,
+          monitoringType: event.target.value,
         };
         updatedItems[itemIndex] = updatedItem;
         setItems(updatedItems);
@@ -368,20 +368,20 @@ export default function PlayList({
               return (
                 <TableRow hover role="checkbox" tabIndex={-1} key={index}>
                   <TableCell
-                    key={element.playlist_index + "-order"}
+                    key={element.sortOrder + "-order"}
                     align="justify"
                     style={{ paddingInlineEnd: "0px" }}
                   >
-                    {+element.playlist_index + 1}
+                    {+element.sortOrder + 1}
                   </TableCell>
                   <TableCell
-                    key={element.playlist_index + "-title"}
+                    key={element.sortOrder + "-title"}
                     align="left"
                     sx={{ width: "75%" }}
                     style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
                   >
                     <Link
-                      href={element.playlist_url}
+                      href={element.playlistUrl}
                       color="inherit"
                       underline="hover"
                       target="_blank"
@@ -391,7 +391,7 @@ export default function PlayList({
                     </Link>
                   </TableCell>
                   <TableCell
-                    key={element.playlist_index + "-watch"}
+                    key={element.sortOrder + "-watch"}
                     align="right"
                     style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
                   >
@@ -400,15 +400,15 @@ export default function PlayList({
                       sx={{ m: 0, minWidth: 80, minHeight: 45 }}
                       size="small"
                     >
-                      <InputLabel id={element.playlist_index + "-label"}>
+                      <InputLabel id={element.sortOrder + "-label"}>
                         {lastUpdateCalc(element.updatedAt)}
                       </InputLabel>
                       <Select
-                        labelId={element.playlist_index + "-label"}
-                        id={element.playlist_index + "-select"}
-                        value={element.monitoring_type}
+                        labelId={element.sortOrder + "-label"}
+                        id={element.sortOrder + "-select"}
+                        value={element.monitoringType}
                         label="Watch"
-                        onChange={(e) => changeWatch(e, element.playlist_url)}
+                        onChange={(e) => changeWatch(e, element.playlistUrl)}
                       >
                         <MenuItem value={"N/A"}>N/A</MenuItem>
                         <MenuItem value={"Full"}>Full</MenuItem>
@@ -417,17 +417,17 @@ export default function PlayList({
                     </FormControl>
                   </TableCell>
                   <TableCell
-                    key={element.playlist_index + "-button"}
+                    key={element.sortOrder + "-button"}
                     align="center"
                     style={{ paddingInline: "8px" }}
                   >
                     <Button
                       size="small"
                       variant="contained"
-                      color={url === element.playlist_url ? "success" : "secondary"}
-                      onClick={() => handleLoad(element.playlist_url)}
+                      color={playListUrl === element.playlistUrl ? "success" : "secondary"}
+                      onClick={() => handleLoad(element.playlistUrl)}
                     >
-                      {url === element.playlist_url ? "DONE" : "LIST"}
+                      {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -521,7 +521,7 @@ export default function PlayList({
 
 PlayList.propTypes = {
   setUrl: PropTypes.func.isRequired,
-  url: PropTypes.string.isRequired,
+  playListUrl: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
   setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,

@@ -53,7 +53,7 @@ export default function App() {
         null : localStorage.getItem("ytdiff_token");
     // now this will be done later
     const [token, setToken] = useState(localToken);
-    const [listUrl, setListUrl] = useState("");
+    const [playListUrl, setPlayListUrl] = useState("init");
     const [respIndex, setRespIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
     const [disableProgress, toggleProgress] = useState(false);
@@ -116,7 +116,7 @@ export default function App() {
     const addNotification = (message) => {
         const newNotification = {
             id: Date.now() + "-" + notificationRef.current.toString(),
-            message
+            message: message,
         };
         notificationRef.current += 1;
         setNotifications(prev => [...prev, newNotification]);
@@ -138,6 +138,7 @@ export default function App() {
         });
         // shows errors
         socket.on("error", function (data) {
+            //console.log("Error: ", data);
             setSnack(`${data.message}`, "error");
         });
         // when token expires this receives the event and sets the token to null
@@ -154,6 +155,7 @@ export default function App() {
         // Download events
         // triggered when a download starts, as progress my not start right away
         socket.on("download-started", function (data) {
+            //console.log("Download started: ", data);
             // put the progress bar in an indeterminate state
             setIndeterminate(true);
             progressRef.current = +data.percentage;
@@ -161,6 +163,7 @@ export default function App() {
             toggleProgressCallBack(false);
         });
         socket.on("download-done", function (data) {
+            //console.log("Download done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             downloadedItem.current = { "url": data.url, "title": data.title };
@@ -168,15 +171,16 @@ export default function App() {
             addNotification(`Downloaded: ${data.title}`);
         });
         socket.on("download-failed", function (data) {
+            //console.log("Download failed: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.title}`, "error");
-            addNotification(`Failed: ${data.title}`);
+            addNotification(`Download Failed: ${data.title}`);
         });
         // gives incremental progress updates at 10% intervals also
         // used to keep the state updated of background activity
         socket.on("downloading-percent-update", function (data) {
-            //console.log(data.percentage);
+            //console.log("downloading-percent-update: ", data);
             if (data.percentage >= 99) {
                 setIndeterminate(true);
                 progressRef.current = 101;
@@ -190,6 +194,7 @@ export default function App() {
         // Listing events
         // Earlier this was not needed but now it may actually be needed
         socket.on("listing-started", function (data) {
+            //console.log("Listing started: ", data);
             // put the progress bar in an indeterminate state
             setIndeterminate(true);
             progressRef.current = +data.percentage;
@@ -197,8 +202,8 @@ export default function App() {
             toggleProgressCallBack(false);
         });
         socket.on("listing-done", function (data) {
+            //console.log("Listing done: ", data);
             // enable the buttons and reset progress
-            // console.log("playlist-done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.url}`, "success");
@@ -207,10 +212,11 @@ export default function App() {
             // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
             // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
             setReFetch(data.url);
-            addNotification(`Successful Listing: ${data.url}`);
+            addNotification(`Successful Added: ${data.url}`);
             //console.log("Listing done: ", data);
         });
         socket.on("listing-failed", function (data) {
+            //console.log("Listing failed: ", data);
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
@@ -231,7 +237,7 @@ export default function App() {
                             themeSwitcher={themeSwitcher}
                             theme={theme}
                             connectionId={connectionId}
-                            setListUrl={setListUrl}
+                            setPlayListUrl={setPlayListUrl}
                             token={token}
                             setToken={setToken}
                             setConnectionId={setConnectionId}
@@ -291,8 +297,8 @@ export default function App() {
                                 <Suspense fallback={<Grid container justifyContent="center" key="PlaySusGrid">
                                     <CircularProgress color="secondary" key="PlaySus" /></Grid>}>
                                     <PlayList
-                                        url={listUrl}
-                                        setUrl={setListUrl}
+                                        playListUrl={playListUrl}
+                                        setUrl={setPlayListUrl}
                                         backEnd={backEnd}
                                         setRespIndex={setRespIndex}
                                         disableButtons={false}
@@ -311,8 +317,8 @@ export default function App() {
                                 <Suspense fallback={<Grid container justifyContent="center" key="SubSusGrid">
                                     <CircularProgress color="secondary" key="SubSus" /></Grid>}>
                                     <SubList
-                                        url={listUrl}
-                                        setUrl={setListUrl}
+                                        loadedPlayList={playListUrl}
+                                        setPlayListUrl={setPlayListUrl}
                                         backEnd={backEnd}
                                         respIndex={respIndex}
                                         downloadedItem={downloadedItem.current}

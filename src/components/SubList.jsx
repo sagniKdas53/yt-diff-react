@@ -22,8 +22,8 @@ import TablePaginationActions from "./Pagination.jsx";
 import debounce from "lodash.debounce";
 
 export default function SubList({
-    setUrl,
-    url,
+    setPlayListUrl,
+    loadedPlayList,
     respIndex,
     downloadedItem,
     backEnd,
@@ -79,7 +79,7 @@ export default function SubList({
     const bulkAction = () => {
         const tempState = {};
         items.forEach((element) => {
-            tempState[element.video_list.video_url] = !selectAll;
+            tempState[element.video_metadatum.videoUrl] = !selectAll;
         });
         updateSelected((prevSelected) => ({ ...prevSelected, ...tempState }));
         setSelectAll(!selectAll);
@@ -90,7 +90,7 @@ export default function SubList({
     };
 
     const clearList = () => {
-        setUrl("");
+        setPlayListUrl("init");
         handleChangePage(null, 0);
     };
 
@@ -104,7 +104,7 @@ export default function SubList({
                 "Content-Type": "application/json",
             },
             mode: "cors",
-            body: JSON.stringify({ urlList: data, playListUrl: url, token: token }),
+            body: JSON.stringify({ urlList: data, playListUrl: loadedPlayList, token: token }),
         }).then((response) => {
             if (response.ok) {
                 setSnack("Download started", "success");
@@ -124,10 +124,10 @@ export default function SubList({
         // the socket one not the http one
         //console.log("start: ", start, "stop: ", stop, "sort: ",
         //    sort, "query: ", query, "url: ", url, "query: ", query, "lastUrl: ", lastUrl, "reFetch: ", reFetch);
-        if (url !== "") {
-            if (url !== lastUrl) {
+        if (loadedPlayList !== "init") {
+            if (loadedPlayList !== lastUrl) {
                 //console.log("changing page to zero")
-                setLastUrl(url);
+                setLastUrl(loadedPlayList);
                 handleChangePage(null, 0);
             }
             //console.log(url, lastUrl, start, stop, sort, query);
@@ -143,7 +143,7 @@ export default function SubList({
                     stop: stop,
                     sortDownloaded: sort,
                     query: query,
-                    url: url,
+                    url: loadedPlayList,
                     token: token
                 }),
             });
@@ -158,14 +158,14 @@ export default function SubList({
                 }
                 return {
                     "count": 1, "rows": [{
-                        "index_in_playlist": 1,
-                        "playlist_url": url,
-                        "video_list": {
+                        "positionInPlaylist": 1,
+                        "playlistUrl": loadedPlayList,
+                        "video_metadatum": {
                             "title": `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
-                            "video_id": "",
-                            "video_url": "",
-                            "downloaded": false,
-                            "available": false
+                            "videoId": "",
+                            "videoUrl": "",
+                            "downloadStatus": false,
+                            "isAvailable": false
                         }
                     }]
                 };
@@ -174,7 +174,7 @@ export default function SubList({
             return { count: 0, rows: [] };
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, start, stop, sort, url, query, reFetch]);
+    }, [backEnd, start, stop, sort, loadedPlayList, query, reFetch]);
 
     useEffect(() => {
         memoizedFetch.then((data) => {
@@ -188,12 +188,12 @@ export default function SubList({
             //console.log(downloadedItem);
             setItems(prevItems => {
                 return prevItems.map(item => {
-                    if (item.video_list.video_url === downloadedItem.url) {
+                    if (item.video_metadatum.videoUrl === downloadedItem.url) {
                         return {
                             ...item,
-                            video_list: {
-                                ...item.video_list,
-                                downloaded: true,
+                            video_metadatum: {
+                                ...item.video_metadatum,
+                                downloadStatus: true,
                                 title: downloadedItem.title
                             }
                         };
@@ -209,14 +209,14 @@ export default function SubList({
         updateSelected({});
         setSelectAll(false);
         updateSort(false);
-    }, [url]);
+    }, [loadedPlayList]);
 
     useEffect(() => {
         setSelectAll(false);
-        items.map((element) => (selectedItems[element.video_list.video_url] = false));
+        items.map((element) => (selectedItems[element.video_metadatum.videoUrl] = false));
         // Remove keys not present in data
         Object.keys(selectedItems).forEach((key) => {
-            if (!items.find((element) => element.video_list.video_url === key)) {
+            if (!items.find((element) => element.video_metadatum.videoUrl === key)) {
                 delete selectedItems[key];
             }
         });
@@ -325,9 +325,9 @@ export default function SubList({
                                     >
                                         <Checkbox
                                             color="primary"
-                                            checked={selectedItems[element.video_list.video_url] || false}
+                                            checked={selectedItems[element.video_metadatum.videoUrl] || false}
                                             onChange={handleSelection}
-                                            id={element.video_list.video_url}
+                                            id={element.video_metadatum.videoUrl}
                                         />
                                     </TableCell>
                                     <TableCell
@@ -336,13 +336,13 @@ export default function SubList({
                                         sx={{ width: "75%" }}
                                     >
                                         <Link
-                                            href={element.video_list.video_url}
+                                            href={element.video_metadatum.videoUrl}
                                             color={
-                                                element.available
+                                                element.isAvailable
                                                     ? "inherit"
-                                                    : element.video_list.title === "[Deleted video]"
+                                                    : element.video_metadatum.title === "[Deleted video]"
                                                         ? "error"
-                                                        : element.video_list.title === "[Private video]"
+                                                        : element.video_metadatum.title === "[Private video]"
                                                             ? "#f57c00"
                                                             : "inherit"
                                             }
@@ -350,7 +350,7 @@ export default function SubList({
                                             target="_blank"
                                             rel="noreferrer"
                                         >
-                                            {element.video_list.title}
+                                            {element.video_metadatum.title}
                                         </Link>
                                     </TableCell>
                                     <TableCell
@@ -359,7 +359,7 @@ export default function SubList({
                                         align="center"
                                         style={{ minWidth: 10 }}
                                     >
-                                        {element.video_list.downloaded ? (
+                                        {element.video_metadatum.downloadStatus ? (
                                             <CheckCircleIcon color="success" />
                                         ) : (
                                             <CancelIcon color="error" />
@@ -401,8 +401,8 @@ export default function SubList({
 }
 
 SubList.propTypes = {
-    setUrl: PropTypes.func.isRequired,
-    url: PropTypes.string.isRequired,
+    setPlayListUrl: PropTypes.func.isRequired,
+    loadedPlayList: PropTypes.string,
     backEnd: PropTypes.string.isRequired,
     respIndex: PropTypes.number.isRequired,
     downloadedItem: PropTypes.object.isRequired,
