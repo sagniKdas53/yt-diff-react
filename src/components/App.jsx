@@ -225,9 +225,21 @@ export default function App() {
         });
         socket.on("listing-chunk-complete", function (data) {
             console.log("Listing chunk complete: ", data);
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setReFetch(data.url);
+            addNotification(`Successful Added: ${data.url}`);
         });
         socket.on("listing-single-item-complete", function (data) {
             console.log("Listing single item: ", data);
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setReFetch(data.url);
+            if (playListUrl === "init" || playListUrl === "None") {
+                setPlayListUrl("None");
+                setRespIndex(data.seekSubListTo);
+            }
+            addNotification(`Successful Added: ${data.url}`);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleProgressCallBack]);
