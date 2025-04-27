@@ -10,7 +10,6 @@ import MuiAlert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
-//import Typography from "@mui/material/Typography";
 
 import io from "socket.io-client";
 
@@ -193,16 +192,17 @@ export default function App() {
         });
         // Listing events
         // Earlier this was not needed but now it may actually be needed
+        // TODO: Fine tune the fetching of events to not be so aggressive
         socket.on("listing-started", function (data) {
-            //console.log("Listing started: ", data);
+            console.log("Listing started: ", data);
             // put the progress bar in an indeterminate state
             setIndeterminate(true);
             progressRef.current = +data.percentage;
             // if socket is set to be disregarded then set it back to listen
             toggleProgressCallBack(false);
         });
-        socket.on("listing-done", function (data) {
-            //console.log("Listing done: ", data);
+        socket.on("listing-complete", function (data) {
+            console.log("Listing done: ", data);
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
@@ -215,13 +215,19 @@ export default function App() {
             addNotification(`Successful Added: ${data.url}`);
             //console.log("Listing done: ", data);
         });
-        socket.on("listing-failed", function (data) {
-            //console.log("Listing failed: ", data);
+        socket.on("listing-error", function (data) {
+            console.log("Listing failed: ", data);
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
             setSnack(`${data.url}`, "error");
             addNotification(`Failed Listing: ${data.url}`);
+        });
+        socket.on("listing-chunk-complete", function (data) {
+            console.log("Listing chunk complete: ", data);
+        });
+        socket.on("listing-single-item-complete", function (data) {
+            console.log("Listing single item: ", data);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleProgressCallBack]);

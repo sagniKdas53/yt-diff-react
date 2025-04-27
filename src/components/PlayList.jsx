@@ -30,7 +30,6 @@ export default function PlayList({
   setUrl,
   playListUrl,
   backEnd,
-  setRespIndex,
   setIndeterminate,
   setSnack,
   reFetch,
@@ -80,25 +79,8 @@ export default function PlayList({
     const valid = Array.from(new Set(urlList.trim().split("\n").filter(validate)));
     try {
       // This response is sent for only the first item ie: 0th item
-      const response = await postUrlList(valid);
+      await postUrlList(valid);
       //console.log("Response: ", response);
-      // since listing may take a while having this here as an intermediate state can not hurt too much.
-      setUrl(response.resp_url);
-      // Will add the playlist position update logic somewhere in here.
-      if (response.prev_sortOrder > 0) {
-        const start = Math.floor(response.prev_sortOrder / rowsPerPage) * rowsPerPage;
-        const end = start + rowsPerPage;
-        const page = Math.floor(response.prev_sortOrder / rowsPerPage);
-        //console.log("Moving to playlist index " + response.prev_sortOrder);
-        //console.log("Start: " + start);
-        //console.log("End: " + end);
-        //console.log("Page: " + page);
-        setPage(page);
-        setStart(start);
-        setStop(end);
-      }
-      //console.log("Response start: ", +response.start);
-      setRespIndex(+response.start);
     } catch (error) {
       //console.error(error);
       setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
@@ -135,9 +117,8 @@ export default function PlayList({
         },
         mode: "cors",
         body: JSON.stringify({
-          url_list: urlList,
-          start: 0,
-          chunk_size: rowsPerPageSubList,
+          urlList: urlList,
+          chunkSize: rowsPerPageSubList,
           monitoringType: watch,
           sleep: true,
           token: token
@@ -523,7 +504,6 @@ PlayList.propTypes = {
   setUrl: PropTypes.func.isRequired,
   playListUrl: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
-  setRespIndex: PropTypes.func.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
