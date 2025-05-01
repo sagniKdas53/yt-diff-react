@@ -193,16 +193,18 @@ export default function App() {
         // Listing events
         // Earlier this was not needed but now it may actually be needed
         // TODO: Fine tune the fetching of events to not be so aggressive
+        // This is sent before any type of listing starts
         socket.on("listing-started", function (data) {
-            console.log("Listing started: ", data);
+            //console.log("Listing started: ", data);
             // put the progress bar in an indeterminate state
             setIndeterminate(true);
             progressRef.current = +data.percentage;
             // if socket is set to be disregarded then set it back to listen
             toggleProgressCallBack(false);
         });
-        socket.on("listing-complete", function (data) {
-            console.log("Listing done: ", data);
+        // Listing playlists
+        socket.on("listing-playlist-complete", function (data) {
+            //console.log("Listing done: ", data);
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
@@ -215,23 +217,15 @@ export default function App() {
             addNotification(`Successful Added: ${data.url}`);
             //console.log("Listing done: ", data);
         });
-        socket.on("listing-error", function (data) {
-            console.log("Listing failed: ", data);
-            // enable the buttons and reset progress
-            setIndeterminate(false);
-            progressRef.current = 0;
-            setSnack(`${data.url}`, "error");
-            addNotification(`Failed Listing: ${data.url}`);
-        });
         socket.on("listing-chunk-complete", function (data) {
-            console.log("Listing chunk complete: ", data);
+            //console.log("Listing chunk complete: ", data);
             setIndeterminate(false);
-            progressRef.current = 0;
             setReFetch(data.url);
-            addNotification(`Successful Added: ${data.url}`);
+            addNotification(`Successful Added Chunk number: ${data.processedChunks} for ${data.url}`);
         });
+        // Listing single item
         socket.on("listing-single-item-complete", function (data) {
-            console.log("Listing single item: ", data);
+            //console.log("Listing single item: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setReFetch(data.url);
@@ -240,6 +234,15 @@ export default function App() {
                 setRespIndex(data.seekSubListTo);
             }
             addNotification(`Successful Added: ${data.url}`);
+        });
+        // Failed listing
+        socket.on("listing-error", function (data) {
+            //console.log("Listing failed: ", data);
+            // enable the buttons and reset progress
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setSnack(`${data.url}`, "error");
+            addNotification(`Failed Listing: ${data.url}`);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, toggleProgressCallBack]);
