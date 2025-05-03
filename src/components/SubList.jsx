@@ -24,7 +24,7 @@ import debounce from "lodash.debounce";
 export default function SubList({
     setPlayListUrl,
     loadedPlayList,
-    respIndex,
+    subListIndex,
     downloadedItem,
     backEnd,
     reFetch,
@@ -243,17 +243,17 @@ export default function SubList({
     );
 
     useEffect(() => {
-        if (respIndex === -1) {
-            handleChangePage(null, 0); // Reset to the first page if respIndex is -1
+        if (subListIndex === -1) {
+            handleChangePage(null, 0); // Reset to the first page if subListIndex is -1
         } else {
-            //console.log("respIndex: ", respIndex, "itemCount: ", itemCount);
+            //console.log("subListIndex: ", subListIndex, "itemCount: ", itemCount);
             // Calculate the current page based on the response index
-            const currentIndex = respIndex < itemCount ? respIndex : itemCount - 1;
+            const currentIndex = subListIndex < itemCount ? subListIndex : itemCount - 1;
             const calculatedPage = Math.floor(currentIndex / rowsPerPage);
             //console.log("currentIndex: ", currentIndex, "calculatedPage: ", calculatedPage);
             handleChangePage(null, calculatedPage);
         }
-    }, [respIndex, handleChangePage, rowsPerPage, itemCount]);
+    }, [subListIndex, handleChangePage, rowsPerPage, itemCount]);
 
     return (
         <>
@@ -404,7 +404,7 @@ SubList.propTypes = {
     setPlayListUrl: PropTypes.func.isRequired,
     loadedPlayList: PropTypes.string,
     backEnd: PropTypes.string.isRequired,
-    respIndex: PropTypes.number.isRequired,
+    subListIndex: PropTypes.number.isRequired,
     downloadedItem: PropTypes.object.isRequired,
     reFetch: PropTypes.string.isRequired,
     tableHeight: PropTypes.string.isRequired,

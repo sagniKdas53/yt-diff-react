@@ -53,7 +53,7 @@ export default function App() {
     // now this will be done later
     const [token, setToken] = useState(localToken);
     const [playListUrl, setPlayListUrl] = useState("init");
-    const [respIndex, setRespIndex] = useState(0);
+    const [subListIndex, setSubListIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
     const [disableProgress, toggleProgress] = useState(false);
     const [showSnackbar, setSnackVisibility] = useState(false);
@@ -195,7 +195,7 @@ export default function App() {
         // TODO: Fine tune the fetching of events to not be so aggressive
         // This is sent before any type of listing starts
         socket.on("listing-started", function (data) {
-            //console.log("Listing started: ", data);
+            console.log("Listing started: ", data);
             // put the progress bar in an indeterminate state
             setIndeterminate(true);
             progressRef.current = +data.percentage;
@@ -204,24 +204,33 @@ export default function App() {
         });
         // Listing playlists
         socket.on("listing-playlist-complete", function (data) {
-            //console.log("Listing done: ", data);
+            console.log("Listing playlist done: ", data);
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
-            setSnack(`${data.url}`, "success");
+            setSnack(`${data.playlistTitle}`, "success");
             // use this to update the playlists, which will inturn update the sub-list if it is selected
             //reFetch.current = !reFetch.current;
             // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
             // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
-            setReFetch(data.url);
-            addNotification(`Successful Added: ${data.url}`);
+            // but it works, so I will leave it for now
+            setReFetch(data.url + data.processedChunks);
+            addNotification(`Successful Added Playlist: ${data.playlistTitle}`);
             //console.log("Listing done: ", data);
         });
-        socket.on("listing-chunk-complete", function (data) {
-            //console.log("Listing chunk complete: ", data);
-            setIndeterminate(false);
-            setReFetch(data.url);
-            addNotification(`Successful Added Chunk number: ${data.processedChunks} for ${data.url}`);
+        socket.on("listing-playlist-chunk-complete", function (data) {
+            console.log("Listing chunk complete: ", data);
+            if (playListUrl === "init" && data.processedChunks === 1) {
+                console.log("Changing playlist url to: ", data.url);
+                setIndeterminate(false);
+                setPlayListUrl(data.url);
+            }
+            else if (playListUrl === data.url && data.processedChunks > 1) {
+                console.log("Setting refetch to: ", data.url + data.processedChunks);
+                setIndeterminate(false);
+                setReFetch(data.url + data.processedChunks);
+                progressRef.current = 0;
+            }
         });
         // Listing single item
         socket.on("listing-single-item-complete", function (data) {
@@ -231,9 +240,9 @@ export default function App() {
             setReFetch(data.url);
             if (playListUrl === "init" || playListUrl === "None") {
                 setPlayListUrl("None");
-                setRespIndex(data.seekSubListTo);
+                setSubListIndex(data.seekSubListTo);
             }
-            addNotification(`Successful Added: ${data.url}`);
+            addNotification(`Successful Added Video: ${data.title}`);
         });
         // Failed listing
         socket.on("listing-error", function (data) {
@@ -321,7 +330,7 @@ export default function App() {
                                         playListUrl={playListUrl}
                                         setUrl={setPlayListUrl}
                                         backEnd={backEnd}
-                                        setRespIndex={setRespIndex}
+                                        setSubListIndex={setSubListIndex}
                                         disableButtons={false}
                                         setIndeterminate={setIndeterminate}
                                         setSnack={setSnack}
@@ -341,7 +350,7 @@ export default function App() {
                                         loadedPlayList={playListUrl}
                                         setPlayListUrl={setPlayListUrl}
                                         backEnd={backEnd}
-                                        respIndex={respIndex}
+                                        subListIndex={subListIndex}
                                         downloadedItem={downloadedItem.current}
                                         reFetch={reFetch}
                                         tableHeight={tableHeight + "px"}
