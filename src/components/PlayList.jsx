@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -36,7 +36,8 @@ export default function PlayList({
   tableHeight,
   rowsPerPageSubList,
   token,
-  setToken
+  setToken,
+  playListIndex
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == updatedAt
@@ -192,11 +193,15 @@ export default function PlayList({
     });
   }, [memoizedFetch]);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-    setStart(newPage * rowsPerPage);
-    setStop((newPage + 1) * rowsPerPage);
-  };
+  const handleChangePage = useCallback(
+    (event, newPage) => {
+      const validPage = Math.max(0, newPage);
+      setPage(validPage);
+      setStart(validPage * rowsPerPage);
+      setStop((validPage + 1) * rowsPerPage);
+    },
+    [rowsPerPage, setStart, setStop, setPage]
+  );
 
   const handleChangeRowsPerPage = (event) => {
     setStop(start + +event.target.value);
@@ -212,6 +217,19 @@ export default function PlayList({
     () => debounce((event) => updateQuery(event.target.value.trim()), 1000),
     []
   );
+
+  useEffect(() => {
+    if (playListIndex === -1) {
+      handleChangePage(null, 0); // Reset to the first page if playListIndex is -1
+    } else {
+      //console.log("playListIndex: ", playListIndex, "totalItems: ", totalItems);
+      // Calculate the current page based on the response index
+      const currentIndex = playListIndex < totalItems ? playListIndex : totalItems - 1;
+      const calculatedPage = Math.floor(currentIndex / rowsPerPage);
+      //console.log("currentIndex: ", currentIndex, "calculatedPage: ", calculatedPage);
+      handleChangePage(null, calculatedPage);
+    }
+  }, [playListIndex, handleChangePage, rowsPerPage, totalItems]);
 
   const changeWatch = async (event, url) => {
     // add some error handling here for gods sake
@@ -510,5 +528,6 @@ PlayList.propTypes = {
   tableHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
   token: PropTypes.string.isRequired,
-  setToken: PropTypes.func.isRequired
+  setToken: PropTypes.func.isRequired,
+  playListIndex: PropTypes.number.isRequired,
 };

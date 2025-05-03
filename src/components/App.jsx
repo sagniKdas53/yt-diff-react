@@ -54,6 +54,8 @@ export default function App() {
     const [token, setToken] = useState(localToken);
     const [playListUrl, setPlayListUrl] = useState("init");
     const [subListIndex, setSubListIndex] = useState(0);
+    // this will be used to seek to the latest playlist
+    const [playListIndex, setPlayListIndex] = useState(0);
     const [connectionId, setConnectionId] = useState("");
     const [disableProgress, toggleProgress] = useState(false);
     const [showSnackbar, setSnackVisibility] = useState(false);
@@ -195,7 +197,7 @@ export default function App() {
         // TODO: Fine tune the fetching of events to not be so aggressive
         // This is sent before any type of listing starts
         socket.on("listing-started", function (data) {
-            console.log("Listing started: ", data);
+            //console.log("Listing started: ", data);
             // put the progress bar in an indeterminate state
             setIndeterminate(true);
             progressRef.current = +data.percentage;
@@ -204,7 +206,7 @@ export default function App() {
         });
         // Listing playlists
         socket.on("listing-playlist-complete", function (data) {
-            console.log("Listing playlist done: ", data);
+            //console.log("Listing playlist done: ", data);
             // enable the buttons and reset progress
             setIndeterminate(false);
             progressRef.current = 0;
@@ -219,14 +221,15 @@ export default function App() {
             //console.log("Listing done: ", data);
         });
         socket.on("listing-playlist-chunk-complete", function (data) {
-            console.log("Listing chunk complete: ", data);
+            //console.log("Listing chunk complete: ", data);
             if (playListUrl === "init" && data.processedChunks === 1) {
-                console.log("Changing playlist url to: ", data.url);
+                //console.log("Changing playlist url to: ", data.url);
                 setIndeterminate(false);
                 setPlayListUrl(data.url);
+                setPlayListIndex(data.seekPlaylistListTo);
             }
             else if (playListUrl === data.url && data.processedChunks > 1) {
-                console.log("Setting refetch to: ", data.url + data.processedChunks);
+                //console.log("Setting refetch to: ", data.url + data.processedChunks);
                 setIndeterminate(false);
                 setReFetch(data.url + data.processedChunks);
                 progressRef.current = 0;
@@ -330,7 +333,7 @@ export default function App() {
                                         playListUrl={playListUrl}
                                         setUrl={setPlayListUrl}
                                         backEnd={backEnd}
-                                        setSubListIndex={setSubListIndex}
+                                        playListIndex={playListIndex}
                                         disableButtons={false}
                                         setIndeterminate={setIndeterminate}
                                         setSnack={setSnack}
