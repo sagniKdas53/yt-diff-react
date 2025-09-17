@@ -100,9 +100,13 @@ export default function SubList({
             headers: {
                 Accept: "application/json",
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
             },
             mode: "cors",
-            body: JSON.stringify({ urlList: data, playListUrl: loadedPlayList, token: token }),
+            body: JSON.stringify({
+                urlList: data,
+                playListUrl: loadedPlayList
+            }),
         }).then((response) => {
             if (response.ok) {
                 setSnack("Download started", "success");
@@ -114,6 +118,100 @@ export default function SubList({
         })
     }
 
+
+    const getFileAndDownload = async (absolutePath) => {
+        if (!absolutePath) {
+            setSnack("No file path available", "error");
+            return;
+        }
+
+        try {
+            // perform the request and stream the response so we can report progress
+            const response = await fetch(backEnd + "/getfile", {
+                method: "post",
+                headers: {
+                    Accept: "application/octet-stream",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                mode: "cors",
+                body: JSON.stringify({ absolutePath }),
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    setSnack("Token expired please re-login", "error");
+                    setToken(null);
+                } else {
+                    const text = await response.text().catch(() => response.statusText);
+                    setSnack(`Failed to download file: ${text}`, "error");
+                }
+                return;
+            }
+
+            const contentLength = response.headers.get('content-length');
+            const total = contentLength ? parseInt(contentLength, 10) : null;
+
+            // derive filename from header or path
+            const cd = response.headers.get("content-disposition") || "";
+            let filename = absolutePath.split("/").pop() || "file";
+            const match = cd.match(/filename\*?=(?:UTF-8'')?([^;\n]*)/i);
+            if (match && match[1]) {
+                let raw = match[1].trim();
+                if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+                    raw = raw.slice(1, -1);
+                }
+                try { filename = decodeURIComponent(raw); } catch { filename = raw; }
+            }
+
+            // stream and build a blob while reporting progress
+            const reader = response.body.getReader();
+            const chunks = [];
+            let received = 0;
+
+            let done = false;
+            while (!done) {
+                const res = await reader.read();
+                done = res.done;
+                const value = res.value;
+                if (done) break;
+                chunks.push(value);
+                received += value.length;
+                if (total) {
+                    const percent = Math.floor((received / total) * 100);
+                    console.log(`Download progress: ${percent}%`);
+                }
+            }
+
+            const blob = new Blob(chunks);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = normalizeFilename(filename);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            setSnack(`Downloaded: ${filename}`, "success");
+        } catch (error) {
+            setSnack(`Error downloading file: ${error.message}`, "error");
+            console.error(`File download error: ${absolutePath}`, error.message);
+        }
+    }
+
+    // Normalize filename by removing problematic characters and limiting length
+    const normalizeFilename = (name) => {
+        if (!name) return 'file';
+        // remove path separators, control chars
+        let n = name.replace(/[:\\/*?|<>\n\r\t\0]/g, '_');
+        // trim whitespace
+        n = n.trim();
+        // limit length
+        if (n.length > 200) n = n.slice(n.length - 200);
+        return n;
+    }
 
     // useEffects and useMemos
     // use the memoized fetch to set the items state
@@ -134,6 +232,7 @@ export default function SubList({
                 headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
                 },
                 mode: "cors",
                 body: JSON.stringify({
@@ -141,8 +240,7 @@ export default function SubList({
                     stop: stop,
                     sortDownloaded: sort,
                     query: query,
-                    url: loadedPlayList,
-                    token: token
+                    url: loadedPlayList
                 }),
             });
             if (response.ok) {
@@ -358,7 +456,7 @@ export default function SubList({
                                         style={{ minWidth: 10 }}
                                     >
                                         {element.video_metadatum.downloadStatus ? (
-                                            <CheckCircleIcon color="success" />
+                                            <CheckCircleIcon color="success" onClick={() => getFileAndDownload(element.video_metadatum.absolutePath)} />
                                         ) : (
                                             <CancelIcon color="error" />
                                         )}

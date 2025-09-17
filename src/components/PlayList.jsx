@@ -115,14 +115,14 @@ export default function PlayList({
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         mode: "cors",
         body: JSON.stringify({
           urlList: urlList,
           chunkSize: rowsPerPageSubList,
           monitoringType: watch,
-          sleep: true,
-          token: token
+          sleep: true
         }),
       }
     );
@@ -149,6 +149,7 @@ export default function PlayList({
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
       mode: "cors",
       body: JSON.stringify({
@@ -156,8 +157,7 @@ export default function PlayList({
         stop: stop,
         sort: sort,
         order: order,
-        query: query,
-        token: token
+        query: query
       }),
     });
     if (response.ok) {
@@ -238,12 +238,12 @@ export default function PlayList({
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
       mode: "cors",
       body: JSON.stringify({
         url: url,
-        watch: event.target.value,
-        token: token
+        watch: event.target.value
       }),
     });
     if (response.ok) {
