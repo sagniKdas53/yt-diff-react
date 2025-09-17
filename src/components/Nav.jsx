@@ -16,6 +16,9 @@ import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
+import Grid from '@mui/material/Grid';
+import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { useState } from 'react';
 
 export default function Navigation({
@@ -128,7 +131,23 @@ function NotificationDrawer({
             <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
                 <div style={{ width: 300, padding: 16 }}>
                     <Typography variant="h6" gutterBottom>
-                        Notifications
+                        <Grid container
+                            justifyContent="space-between"
+                            alignItems="center" sx={{ m: 0, p: 0 }}
+                        >
+                            <Grid item sx={{ m: 0, p: 0 }}>
+                                Notifications
+                            </Grid>
+                            <Grid style={{ cursor: 'pointer' }} sx={{ m: 0, p: 0 }}>
+                                <Button onClick={() => {
+                                    notifications.forEach(note => {
+                                        onDismissNotification(note.id);
+                                    });
+                                }} sx={{ minWidth: 0, p: 0, m: 0 }}>
+                                    <ClearAllIcon fontSize="large" />
+                                </Button>
+                            </Grid>
+                        </Grid>
                     </Typography>
                     <Divider />
                     <List>
@@ -140,8 +159,9 @@ function NotificationDrawer({
                                     <Button
                                         onClick={() => onDismissNotification(note.id)}
                                         size="small"
+                                        sx={{ minWidth: 0 }}
                                     >
-                                        Dismiss
+                                        <HighlightOffIcon />
                                     </Button>
                                 }
                             >

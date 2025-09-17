@@ -362,6 +362,7 @@ export default function App() {
                                         token={token}
                                         setToken={setToken}
                                         setSnack={setSnack}
+                                        progressRef={progressRef}
                                     />
                                 </Suspense>
                             </Grid>

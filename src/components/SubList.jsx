@@ -20,6 +20,7 @@ import TextField from "@mui/material/TextField";
 import TablePaginationActions from "./Pagination.jsx";
 
 import debounce from "lodash.debounce";
+import { Button } from "@mui/material";
 
 export default function SubList({
     setPlayListUrl,
@@ -33,7 +34,8 @@ export default function SubList({
     setRowsPerPage,
     token,
     setToken,
-    setSnack
+    setSnack,
+    progressRef
 }) {
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
@@ -149,8 +151,8 @@ export default function SubList({
                 return;
             }
 
-            // const contentLength = response.headers.get('content-length');
-            // const total = contentLength ? parseInt(contentLength, 10) : null;
+            const contentLength = response.headers.get('content-length');
+            const total = contentLength ? parseInt(contentLength, 10) : null;
 
             // derive filename from header or path
             const cd = response.headers.get("content-disposition") || "";
@@ -167,7 +169,7 @@ export default function SubList({
             // stream and build a blob while reporting progress
             const reader = response.body.getReader();
             const chunks = [];
-            // let received = 0;
+            let received = 0;
 
             let done = false;
             while (!done) {
@@ -176,14 +178,15 @@ export default function SubList({
                 const value = res.value;
                 if (done) break;
                 chunks.push(value);
-                // received += value.length;
-                // if (total) {
-                //     const percent = Math.floor((received / total) * 100);
-                //     //console.log(`Download progress: ${percent}%`);
-                //     if (progressRef && progressRef.current !== undefined) {
-                //         progressRef.current = percent;
-                //     }
-                // }
+                received += value.length;
+                if (total) {
+                    const percent = Math.floor((received / total) * 100);
+                    //console.log(`Download progress: ${percent}%`);
+                    if (progressRef && progressRef.current !== undefined) {
+                        progressRef.current = percent;
+                        console.log(`Download progress: ${percent}%`);
+                    }
+                }
             }
 
             const blob = new Blob(chunks);
@@ -198,18 +201,19 @@ export default function SubList({
             window.URL.revokeObjectURL(url);
 
             setSnack(`Downloaded: ${filename}`, "success");
-            // if (progressRef && progressRef.current !== undefined) {
-            //     // Reset progress after a short delay to allow UI to update
-            //     setTimeout(() => {
-            //         progressRef.current = 0;
-            //     }, 3000);
-            // }
+            if (progressRef && progressRef.current !== undefined) {
+                // Reset progress after a short delay to allow UI to update
+                setTimeout(() => {
+                    console.log("Resetting progressRef");
+                    progressRef.current = 0;
+                }, 1000);
+            }
         } catch (error) {
             setSnack(`Error downloading file: ${error.message}`, "error");
             //console.error(`File download error: ${absolutePath}`, error.message);
-            // if (progressRef && progressRef.current !== undefined) {
-            //     progressRef.current = 0;
-            // }
+            if (progressRef && progressRef.current !== undefined) {
+                progressRef.current = 0;
+            }
         }
     }
 
@@ -469,7 +473,12 @@ export default function SubList({
                                         style={{ minWidth: 10 }}
                                     >
                                         {element.video_metadatum.downloadStatus ? (
-                                            <CheckCircleIcon color="success" onClick={() => getFileAndDownload(element.video_metadatum.absolutePath)} />
+                                            <Button
+                                                onClick={() => getFileAndDownload(element.video_metadatum.absolutePath)}
+                                                sx={{ m: 0, p: 0 }}
+                                            >
+                                                <CheckCircleIcon color="success" />
+                                            </Button>
                                         ) : (
                                             <CancelIcon color="error" />
                                         )}
@@ -521,7 +530,8 @@ SubList.propTypes = {
     setRowsPerPage: PropTypes.func.isRequired,
     token: PropTypes.string.isRequired,
     setToken: PropTypes.func.isRequired,
-    setSnack: PropTypes.func.isRequired
+    setSnack: PropTypes.func.isRequired,
+    progressRef: PropTypes.object.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download }) {
