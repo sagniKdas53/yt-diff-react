@@ -149,8 +149,8 @@ export default function SubList({
                 return;
             }
 
-            //const contentLength = response.headers.get('content-length');
-            //const total = contentLength ? parseInt(contentLength, 10) : null;
+            // const contentLength = response.headers.get('content-length');
+            // const total = contentLength ? parseInt(contentLength, 10) : null;
 
             // derive filename from header or path
             const cd = response.headers.get("content-disposition") || "";
@@ -167,19 +167,22 @@ export default function SubList({
             // stream and build a blob while reporting progress
             const reader = response.body.getReader();
             const chunks = [];
-            //let received = 0;
+            // let received = 0;
 
             let done = false;
             while (!done) {
                 const res = await reader.read();
                 done = res.done;
-                // const value = res.value;
+                const value = res.value;
                 if (done) break;
-                // chunks.push(value);
+                chunks.push(value);
                 // received += value.length;
                 // if (total) {
                 //     const percent = Math.floor((received / total) * 100);
                 //     //console.log(`Download progress: ${percent}%`);
+                //     if (progressRef && progressRef.current !== undefined) {
+                //         progressRef.current = percent;
+                //     }
                 // }
             }
 
@@ -195,9 +198,18 @@ export default function SubList({
             window.URL.revokeObjectURL(url);
 
             setSnack(`Downloaded: ${filename}`, "success");
+            // if (progressRef && progressRef.current !== undefined) {
+            //     // Reset progress after a short delay to allow UI to update
+            //     setTimeout(() => {
+            //         progressRef.current = 0;
+            //     }, 3000);
+            // }
         } catch (error) {
             setSnack(`Error downloading file: ${error.message}`, "error");
             //console.error(`File download error: ${absolutePath}`, error.message);
+            // if (progressRef && progressRef.current !== undefined) {
+            //     progressRef.current = 0;
+            // }
         }
     }
 
