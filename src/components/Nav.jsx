@@ -17,7 +17,8 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import Grid from '@mui/material/Grid';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { useState } from 'react';
 
@@ -131,23 +132,17 @@ function NotificationDrawer({
             <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
                 <div style={{ width: 300, padding: 16 }}>
                     <Typography variant="h6" gutterBottom>
-                        <Grid container
-                            justifyContent="space-between"
-                            alignItems="center" sx={{ m: 0, p: 0 }}
-                        >
-                            <Grid item sx={{ m: 0, p: 0 }}>
-                                Notifications
-                            </Grid>
-                            <Grid style={{ cursor: 'pointer' }} sx={{ m: 0, p: 0 }}>
-                                <Button onClick={() => {
-                                    notifications.forEach(note => {
-                                        onDismissNotification(note.id);
-                                    });
-                                }} sx={{ minWidth: 0, p: 0, m: 0 }}>
-                                    <ClearAllIcon fontSize="large" />
-                                </Button>
-                            </Grid>
-                        </Grid>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ m: 0, p: 0 }}>
+                            <Box component="span">Notifications</Box>
+                            <IconButton
+                                aria-label="clear all"
+                                onClick={() => notifications.forEach(note => onDismissNotification(note.id))}
+                                sx={{ p: 0 }}
+                                size="large"
+                            >
+                                <ClearAllIcon fontSize="large" />
+                            </IconButton>
+                        </Box>
                     </Typography>
                     <Divider />
                     <List>
