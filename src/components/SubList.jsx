@@ -184,7 +184,7 @@ export default function SubList({
                     //console.log(`Download progress: ${percent}%`);
                     if (progressRef && progressRef.current !== undefined) {
                         progressRef.current = percent;
-                        console.log(`Download progress: ${percent}%`);
+                        //console.log(`Download progress: ${percent}%`);
                     }
                 }
             }
@@ -204,7 +204,7 @@ export default function SubList({
             if (progressRef && progressRef.current !== undefined) {
                 // Reset progress after a short delay to allow UI to update
                 setTimeout(() => {
-                    console.log("Resetting progressRef");
+                    //console.log("Resetting progressRef");
                     progressRef.current = 0;
                 }, 1000);
             }
