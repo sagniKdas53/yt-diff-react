@@ -50,6 +50,7 @@ export default function SubList({
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
     const [lastUrl, setLastUrl] = useState("");
+    const [playlistDirectory, setPlaylistDirectory] = useState("init");
 
     // const functions and normal functions
     const handleChangePage = useCallback(
@@ -91,6 +92,7 @@ export default function SubList({
 
     const clearList = () => {
         setPlayListUrl("init");
+        setPlaylistDirectory("init");
         handleChangePage(null, 0);
     };
 
@@ -293,6 +295,7 @@ export default function SubList({
     useEffect(() => {
         memoizedFetch.then((data) => {
             setItems(data["rows"]);
+            setPlaylistDirectory(data["saveDirectory"]);
             setItemCount(parseInt(data["count"]));
         });
     }, [memoizedFetch]);
@@ -310,8 +313,7 @@ export default function SubList({
                                 downloadStatus: true,
                                 title: downloadedItem.title,
                                 fileName: downloadedItem.fileName,
-                            },
-                            saveDirectory: downloadedItem.saveDirectory || item.saveDirectory
+                            }
                         };
                     }
                     return item;
@@ -477,7 +479,7 @@ export default function SubList({
                                     >
                                         {element.video_metadatum.downloadStatus ? (
                                             <Button
-                                                onClick={() => getFileAndDownload(element.saveDirectory, element.video_metadatum.fileName)}
+                                                onClick={() => getFileAndDownload(playlistDirectory, element.video_metadatum.fileName)}
                                                 sx={{ m: 0, p: 0 }}
                                             >
                                                 <CheckCircleIcon color="success" />
