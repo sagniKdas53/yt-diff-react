@@ -121,14 +121,16 @@ export default function SubList({
     }
 
 
-    const getFileAndDownload = async (absolutePath) => {
-        if (!absolutePath) {
-            setSnack("No file path available", "error");
+    const getFileAndDownload = async (saveDirectory, fileName) => {
+        if (!fileName) {
+            setSnack("No file available", "error");
             return;
         }
 
         try {
             // perform the request and stream the response so we can report progress
+            console.log("Requesting file: ", { saveDirectory, fileName });
+            setSnack(`Downloading: ${fileName}`, "info");
             const response = await fetch(backEnd + "/getfile", {
                 method: "post",
                 headers: {
@@ -137,7 +139,7 @@ export default function SubList({
                     "Authorization": `Bearer ${token}`,
                 },
                 mode: "cors",
-                body: JSON.stringify({ absolutePath }),
+                body: JSON.stringify({ saveDirectory, fileName }),
             });
 
             if (!response.ok) {
@@ -156,7 +158,7 @@ export default function SubList({
 
             // derive filename from header or path
             const cd = response.headers.get("content-disposition") || "";
-            let filename = absolutePath.split("/").pop() || "file";
+            let filename = fileName || "file";
             const match = cd.match(/filename\*?=(?:UTF-8'')?([^;\n]*)/i);
             if (match && match[1]) {
                 let raw = match[1].trim();
@@ -307,8 +309,9 @@ export default function SubList({
                                 ...item.video_metadatum,
                                 downloadStatus: true,
                                 title: downloadedItem.title,
-                                absolutePath: downloadedItem.absolutePath,
-                            }
+                                fileName: downloadedItem.fileName,
+                            },
+                            saveDirectory: downloadedItem.saveDirectory || item.saveDirectory
                         };
                     }
                     return item;
@@ -474,7 +477,7 @@ export default function SubList({
                                     >
                                         {element.video_metadatum.downloadStatus ? (
                                             <Button
-                                                onClick={() => getFileAndDownload(element.video_metadatum.absolutePath)}
+                                                onClick={() => getFileAndDownload(element.saveDirectory, element.video_metadatum.fileName)}
                                                 sx={{ m: 0, p: 0 }}
                                             >
                                                 <CheckCircleIcon color="success" />

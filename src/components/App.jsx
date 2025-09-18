@@ -71,7 +71,7 @@ export default function App() {
     const [notifications, setNotifications] = useState([]);
     const progressRef = useRef(0);
     const notificationRef = useRef(0);
-    const downloadedItem = useRef({ "url": null, "title": null, "absolutePath": null });
+    const downloadedItem = useRef({ "url": null, "title": null, "fileName": null, "saveDirectory": null });
     const socket = useMemo(() => {
         // for some reason socket.io likes to take base and path separately
         const sock = io.connect(base, {
@@ -167,7 +167,7 @@ export default function App() {
             //console.log("Download done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
-            downloadedItem.current = { "url": data.url, "title": data.title, "absolutePath": data.absolutePath };
+            downloadedItem.current = { "url": data.url, "title": data.title, "fileName": data.fileName || null, "saveDirectory": data.saveDirectory || null };
             setSnack(`${data.title}`, "success");
             addNotification(`Downloaded: ${data.title}`);
         });
