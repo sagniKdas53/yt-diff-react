@@ -66,7 +66,7 @@ export default function Login({
                     localStorage.setItem("ytdiff_token", data.token);
                 }
             } else {
-                setSnack(`${data.Outcome}`, "error");
+                setSnack(`${data.message}`, "error");
             }
         } catch (error) {
             setSnack("Error in signing in", "error");
