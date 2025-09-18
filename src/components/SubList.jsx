@@ -129,7 +129,7 @@ export default function SubList({
 
         try {
             // perform the request and stream the response so we can report progress
-            console.log("Requesting file: ", { saveDirectory, fileName });
+            //console.log("Requesting file: ", { saveDirectory, fileName });
             setSnack(`Downloading: ${fileName}`, "info");
             const response = await fetch(backEnd + "/getfile", {
                 method: "post",
