@@ -54,7 +54,7 @@ export default function App() {
     // now this will be done later
     const [token, setToken] = useState(localToken);
     // signup related states
-    const [isSigningUp, setIsSigningUp] = useState(false);
+    const [showSignUpComponent, toggleSignUpComponent] = useState(false);
     // playlist related states
     const [playListUrl, setPlayListUrl] = useState("init");
     const [subListIndex, setSubListIndex] = useState(0);
@@ -311,19 +311,19 @@ export default function App() {
                                         <CircularProgress color="secondary" key="LoginSus" />
                                     </Grid>
                                 }>
-                                    {isSigningUp ?
+                                    {showSignUpComponent ?
                                         <Signup
                                             backEnd={backEnd}
                                             setSnack={setSnack}
                                             height={tableHeight + 52 + "px"}
-                                            setIsSigningUp={setIsSigningUp}
+                                            toggleSignUpComponent={toggleSignUpComponent}
                                         /> :
                                         <Login
                                             backEnd={backEnd}
                                             setToken={setToken}
                                             setSnack={setSnack}
                                             height={tableHeight + 52 + "px"}
-                                            setIsSigningUp={setIsSigningUp}
+                                            toggleSignUpComponent={toggleSignUpComponent}
                                         />}
                                 </Suspense>
                             </Grid>

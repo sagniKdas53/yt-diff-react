@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Unstable_Grid2";
 import Button from "@mui/material/Button";
@@ -16,13 +16,16 @@ export default function Login({
     setToken,
     setSnack,
     height,
-    setIsSigningUp
+    toggleSignUpComponent
 }) {
     const [userName, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+
+    const [isSignUpEnabled, setIsSignUpEnabled] = useState(true);
+
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -72,6 +75,44 @@ export default function Login({
             setSnack("Error in signing in", "error");
         }
     };
+
+    const regEnableCheck = async () => {
+        const response = await fetch(backEnd +
+            "/isregallowed",
+            {
+                method: "post",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+                mode: "cors",
+                body: JSON.stringify({
+                    "sendStats": false
+                }),
+            }
+        );
+
+        // Handle response (e.g., store token)
+        const data = await response.json();
+        // Propagate it to the main app
+        try {
+            if (response.ok) {
+                setIsSignUpEnabled(data.registrationAllowed);
+            } else {
+                setSnack(`${data.message}`, "error");
+            }
+        } catch (error) {
+            setSnack("Error in checking signup availability", "error");
+        }
+    };
+
+    // Check if signup is allowed on component mount, wonder if this should be memoized
+    useEffect(() => {
+        // Whenever the login component is shown, i.e. First time opening up the app
+        // or switching back from signup to login, check if signup is allowed
+        regEnableCheck();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <Grid container
@@ -136,12 +177,14 @@ export default function Login({
                         Login
                     </Button>
                 </Grid>
-                <Grid xs={12}>
-                    <Button fullWidth variant="contained" color="primary"
-                        sx={{ float: "right" }} onClick={() => setIsSigningUp(true)}>
-                        Sign Up
-                    </Button>
-                </Grid>
+                {isSignUpEnabled ? (
+                    <Grid xs={12}>
+                        <Button fullWidth variant="contained" color="primary"
+                            sx={{ float: "right" }} onClick={() => toggleSignUpComponent(true)}>
+                            Sign Up
+                        </Button>
+                    </Grid>
+                ) : null}
             </Grid>
         </Grid>
     );
@@ -152,5 +195,5 @@ Login.propTypes = {
     setToken: PropTypes.func.isRequired,
     setSnack: PropTypes.func.isRequired,
     height: PropTypes.string.isRequired,
-    setIsSigningUp: PropTypes.func.isRequired
+    toggleSignUpComponent: PropTypes.func.isRequired
 };

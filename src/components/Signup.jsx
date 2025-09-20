@@ -14,7 +14,7 @@ export default function Signup({
     backEnd,
     setSnack,
     height,
-    setIsSigningUp
+    toggleSignUpComponent
 }) {
 
     const [userName, setUsername] = useState("");
@@ -55,7 +55,7 @@ export default function Signup({
         try {
             if (response.ok) {
                 setSnack("Signed up successfully", "success");
-                setIsSigningUp(false);
+                toggleSignUpComponent(false);
             } else {
                 setSnack(`${data.message}`, "error");
             }
@@ -119,14 +119,20 @@ export default function Signup({
                         Sign Up
                     </Button>
                 </Grid>
+                <Grid xs={12}>
+                    <Button fullWidth variant="contained" color="primary"
+                        sx={{ float: "right" }} onClick={() => toggleSignUpComponent(false)}>
+                        Login
+                    </Button>
+                </Grid>
             </Grid>
         </Grid>
     );
 }
 
 Signup.propTypes = {
-    backEnd: PropTypes.object.isRequired,
+    backEnd: PropTypes.string.isRequired,
     setSnack: PropTypes.func.isRequired,
     height: PropTypes.string.isRequired,
-    setIsSigningUp: PropTypes.func.isRequired
+    toggleSignUpComponent: PropTypes.func.isRequired
 };
