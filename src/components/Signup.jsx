@@ -81,7 +81,7 @@ export default function Signup({
                         sx={{ m: 0, width: "100%" }}
                         label="Username"
                         variant="outlined"
-                        autoComplete="new-username"
+                        autoComplete="username"
                         value={userName}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Username"
