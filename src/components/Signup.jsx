@@ -2,27 +2,25 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Unstable_Grid2";
 import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Typography from "@mui/material/Typography";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 
-export default function Login({
+export default function Signup({
     backEnd,
-    setToken,
     setSnack,
     height,
     setIsSigningUp
 }) {
+
     const [userName, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -30,18 +28,14 @@ export default function Login({
         event.preventDefault();
     };
 
-    const handleRemembered = () => {
-        setRememberMe(!rememberMe);
-    }
-
-    const handleLogin = async () => {
-        // Send login request to backend
+    const handleSignup = async () => {
+        // Send signup request to backend
         if (userName === "" || password === "") {
             setSnack("Username or password is empty", "error");
             return;
         }
         const response = await fetch(backEnd +
-            "/login",
+            "/register",
             {
                 method: "post",
                 headers: {
@@ -60,18 +54,16 @@ export default function Login({
         // Propagate it to the main app
         try {
             if (response.ok) {
-                setToken(data.token);
-                // Store token in localStorage or sessionStorage
-                if (rememberMe) {
-                    localStorage.setItem("ytdiff_token", data.token);
-                }
+                setSnack("Signed up successfully", "success");
+                setIsSigningUp(false);
             } else {
                 setSnack(`${data.message}`, "error");
             }
         } catch (error) {
-            setSnack("Error in signing in", "error");
+            setSnack("Error in signing up", "error");
         }
     };
+
 
     return (
         <Grid container
@@ -81,7 +73,7 @@ export default function Login({
             <Grid container spacing={3} sx={{ m: 1 }}>
                 <Grid xs={12} sx={{ alignItems: "center" }}>
                     <Typography component="h1" variant="h5">
-                        Sign in
+                        Sign Up
                     </Typography>
                 </Grid>
                 <Grid xs={12}>
@@ -89,7 +81,7 @@ export default function Login({
                         sx={{ m: 0, width: "100%" }}
                         label="Username"
                         variant="outlined"
-                        autoComplete="username"
+                        autoComplete="new-username"
                         value={userName}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Username"
@@ -100,7 +92,7 @@ export default function Login({
                         sx={{ m: 0, width: "100%" }}
                         label="Password"
                         variant="outlined"
-                        autoComplete="current-password"
+                        autoComplete="new-password"
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -121,24 +113,9 @@ export default function Login({
                         }} />
                 </Grid>
                 <Grid xs={12}>
-                    <FormControlLabel
-                        control={
-                            <Checkbox value="remember"
-                                checked={rememberMe}
-                                onChange={handleRemembered}
-                                color="primary" />
-                        }
-                        label="Remember me"
-                    /></Grid>
-                <Grid xs={12}>
+                    <Box sx={{ flexGrow: 1 }}></Box>
                     <Button fullWidth variant="contained" color="primary"
-                        sx={{ float: "right" }} onClick={handleLogin}>
-                        Login
-                    </Button>
-                </Grid>
-                <Grid xs={12}>
-                    <Button fullWidth variant="contained" color="primary"
-                        sx={{ float: "right" }} onClick={() => setIsSigningUp(true)}>
+                        sx={{ float: "right" }} onClick={handleSignup}>
                         Sign Up
                     </Button>
                 </Grid>
@@ -147,9 +124,8 @@ export default function Login({
     );
 }
 
-Login.propTypes = {
-    backEnd: PropTypes.string.isRequired,
-    setToken: PropTypes.func.isRequired,
+Signup.propTypes = {
+    backEnd: PropTypes.object.isRequired,
     setSnack: PropTypes.func.isRequired,
     height: PropTypes.string.isRequired,
     setIsSigningUp: PropTypes.func.isRequired

@@ -17,6 +17,7 @@ const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
+const Signup = lazy(() => import("./Signup.jsx"));
 
 const base = import.meta.env.PROD ? "" : "http://localhost:8888";
 const path = import.meta.env.VITE_BASE_PATH || "/ytdiff";
@@ -52,6 +53,9 @@ export default function App() {
         null : localStorage.getItem("ytdiff_token");
     // now this will be done later
     const [token, setToken] = useState(localToken);
+    // signup related states
+    const [isSigningUp, setIsSigningUp] = useState(false);
+    // playlist related states
     const [playListUrl, setPlayListUrl] = useState("init");
     const [subListIndex, setSubListIndex] = useState(0);
     // this will be used to seek to the latest playlist
@@ -307,12 +311,20 @@ export default function App() {
                                         <CircularProgress color="secondary" key="LoginSus" />
                                     </Grid>
                                 }>
-                                    <Login
-                                        backEnd={backEnd}
-                                        setToken={setToken}
-                                        setSnack={setSnack}
-                                        height={tableHeight + 52 + "px"}
-                                    />
+                                    {isSigningUp ?
+                                        <Signup
+                                            backEnd={backEnd}
+                                            setSnack={setSnack}
+                                            height={tableHeight + 52 + "px"}
+                                            setIsSigningUp={setIsSigningUp}
+                                        /> :
+                                        <Login
+                                            backEnd={backEnd}
+                                            setToken={setToken}
+                                            setSnack={setSnack}
+                                            height={tableHeight + 52 + "px"}
+                                            setIsSigningUp={setIsSigningUp}
+                                        />}
                                 </Suspense>
                             </Grid>
                             <Grid xl={4} lg={4} md={2} sm={12} xs={12} key="EndSignUpGrid"
