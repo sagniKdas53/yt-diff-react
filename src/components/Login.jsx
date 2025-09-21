@@ -177,14 +177,14 @@ export default function Login({
                         Login
                     </Button>
                 </Grid>
-                {isSignUpEnabled ? (
+                {isSignUpEnabled && (
                     <Grid xs={12}>
                         <Button fullWidth variant="contained" color="primary"
                             sx={{ float: "right" }} onClick={() => toggleSignUpComponent(true)}>
                             Sign Up
                         </Button>
                     </Grid>
-                ) : null}
+                )}
             </Grid>
         </Grid>
     );
