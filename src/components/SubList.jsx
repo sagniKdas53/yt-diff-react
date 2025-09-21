@@ -29,7 +29,7 @@ export default function SubList({
     downloadedItem,
     backEnd,
     reFetch,
-    tableHeight,
+    tableConatinerHeight,
     rowsPerPage,
     setRowsPerPage,
     token,
@@ -375,7 +375,7 @@ export default function SubList({
 
     return (
         <>
-            <TableContainer sx={{ height: tableHeight }}>
+            <TableContainer sx={{ height: tableConatinerHeight }}>
                 <Table stickyHeader size="small" aria-label="sub-list table">
                     <TableHead>
                         <TableRow>
@@ -530,7 +530,7 @@ SubList.propTypes = {
     subListIndex: PropTypes.number.isRequired,
     downloadedItem: PropTypes.object.isRequired,
     reFetch: PropTypes.string.isRequired,
-    tableHeight: PropTypes.string.isRequired,
+    tableConatinerHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
     setRowsPerPage: PropTypes.func.isRequired,
     token: PropTypes.string.isRequired,
