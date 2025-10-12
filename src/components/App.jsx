@@ -19,7 +19,7 @@ const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 const Signup = lazy(() => import("./Signup.jsx"));
 
-const base = import.meta.env.PROD ? window.location.origin : "http://localhost:8888";
+const base = import.meta.env.PROD ? "" : "http://localhost:8888";
 const path = import.meta.env.VITE_BASE_PATH || "/ytdiff";
 const backEnd = base + path;
 

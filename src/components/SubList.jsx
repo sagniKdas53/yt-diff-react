@@ -159,7 +159,7 @@ export default function SubList({
             const data = await response.text();
             const json_data = JSON.parse(data);
             if (json_data.status === "success" && json_data.signedUrlId) {
-                const downloadUrl = new URL(backEnd + "/getfile");
+                const downloadUrl = new URL(window.location.origin + backEnd + "/getfile");
                 downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
                 //console.log("Opening download URL: ", downloadUrl.toString());
                 // open in new tab
