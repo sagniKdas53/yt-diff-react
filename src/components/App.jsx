@@ -240,6 +240,13 @@ export default function App() {
             addNotification(`Successful Added Playlist: ${data.playlistTitle}`);
             //console.log("Listing done: ", data);
         });
+        socket.on("playlist-skipped", (data) => {
+            //console.log("Playlist item skipped: ", data);
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setSnack(`${data.message}`, "info");
+            addNotification(`${data.message}`);
+        });
         socket.on("listing-playlist-chunk-complete", (data) => {
             //console.log("Listing chunk complete: ", data);
             if (playListUrl === "init" && data.processedChunks === 1) {
