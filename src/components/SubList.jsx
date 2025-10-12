@@ -155,63 +155,82 @@ export default function SubList({
                 return;
             }
 
-            const contentLength = response.headers.get('content-length');
-            const total = contentLength ? parseInt(contentLength, 10) : null;
-
-            // derive filename from header or path
-            const cd = response.headers.get("content-disposition") || "";
-            let filename = fileName || "file";
-            const match = cd.match(/filename\*?=(?:UTF-8'')?([^;\n]*)/i);
-            if (match && match[1]) {
-                let raw = match[1].trim();
-                if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
-                    raw = raw.slice(1, -1);
-                }
-                try { filename = decodeURIComponent(raw); } catch { filename = raw; }
+            // Now the backend sends a json response like this
+            // {
+            // "status": "success",
+            //     "signedUrlId": "a3eb05d3-54cb-4419-b63a-640cfcc301fc"
+            // }
+            // all we need to do is open a request like this http://localhost:8888/ytdiff/getfile?fileId={{fileId}} in a new tab
+            const data = await response.text();
+            const json_data = JSON.parse(data);
+            if (json_data.status === "success" && json_data.signedUrlId) {
+                const downloadUrl = new URL(backEnd + "/getfile");
+                downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
+                console.log("Opening download URL: ", downloadUrl.toString());
+                // open in new tab
+                window.open(downloadUrl.toString(), "_blank", "noopener,noreferrer");
+                setSnack(`Download started: ${fileName}`, "success");
+            } else {
+                setSnack(`Failed to get download URL`, "error");
             }
 
-            // stream and build a blob while reporting progress
-            const reader = response.body.getReader();
-            const chunks = [];
-            let received = 0;
+            // const contentLength = response.headers.get('content-length');
+            // const total = contentLength ? parseInt(contentLength, 10) : null;
 
-            let done = false;
-            while (!done) {
-                const res = await reader.read();
-                done = res.done;
-                const value = res.value;
-                if (done) break;
-                chunks.push(value);
-                received += value.length;
-                if (total) {
-                    const percent = Math.floor((received / total) * 100);
-                    //console.log(`Download progress: ${percent}%`);
-                    if (progressRef && progressRef.current !== undefined) {
-                        progressRef.current = percent;
-                        //console.log(`Download progress: ${percent}%`);
-                    }
-                }
-            }
+            // // derive filename from header or path
+            // const cd = response.headers.get("content-disposition") || "";
+            // let filename = fileName || "file";
+            // const match = cd.match(/filename\*?=(?:UTF-8'')?([^;\n]*)/i);
+            // if (match && match[1]) {
+            //     let raw = match[1].trim();
+            //     if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+            //         raw = raw.slice(1, -1);
+            //     }
+            //     try { filename = decodeURIComponent(raw); } catch { filename = raw; }
+            // }
 
-            const blob = new Blob(chunks);
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.style.display = "none";
-            a.href = url;
-            a.download = normalizeFilename(filename);
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
+            // // stream and build a blob while reporting progress
+            // const reader = response.body.getReader();
+            // const chunks = [];
+            // let received = 0;
 
-            setSnack(`Downloaded: ${filename}`, "success");
-            if (progressRef && progressRef.current !== undefined) {
-                // Reset progress after a short delay to allow UI to update
-                setTimeout(() => {
-                    //console.log("Resetting progressRef");
-                    progressRef.current = 0;
-                }, 1000);
-            }
+            // let done = false;
+            // while (!done) {
+            //     const res = await reader.read();
+            //     done = res.done;
+            //     const value = res.value;
+            //     if (done) break;
+            //     chunks.push(value);
+            //     received += value.length;
+            //     if (total) {
+            //         const percent = Math.floor((received / total) * 100);
+            //         //console.log(`Download progress: ${percent}%`);
+            //         if (progressRef && progressRef.current !== undefined) {
+            //             progressRef.current = percent;
+            //             //console.log(`Download progress: ${percent}%`);
+            //         }
+            //     }
+            // }
+
+            // const blob = new Blob(chunks);
+            // const url = window.URL.createObjectURL(blob);
+            // const a = document.createElement("a");
+            // a.style.display = "none";
+            // a.href = url;
+            // a.download = normalizeFilename(filename);
+            // document.body.appendChild(a);
+            // a.click();
+            // a.remove();
+            // window.URL.revokeObjectURL(url);
+
+            // setSnack(`Downloaded: ${filename}`, "success");
+            // if (progressRef && progressRef.current !== undefined) {
+            //     // Reset progress after a short delay to allow UI to update
+            //     setTimeout(() => {
+            //         //console.log("Resetting progressRef");
+            //         progressRef.current = 0;
+            //     }, 1000);
+            // }
         } catch (error) {
             setSnack(`Error downloading file: ${error.message}`, "error");
             //console.error(`File download error: ${absolutePath}`, error.message);
@@ -222,16 +241,16 @@ export default function SubList({
     }
 
     // Normalize filename by removing problematic characters and limiting length
-    const normalizeFilename = (name) => {
-        if (!name) return 'file';
-        // remove path separators, control chars
-        let n = name.replace(/[:\\/*?|<>\n\r\t\0]/g, '_');
-        // trim whitespace
-        n = n.trim();
-        // limit length
-        if (n.length > 200) n = n.slice(n.length - 200);
-        return n;
-    }
+    // const normalizeFilename = (name) => {
+    //     if (!name) return 'file';
+    //     // remove path separators, control chars
+    //     let n = name.replace(/[:\\/*?|<>\n\r\t\0]/g, '_');
+    //     // trim whitespace
+    //     n = n.trim();
+    //     // limit length
+    //     if (n.length > 200) n = n.slice(n.length - 200);
+    //     return n;
+    // }
 
     // useEffects and useMemos
     // use the memoized fetch to set the items state
