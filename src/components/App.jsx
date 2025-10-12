@@ -331,6 +331,7 @@ export default function App() {
                         reFetch={reFetch}
                         tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPageSubList={rowsPerPageSubList}
+                        setRowsPerPageSubList={setRowsPerPageSubList}
                         token={token}
                         setToken={setToken}
                     />

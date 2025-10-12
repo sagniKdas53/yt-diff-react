@@ -35,6 +35,7 @@ export default function PlayList({
   reFetch,
   tableContainerHeight,
   rowsPerPageSubList,
+  setRowsPerPageSubList,
   token,
   setToken,
   playListIndex
@@ -506,6 +507,21 @@ export default function PlayList({
               <MenuItem value={"Full"}>Full</MenuItem>
               <MenuItem value={"Fast"}>Fast</MenuItem>
             </Select>
+            <InputLabel id="dialog-watch-label-rows-per-page" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
+              Rows per page:
+            </InputLabel>
+            <Select
+              labelId="dialog-watch-label"
+              id="dialog-watch-select-rows-per-page"
+              value={rowsPerPageSubList}
+              label="Rows per page"
+              onChange={(event) => setRowsPerPageSubList(event.target.value)}
+            >
+              <MenuItem value={10}>10</MenuItem>
+              <MenuItem value={25}>25</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+            </Select>
           </FormControl>
           <Box sx={{ flexGrow: 1 }}></Box>
           <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
@@ -527,6 +543,7 @@ PlayList.propTypes = {
   reFetch: PropTypes.string.isRequired,
   tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
+  setRowsPerPageSubList: PropTypes.func.isRequired,
   token: PropTypes.string.isRequired,
   setToken: PropTypes.func.isRequired,
   playListIndex: PropTypes.number.isRequired,
