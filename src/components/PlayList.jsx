@@ -33,7 +33,7 @@ export default function PlayList({
   setIndeterminate,
   setSnack,
   reFetch,
-  tableConatinerHeight,
+  tableContainerHeight,
   rowsPerPageSubList,
   token,
   setToken,
@@ -307,7 +307,7 @@ export default function PlayList({
 
   return (
     <Box sx={{ width: "100%", overflow: "hidden", position: "relative", m: 0, p: 0 }}>
-      <TableContainer sx={{ height: tableConatinerHeight }}>
+      <TableContainer sx={{ height: tableContainerHeight }}>
         <Table stickyHeader size="small" aria-label="a dense table">
           <TableHead>
             <TableRow>
@@ -525,7 +525,7 @@ PlayList.propTypes = {
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
-  tableConatinerHeight: PropTypes.string.isRequired,
+  tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
   token: PropTypes.string.isRequired,
   setToken: PropTypes.func.isRequired,

@@ -110,8 +110,8 @@ export default function App() {
     const appBarHeight = 48;
     const tablePaginationHeight = 52;
     const adjust = tablePaginationHeight + appBarHeight + progressBarHeight;
-    const [tableConatinerHeight, setTableContainerHeight] = useState(window.innerHeight - adjust);
-    const fullHeight = `${tableConatinerHeight + 52}px`;
+    const [tableContainerHeight, setTableContainerHeight] = useState(window.innerHeight - adjust);
+    const fullHeight = `${tableContainerHeight + 52}px`;
 
     useEffect(() => {
         function handleResize() {
@@ -124,7 +124,7 @@ export default function App() {
 
     const toggleProgressCallBack = useCallback((next) => toggleProgress(next), []);
 
-    // helper for snackbars
+    // helper for snackbar
     const setSnack = (msg, type) => {
         setSnackMsgTxt(msg);
         setSnackSeverity(type);
@@ -329,7 +329,7 @@ export default function App() {
                         setIndeterminate={setIndeterminate}
                         setSnack={setSnack}
                         reFetch={reFetch}
-                        tableConatinerHeight={`${tableConatinerHeight}px`}
+                        tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPageSubList={rowsPerPageSubList}
                         token={token}
                         setToken={setToken}
@@ -346,7 +346,7 @@ export default function App() {
                         subListIndex={subListIndex}
                         downloadedItem={downloadedItem.current}
                         reFetch={reFetch}
-                        tableConatinerHeight={`${tableConatinerHeight}px`}
+                        tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPage={rowsPerPageSubList}
                         setRowsPerPage={setRowsPerPageSubList}
                         token={token}
