@@ -121,7 +121,8 @@ export default function PlayList({
         mode: "cors",
         body: JSON.stringify({
           urlList: urlList,
-          chunkSize: rowsPerPageSubList,
+          // This is to make sure that we can get the requested amount + 1 so that we can paginate properly
+          chunkSize: rowsPerPageSubList + 1,
           monitoringType: watch,
           sleep: true
         }),
@@ -488,42 +489,50 @@ export default function PlayList({
           />
         </DialogContent>
         <DialogActions>
-          <FormControl
-            variant="standard"
-            sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}
-            size="small"
-          >
-            <InputLabel id="dialog-watch-label" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-              Watch mode:
-            </InputLabel>
-            <Select
-              labelId="dialog-watch-label"
-              id="dialog-watch-select"
-              value={watch}
-              label="Watch"
-              onChange={(event) => setWatch(event.target.value)}
+          <Box sx={{ m: 0, p: 0, flexDirection: { xs: "column", sm: "row" } }}>
+            <FormControl
+              variant="standard"
+              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}
+              size="small"
             >
-              <MenuItem value={"N/A"}>N/A</MenuItem>
-              <MenuItem value={"Full"}>Full</MenuItem>
-              <MenuItem value={"Fast"}>Fast</MenuItem>
-            </Select>
-            <InputLabel id="dialog-watch-label-rows-per-page" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-              Rows per page:
-            </InputLabel>
-            <Select
-              labelId="dialog-watch-label"
-              id="dialog-watch-select-rows-per-page"
-              value={rowsPerPageSubList}
-              label="Rows per page"
-              onChange={(event) => setRowsPerPageSubList(event.target.value)}
+              <InputLabel id="dialog-watch-label" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}>
+                Watch mode:
+              </InputLabel>
+              <Select
+                labelId="dialog-watch-label"
+                id="dialog-watch-select"
+                value={watch}
+                label="Watch"
+                onChange={(event) => setWatch(event.target.value)}
+              >
+                <MenuItem value={"N/A"}>N/A</MenuItem>
+                <MenuItem value={"Full"}>Full</MenuItem>
+                <MenuItem value={"Fast"}>Fast</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl
+              variant="standard"
+              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}
+              size="small"
             >
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={25}>25</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-              <MenuItem value={100}>100</MenuItem>
-            </Select>
-          </FormControl>
-          <Box sx={{ flexGrow: 1 }}></Box>
+              <InputLabel id="dialog-watch-label-rows-per-page" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}>
+                Rows per page:
+              </InputLabel>
+              <Select
+                labelId="dialog-watch-label-rows-per-page"
+                id="dialog-watch-select-rows-per-page"
+                value={rowsPerPageSubList}
+                label="Rows per page"
+                onChange={(event) => setRowsPerPageSubList(event.target.value)}
+              >
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={25}>25</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ flexGrow: 1 }} />
           <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
           <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
             <Button variant="contained" onClick={submitUrlList} sx={{ float: "right" }}>Submit</Button>
