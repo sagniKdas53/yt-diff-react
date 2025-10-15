@@ -50,7 +50,6 @@ export default function SubList({
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
     const [lastUrl, setLastUrl] = useState("");
-    const [playlistDirectory, setPlaylistDirectory] = useState("init");
 
     // const functions and normal functions
     const handleChangePage = useCallback(
@@ -92,7 +91,6 @@ export default function SubList({
 
     const clearList = () => {
         setPlayListUrl("init");
-        setPlaylistDirectory("init");
         handleChangePage(null, 0);
     };
 
@@ -123,7 +121,7 @@ export default function SubList({
     }
 
 
-    const getFileAndDownload = async (saveDirectory, fileName) => {
+    const getFileAndDownload = async (fileName) => {
         if (!fileName) {
             setSnack("No file available", "error");
             return;
@@ -131,7 +129,6 @@ export default function SubList({
 
         try {
             // perform the request and stream the response so we can report progress
-            //console.log("Requesting file: ", { saveDirectory, fileName });
             setSnack(`Downloading: ${fileName}`, "info");
             const response = await fetch(backEnd + "/getfile", {
                 method: "post",
@@ -141,7 +138,7 @@ export default function SubList({
                     "Authorization": `Bearer ${token}`,
                 },
                 mode: "cors",
-                body: JSON.stringify({ saveDirectory, fileName }),
+                body: JSON.stringify({ fileName }),
             });
 
             if (!response.ok) {
@@ -159,7 +156,7 @@ export default function SubList({
             const data = await response.text();
             const json_data = JSON.parse(data);
             if (json_data.status === "success" && json_data.signedUrlId) {
-                const downloadUrl = new URL(window.location.origin + backEnd + "/getfile");
+                const downloadUrl = new URL(import.meta.env.PROD ? window.location.origin : "" + backEnd + "/getfile");
                 downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
                 //console.log("Opening download URL: ", downloadUrl.toString());
                 // open in new tab
@@ -239,7 +236,6 @@ export default function SubList({
     useEffect(() => {
         memoizedFetch.then((data) => {
             setItems(data["rows"]);
-            setPlaylistDirectory(data["saveDirectory"]);
             setItemCount(parseInt(data["count"]));
         });
     }, [memoizedFetch]);
@@ -423,7 +419,7 @@ export default function SubList({
                                     >
                                         {element.video_metadatum.downloadStatus ? (
                                             <Button
-                                                onClick={() => getFileAndDownload(playlistDirectory, element.video_metadatum.fileName)}
+                                                onClick={() => getFileAndDownload(element.video_metadatum.fileName)}
                                                 sx={{ m: 0, p: 0 }}
                                             >
                                                 <CheckCircleIcon color="success" />

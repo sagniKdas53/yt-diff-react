@@ -91,7 +91,7 @@ export default function App() {
     const [notifications, setNotifications] = useState([]);
     const progressRef = useRef(0);
     const notificationRef = useRef(0);
-    const downloadedItem = useRef({ url: null, title: null, fileName: null, saveDirectory: null });
+    const downloadedItem = useRef({ url: null, title: null, fileName: null });
 
     // socket setup
     const socket = useMemo(() => {
@@ -187,7 +187,6 @@ export default function App() {
                 url: data.url,
                 title: data.title,
                 fileName: data.fileName || null,
-                saveDirectory: data.saveDirectory || null,
             };
             setSnack(`${data.title}`, "success");
             addNotification(`Downloaded: ${data.title}`);

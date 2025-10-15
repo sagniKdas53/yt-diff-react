@@ -178,7 +178,6 @@ export default function PlayList({
           "title": `Error in fetching playlists: ${response.status} ${response.statusText}`,
           "sortOrder": 0,
           "monitoringType": "N/A",
-          "saveDirectory": "",
           "createdAt": new Date().toISOString(),
           "updatedAt": new Date().toISOString()
         }]
