@@ -159,7 +159,10 @@ export default function SubList({
             const data = await response.text();
             const json_data = JSON.parse(data);
             if (json_data.status === "success" && json_data.signedUrlId) {
-                const downloadUrl = new URL(import.meta.env.PROD ? window.location.origin : "" + backEnd + "/getfile");
+                // When on PROD use window.location.origin else use ""
+                // the backEnd will have the correct path on dev
+                const baseUrl = import.meta.env.PROD ? window.location.origin : "";
+                const downloadUrl = new URL(baseUrl + backEnd + "/getfile");
                 downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
                 //console.log("Opening download URL: ", downloadUrl.toString());
                 // open in new tab
