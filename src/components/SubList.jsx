@@ -50,6 +50,7 @@ export default function SubList({
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
     const [lastUrl, setLastUrl] = useState("");
+    const [playlistDirectory, setPlaylistDirectory] = useState("init");
 
     // const functions and normal functions
     const handleChangePage = useCallback(
@@ -91,6 +92,7 @@ export default function SubList({
 
     const clearList = () => {
         setPlayListUrl("init");
+        setPlaylistDirectory("init");
         handleChangePage(null, 0);
     };
 
@@ -121,7 +123,7 @@ export default function SubList({
     }
 
 
-    const getFileAndDownload = async (fileName) => {
+    const getFileAndDownload = async (saveDirectory, fileName) => {
         if (!fileName) {
             setSnack("No file available", "error");
             return;
@@ -129,6 +131,7 @@ export default function SubList({
 
         try {
             // perform the request and stream the response so we can report progress
+            //console.log("Requesting file: ", { saveDirectory, fileName });
             setSnack(`Downloading: ${fileName}`, "info");
             const response = await fetch(backEnd + "/getfile", {
                 method: "post",
@@ -138,7 +141,7 @@ export default function SubList({
                     "Authorization": `Bearer ${token}`,
                 },
                 mode: "cors",
-                body: JSON.stringify({ fileName }),
+                body: JSON.stringify({ saveDirectory, fileName }),
             });
 
             if (!response.ok) {
@@ -146,8 +149,8 @@ export default function SubList({
                     setSnack("Token expired please re-login", "error");
                     setToken(null);
                 } else {
-                    const text = await response.text().catch(() => response.statusText);
-                    setSnack(`Failed to download file: ${text}`, "error");
+                    const text = await response.json().catch(() => response.statusText);
+                    setSnack(`Failed to download file: ${text.message}`, "error");
                 }
                 return;
             }
@@ -236,6 +239,7 @@ export default function SubList({
     useEffect(() => {
         memoizedFetch.then((data) => {
             setItems(data["rows"]);
+            setPlaylistDirectory(data["saveDirectory"]);
             setItemCount(parseInt(data["count"]));
         });
     }, [memoizedFetch]);
@@ -419,7 +423,7 @@ export default function SubList({
                                     >
                                         {element.video_metadatum.downloadStatus ? (
                                             <Button
-                                                onClick={() => getFileAndDownload(element.video_metadatum.fileName)}
+                                                onClick={() => getFileAndDownload(playlistDirectory, element.video_metadatum.fileName)}
                                                 sx={{ m: 0, p: 0 }}
                                             >
                                                 <CheckCircleIcon color="success" />
