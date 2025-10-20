@@ -14,7 +14,7 @@ import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, us
 import io from "socket.io-client";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
-const PlayList = lazy(() => import("./PlayList.jsx"));
+const PlayList = lazy(() => import("./PlayListDelSupported.jsx"));
 const SubList = lazy(() => import("./SubListMedia.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 const Signup = lazy(() => import("./Signup.jsx"));
@@ -188,6 +188,10 @@ export default function App() {
                 title: data.title,
                 fileName: data.fileName || null,
                 saveDirectory: data.saveDirectory || null,
+                isMetaDataSynced: data.isMetaDataSynced || null,
+                thumbNailFile: data.thumbNailFile || null,
+                subTitleFile: data.subTitleFile || null,
+                descriptionFile: data.descriptionFile || null,
             };
             setSnack(`${data.title}`, "success");
             addNotification(`Downloaded: ${data.title}`);
@@ -324,7 +328,7 @@ export default function App() {
     // renders main app when token is available
     const renderMain = () => (
         <Grid container spacing={0}>
-            <Grid xl={6} lg={6} md={12} sm={12} xs={12}
+            <Grid xl={4} lg={4} md={6} sm={12} xs={12}
                 sx={{ height: fullHeight }}>
                 <Suspense fallback={<Loader />}>
                     <PlayList
@@ -336,6 +340,7 @@ export default function App() {
                         setIndeterminate={setIndeterminate}
                         setSnack={setSnack}
                         reFetch={reFetch}
+                        setReFetch={setReFetch}
                         tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPageSubList={rowsPerPageSubList}
                         setRowsPerPageSubList={setRowsPerPageSubList}
@@ -344,7 +349,7 @@ export default function App() {
                     />
                 </Suspense>
             </Grid>
-            <Grid xl={6} lg={6} md={12} sm={12} xs={12}
+            <Grid xl={8} lg={8} md={6} sm={12} xs={12}
                 sx={{ height: fullHeight }}>
                 <Suspense fallback={<Loader />}>
                     <SubList
@@ -354,6 +359,7 @@ export default function App() {
                         subListIndex={subListIndex}
                         downloadedItem={downloadedItem.current}
                         reFetch={reFetch}
+                        setReFetch={setReFetch}
                         tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPage={rowsPerPageSubList}
                         setRowsPerPage={setRowsPerPageSubList}

@@ -1,5 +1,8 @@
 import CancelIcon from "@mui/icons-material/Cancel";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import ClearIcon from "@mui/icons-material/Clear";
 import DownloadIcon from "@mui/icons-material/Download";
 import Box from "@mui/material/Box";
@@ -17,7 +20,9 @@ import CardActions from "@mui/material/CardActions";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import TablePaginationActions from "./Pagination.jsx";
 import debounce from "lodash.debounce";
 
@@ -28,6 +33,7 @@ export default function SubList({
     downloadedItem,
     backEnd,
     reFetch,
+    setReFetch,
     tableContainerHeight,
     rowsPerPage,
     setRowsPerPage,
@@ -180,6 +186,48 @@ export default function SubList({
         }
     }
 
+    /**
+     * Delete a video from the playlist.
+     * @param {string} playListUrl The playlist to delete from.
+     * @param {string} videoUrl The URL of the video to delete.
+     * @param {string} title The title of the video to delete.
+     * @param {boolean} cleanUp Whether to clean up the downloaded files.
+     * @param {boolean} deleteVideoMappings Whether to delete the video mappings from the database.
+     * @param {boolean} deleteVideosInDB Whether to delete the video itself from the database.
+     * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+     */
+    const deleteVideo = async (playListUrl, videoUrl, title, cleanUp, deleteVideoMappings, deleteVideosInDB) => {
+        setSnack(`Deleting: ${videoUrl}`, "info");
+        const response = await fetch(backEnd + "/delsub", {
+            method: "post",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            mode: "cors",
+            body: JSON.stringify(
+                {
+                    "playListUrl": playListUrl,
+                    "videoUrls": [
+                        videoUrl
+                    ],
+                    "cleanUp": cleanUp,
+                    "deleteVideoMappings": deleteVideoMappings,
+                    "deleteVideosInDB": deleteVideosInDB
+                }
+            ),
+        });
+        if (response.ok) {
+            setSnack(`Deleted: ${title ? title : videoUrl}`, "success");
+            //console.log(`Deleted: ${videoUrl}`);
+            setReFetch(`${videoUrl}-del`);
+        }
+        if (!response.ok) {
+            setSnack(`Failed to delete: ${title ? title : videoUrl}`, "error");
+        }
+    }
+
     // useEffects and useMemos
     // use the memoized fetch to set the items state
     const memoizedFetch = useMemo(async () => {
@@ -247,59 +295,94 @@ export default function SubList({
         });
     }, [memoizedFetch]);
 
-    // Fetch signed URLs for thumbnails using backend /getfile API
+    // Refs for card elements and the scrollable container
+    const cardsContainerRef = useRef(null);
+    const cardRefs = useRef({});
+
+    // Responsive card media height using MUI breakpoints
+    const theme = useTheme();
+    const isXs = useMediaQuery(theme.breakpoints.down("sm"));
+    const isSm = useMediaQuery(theme.breakpoints.between("sm", "md"));
+    const isMd = useMediaQuery(theme.breakpoints.between("md", "lg"));
+    const mediaHeight = isXs ? 220 : isSm ? 200 : isMd ? 160 : 140;
+
+    // IntersectionObserver-based lazy fetch for thumbnails
     useEffect(() => {
-        let mounted = true;
-        const fetchThumbs = async () => {
-            if (!items || items.length === 0) return;
-            const newUrls = {};
-            for (const element of items) {
-                const meta = element.video_metadatum || {};
-                const thumb = meta.thumbNailFile;
-                if (!thumb) continue;
-                // Skip if we already have a URL or have tried and stored null
-                if (thumbUrls[thumb] !== undefined) continue;
-                try {
-                    const response = await fetch(backEnd + "/getfile", {
-                        method: "post",
-                        headers: {
-                            Accept: "application/json",
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${token}`,
-                        },
-                        mode: "cors",
-                        body: JSON.stringify({ saveDirectory: playlistDirectory, fileName: thumb }),
-                    });
-                    if (response.ok) {
-                        const data = await response.text();
-                        const json_data = JSON.parse(data);
-                        if (json_data.status === "success" && json_data.signedUrlId) {
-                            const baseUrl = import.meta.env.PROD ? window.location.origin : "";
-                            newUrls[thumb] = baseUrl + backEnd + "/getfile?fileId=" + json_data.signedUrlId;
-                        } else {
-                            newUrls[thumb] = null;
-                        }
-                    } else {
-                        if (response.status === 401) {
-                            setSnack("Token expired please re-login", "error");
-                            setToken(null);
-                            return;
-                        }
-                        newUrls[thumb] = null;
+        if (!items || items.length === 0) return;
+
+        const observerOptions = {
+            root: cardsContainerRef.current || null,
+            rootMargin: "200px",
+            threshold: 0.05,
+        };
+
+        const observer = new IntersectionObserver(async (entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    const thumb = entry.target.getAttribute("data-thumb");
+                    if (!thumb) continue;
+                    // If already fetched or in-progress, skip
+                    if (thumbUrls[thumb] !== undefined) {
+                        observer.unobserve(entry.target);
+                        continue;
                     }
-                } catch (err) {
-                    newUrls[thumb] = null;
+                    // Mark as in-progress to avoid duplicate fetches
+                    setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
+                    try {
+                        const response = await fetch(backEnd + "/getfile", {
+                            method: "post",
+                            headers: {
+                                Accept: "application/json",
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${token}`,
+                            },
+                            mode: "cors",
+                            body: JSON.stringify({ saveDirectory: playlistDirectory, fileName: thumb }),
+                        });
+                        if (response.ok) {
+                            const data = await response.text();
+                            const json_data = JSON.parse(data);
+                            if (json_data.status === "success" && json_data.signedUrlId) {
+                                const baseUrl = import.meta.env.PROD ? window.location.origin : "";
+                                const signed = baseUrl + backEnd + "/getfile?fileId=" + json_data.signedUrlId;
+                                setThumbUrls((prev) => ({ ...prev, [thumb]: signed }));
+                            } else {
+                                setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
+                            }
+                        } else {
+                            if (response.status === 401) {
+                                setSnack("Token expired please re-login", "error");
+                                setToken(null);
+                                return;
+                            }
+                            setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
+                        }
+                    } catch (err) {
+                        setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
+                    } finally {
+                        observer.unobserve(entry.target);
+                    }
                 }
             }
-            if (mounted && Object.keys(newUrls).length > 0) {
-                setThumbUrls((prev) => ({ ...prev, ...newUrls }));
+        }, observerOptions);
+
+        // Observe card elements for thumbs that lack a fetched URL
+        items.forEach((element) => {
+            const meta = element.video_metadatum || {};
+            const thumb = meta.thumbNailFile;
+            if (!thumb) return;
+            const el = cardRefs.current[thumb];
+            if (el && thumbUrls[thumb] === undefined) {
+                observer.observe(el);
             }
-        };
-        fetchThumbs();
+        });
+
         return () => {
-            mounted = false;
+            observer.disconnect();
         };
-    }, [items, playlistDirectory, backEnd, token, thumbUrls, setSnack, setToken]);
+        // We intentionally omit thumbUrls to avoid re-creating observer while fetches are in progress
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [items, playlistDirectory, backEnd, token, setSnack, setToken]);
 
     useEffect(() => {
         if (downloadedItem.url !== null) {
@@ -314,6 +397,10 @@ export default function SubList({
                                 downloadStatus: true,
                                 title: downloadedItem.title,
                                 fileName: downloadedItem.fileName,
+                                isMetaDataSynced: downloadedItem.isMetaDataSynced || null,
+                                thumbNailFile: downloadedItem.thumbNailFile || null,
+                                subTitleFile: downloadedItem.subTitleFile || null,
+                                descriptionFile: downloadedItem.descriptionFile || null,
                             }
                         };
                     }
@@ -376,10 +463,10 @@ export default function SubList({
 
     return (
         <>
-            <Box sx={{ height: tableContainerHeight, position: 'relative' }}>
-                <Box sx={{ p: 1 }} aria-label="sub-list cards">
-                    <Grid container spacing={2} alignItems="stretch">
-                        {/* Header controls: select all checkbox, search field and sort */}
+            <Box sx={{ height: tableContainerHeight, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                {/* Header area stays on top */}
+                <Box sx={{ p: 1, flex: '0 0 auto' }} aria-label="sub-list header">
+                    <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12}>
                             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                                 <Checkbox
@@ -415,27 +502,45 @@ export default function SubList({
                                 </Box>
                             </Box>
                         </Grid>
+                    </Grid>
+                </Box>
+
+                {/* Scrollable cards area */}
+                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto' }} aria-label="sub-list cards">
+                    <Grid container spacing={2} alignItems="stretch">
 
                         {items.map((element, index) => {
                             const meta = element.video_metadatum || {};
                             const thumb = meta.thumbNailFile || "";
                             return (
                                 <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                                    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                                        {thumb ? (
-                                            <CardMedia
-                                                component="img"
-                                                height="140"
-                                                image={
-                                                    thumbUrls[thumb]
-                                                        ? thumbUrls[thumb]
-                                                        : (playlistDirectory && thumb ? `${backEnd}/thumbs/${playlistDirectory}/${thumb}` : thumb)
-                                                }
-                                                alt={meta.title}
-                                            />
-                                        ) : null}
-                                        <CardContent sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle1" component="div" gutterBottom>
+                                    <Card
+                                        variant="outlined"
+                                        sx={{
+                                            height: "100%",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            borderColor: 'divider',
+                                            minWidth: 125
+                                        }}
+                                        ref={(el) => {
+                                            if (thumb) cardRefs.current[thumb] = el;
+                                        }}
+                                        data-thumb={thumb || undefined}
+                                    >
+                                        <CardMedia
+                                            component="img"
+                                            height={mediaHeight}
+                                            image={
+                                                thumbUrls[thumb]
+                                                    ? thumbUrls[thumb]
+                                                    : "/404.png"
+                                            }
+                                            alt={meta.title}
+                                            loading="lazy"
+                                        />
+                                        <CardContent sx={{ flex: 1, my: 0, pb: 0 }}>
+                                            <Typography variant="subtitle1" component="div" >
                                                 <Link
                                                     href={meta.videoUrl}
                                                     color={
@@ -451,14 +556,11 @@ export default function SubList({
                                                     target="_blank"
                                                     rel="noreferrer"
                                                 >
-                                                    {meta.title}
+                                                    {meta.title.replaceAll("_", " ")}
                                                 </Link>
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {meta.videoId}
-                                            </Typography>
                                         </CardContent>
-                                        <CardActions sx={{ justifyContent: "space-between" }}>
+                                        <CardActions sx={{ justifyContent: "normal" }}>
                                             <Checkbox
                                                 color="primary"
                                                 checked={selectedItems[meta.videoUrl] || false}
@@ -467,11 +569,32 @@ export default function SubList({
                                             />
                                             <Box>
                                                 {meta.downloadStatus ? (
+                                                    <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, false, false)} size="large">
+                                                        {/* This deletes only the downloaded files, the video mappings and the video are not deleted */}
+                                                        <DeleteForeverIcon color="success" />
+                                                    </IconButton>
+                                                ) : (
+                                                    <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, false, true, false)} size="large">
+                                                        {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
+                                                        <DeleteOutlineIcon color="warning" />
+                                                    </IconButton>
+                                                )}
+                                            </Box>
+                                            <Box>
+                                                <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, true, true)} size="large">
+                                                    {/* This deletes everything */}
+                                                    <DeleteSweepIcon color="error" />
+                                                </IconButton>
+                                            </Box>
+                                            <Box>
+                                                {meta.downloadStatus ? (
                                                     <IconButton onClick={() => getFileAndDownload(playlistDirectory, meta.fileName)} size="large">
                                                         <CheckCircleIcon color="success" />
                                                     </IconButton>
                                                 ) : (
-                                                    <CancelIcon color="error" />
+                                                    <IconButton disabled>
+                                                        <CancelIcon color="error" />
+                                                    </IconButton>
                                                 )}
                                             </Box>
                                         </CardActions>
@@ -518,6 +641,7 @@ SubList.propTypes = {
     subListIndex: PropTypes.number.isRequired,
     downloadedItem: PropTypes.object.isRequired,
     reFetch: PropTypes.string.isRequired,
+    setReFetch: PropTypes.func.isRequired,
     tableContainerHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
     setRowsPerPage: PropTypes.func.isRequired,
