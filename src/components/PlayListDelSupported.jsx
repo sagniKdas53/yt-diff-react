@@ -1,5 +1,5 @@
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
@@ -8,8 +8,10 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
+import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
+import Menu from '@mui/material/Menu';
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Table from "@mui/material/Table";
@@ -22,10 +24,8 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import PropTypes from "prop-types";
-import IconButton from "@mui/material/IconButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TablePaginationActions from "./Pagination.jsx";
-import Tooltip from "@mui/material/Tooltip";
 
 import debounce from "lodash.debounce";
 
@@ -61,6 +61,24 @@ export default function PlayList({
   const [open, setOpen] = useState(false);
   const [urlList, setUrlList] = useState("");
   const [watch, setWatch] = useState("N/A");
+  // Long-button
+  const [longButton, setLongButton] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const handleClickAnchor = (event) => {
+    setAnchorEl(event.currentTarget);
+    setLongButton(true);
+  };
+  const handleCloseAnchor = () => {
+    setAnchorEl(null);
+    setLongButton(false);
+  };
+  const ITEM_HEIGHT = 48;
+  const options = [
+    // deleteAllVideosInPlaylist, deletePlaylist, cleanUp
+    ["Delete playlist", false, true, false],
+    ["Delete all videos in playlist", true, false, false],
+    ["Delete everything", true, true, true]
+  ];
   const updateUrls = (event) => {
     setUrlList(event.target.value);
   };
@@ -157,6 +175,7 @@ export default function PlayList({
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
   const deletePlaylist = async (playListUrl, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
+    console.log("deletePlaylist: ", playListUrl, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp);
     setSnack(`Deleting: ${title}`, "info");
     const response = await fetch(backEnd + "/delplay", {
       method: "post",
@@ -181,7 +200,8 @@ export default function PlayList({
       console.log("deletePlaylist response: ", json_data);
       setSnack(`Deleted: ${title ? title : playListUrl}, ${json_data.message}`, "success");
       // Do the refetch conditionally
-      setReFetch(`${playListUrl}-del`);
+      // Delete-playlist is not getting re-fetched
+      setReFetch(`${playListUrl}-del-${new Date().getTime()}`);
     }
     if (!response.ok) {
       setSnack(`Failed to delete: ${title ? title : playListUrl}`, "error");
@@ -488,12 +508,42 @@ export default function PlayList({
                     align="center"
                     style={{ paddingInline: "8px" }}
                   >
-                    <Tooltip title="Delete everything">
-                      <IconButton onClick={() => deletePlaylist(element.playlistUrl, element.title, true, true, true)} size="large">
-                        {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
-                        <DeleteOutlineIcon color="error" />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton
+                      aria-label="more"
+                      id={index + "-long-button"}
+                      aria-controls={longButton ? 'long-menu' : undefined}
+                      aria-expanded={longButton ? 'true' : undefined}
+                      aria-haspopup="true"
+                      onClick={handleClickAnchor}
+                      sx={{ maxWidth: "5%", m: 0, p: 0 }}
+                    >
+                      <MoreVertIcon />
+                    </IconButton>
+                    <Menu
+                      id={index + "-long-menu"}
+                      anchorEl={anchorEl}
+                      open={longButton}
+                      onClose={handleCloseAnchor}
+                      slotProps={{
+                        paper: {
+                          style: {
+                            maxHeight: ITEM_HEIGHT * 4.5,
+                            width: '20ch',
+                          },
+                        },
+                        list: {
+                          'aria-labelledby': 'long-button',
+                        },
+                      }}
+                    >
+                      {options.map((option) => (
+                        <MenuItem key={option[0]} selected={option[0] === 'Delete Playlist'} onClick={handleCloseAnchor}>
+                          <Button onClick={() => deletePlaylist(element.playlistUrl, element.title, option[1], option[2], option[3])}>
+                            {option}
+                          </Button>
+                        </MenuItem>
+                      ))}
+                    </Menu>
                   </TableCell>
                 </TableRow>
               );

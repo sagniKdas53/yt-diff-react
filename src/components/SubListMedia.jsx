@@ -16,7 +16,11 @@ import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
 import { useTheme } from "@mui/material/styles";
+import Table from "@mui/material/Table";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
+import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
@@ -465,10 +469,15 @@ export default function SubList({
         <>
             <Box sx={{ height: tableContainerHeight, position: 'relative', display: 'flex', flexDirection: 'column' }}>
                 {/* Header area stays on top */}
-                <Box sx={{ p: 1, flex: '0 0 auto' }} aria-label="sub-list header">
-                    <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12}>
-                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                <Table stickyHeader size="small" aria-label="a dense table">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell
+                                padding="checkbox"
+                                key="check-head"
+                                align="center"
+                                style={{ minWidth: 10 }}
+                            >
                                 <Checkbox
                                     color="primary"
                                     indeterminate={
@@ -483,27 +492,41 @@ export default function SubList({
                                         "aria-label": "select all items",
                                     }}
                                 />
+                            </TableCell>
+                            <TableCell
+                                key="title-head"
+                                align="center"
+                                style={{ minWidth: 10 }}
+                                sx={{ width: "50%" }}
+                            >
                                 <TextField
                                     id="title-input"
                                     label="Title"
                                     variant="outlined"
                                     size="small"
-                                    sx={{ flex: 1 }}
+                                    sx={{ width: "100%" }}
                                     onKeyUp={debouncedQuery}
                                 />
-                                <Box sx={{ display: "flex", alignItems: "center", pl: 1 }}>
-                                    <TableSortLabel
-                                        active={sort}
-                                        direction={sort ? "asc" : "desc"}
-                                        onClick={handleSort}
-                                    >
-                                        Saved
-                                    </TableSortLabel>
-                                </Box>
-                            </Box>
-                        </Grid>
-                    </Grid>
-                </Box>
+                            </TableCell>
+                            <TableCell
+                                key="saved-head"
+                                align="center"
+                                style={{ minWidth: 10 }}
+                            >
+                                <TableSortLabel
+                                    active={sort}
+                                    direction={sort ? "asc" : "desc"}
+                                    onClick={handleSort}
+                                    sx={{ paddingInlineStart: 2 }}
+                                >
+                                    Saved
+                                </TableSortLabel>
+                            </TableCell>
+                        </TableRow>
+                    </TableHead>
+                </Table>
+
+
 
                 {/* Scrollable cards area */}
                 <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto' }} aria-label="sub-list cards">
