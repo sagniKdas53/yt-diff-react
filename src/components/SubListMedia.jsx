@@ -497,7 +497,7 @@ export default function SubList({
                                 key="title-head"
                                 align="center"
                                 style={{ minWidth: 10 }}
-                                sx={{ width: "50%" }}
+                                sx={{ width: "85%" }}
                             >
                                 <TextField
                                     id="title-input"

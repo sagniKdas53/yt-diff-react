@@ -28,6 +28,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import TablePaginationActions from "./Pagination.jsx";
 
 import debounce from "lodash.debounce";
+import { Typography } from "@mui/material";
 
 export default function PlayList({
   setUrl,
@@ -76,7 +77,7 @@ export default function PlayList({
   const options = [
     // deleteAllVideosInPlaylist, deletePlaylist, cleanUp
     ["Delete playlist", false, true, false],
-    ["Delete all videos in playlist", true, false, false],
+    ["Delete videos", true, false, false],
     ["Delete everything", true, true, true]
   ];
   const updateUrls = (event) => {
@@ -538,8 +539,9 @@ export default function PlayList({
                     >
                       {options.map((option) => (
                         <MenuItem key={option[0]} selected={option[0] === 'Delete Playlist'} onClick={handleCloseAnchor}>
-                          <Button onClick={() => deletePlaylist(element.playlistUrl, element.title, option[1], option[2], option[3])}>
-                            {option}
+                          <Button size="small"
+                            onClick={() => deletePlaylist(element.playlistUrl, element.title, option[1], option[2], option[3])}>
+                            <Typography textAlign="center" color="error">{option[0]}</Typography>
                           </Button>
                         </MenuItem>
                       ))}
