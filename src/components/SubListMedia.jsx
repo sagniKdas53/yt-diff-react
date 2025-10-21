@@ -1,30 +1,31 @@
 import CancelIcon from "@mui/icons-material/Cancel";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import ClearIcon from "@mui/icons-material/Clear";
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import DownloadIcon from "@mui/icons-material/Download";
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import CardMedia from "@mui/material/CardMedia";
 import Checkbox from "@mui/material/Checkbox";
 import Fab from "@mui/material/Fab";
-import Link from "@mui/material/Link";
-import TablePagination from "@mui/material/TablePagination";
-import TextField from "@mui/material/TextField";
-import TableSortLabel from "@mui/material/TableSortLabel";
 import Grid from "@mui/material/Grid";
-import Card from "@mui/material/Card";
-import CardMedia from "@mui/material/CardMedia";
-import CardContent from "@mui/material/CardContent";
-import CardActions from "@mui/material/CardActions";
-import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
-import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import Link from "@mui/material/Link";
 import { useTheme } from "@mui/material/styles";
+import TablePagination from "@mui/material/TablePagination";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import TablePaginationActions from "./Pagination.jsx";
 import debounce from "lodash.debounce";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import TablePaginationActions from "./Pagination.jsx";
 
 export default function SubList({
     setPlayListUrl,
@@ -57,7 +58,7 @@ export default function SubList({
     const [lastUrl, setLastUrl] = useState("");
     const [playlistDirectory, setPlaylistDirectory] = useState("init");
     const [thumbUrls, setThumbUrls] = useState({});
-
+    const baseUrl = import.meta.env.PROD ? window.location.origin : "";
     // const functions and normal functions
     const handleChangePage = useCallback(
         (event, newPage) => {
@@ -167,7 +168,6 @@ export default function SubList({
             if (json_data.status === "success" && json_data.signedUrlId) {
                 // When on PROD use window.location.origin else use ""
                 // the backEnd will have the correct path on dev
-                const baseUrl = import.meta.env.PROD ? window.location.origin : "";
                 const downloadUrl = new URL(baseUrl + backEnd + "/getfile");
                 downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
                 //console.log("Opening download URL: ", downloadUrl.toString());
@@ -534,7 +534,7 @@ export default function SubList({
                                             image={
                                                 thumbUrls[thumb]
                                                     ? thumbUrls[thumb]
-                                                    : "/404.png"
+                                                    : (baseUrl + backEnd + "/404.png")
                                             }
                                             alt={meta.title}
                                             loading="lazy"
@@ -560,7 +560,7 @@ export default function SubList({
                                                 </Link>
                                             </Typography>
                                         </CardContent>
-                                        <CardActions sx={{ justifyContent: "normal" }}>
+                                        <CardActions sx={{ justifyContent: "right" }}>
                                             <Checkbox
                                                 color="primary"
                                                 checked={selectedItems[meta.videoUrl] || false}
@@ -569,28 +569,36 @@ export default function SubList({
                                             />
                                             <Box>
                                                 {meta.downloadStatus ? (
-                                                    <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, false, false)} size="large">
-                                                        {/* This deletes only the downloaded files, the video mappings and the video are not deleted */}
-                                                        <DeleteForeverIcon color="success" />
-                                                    </IconButton>
+                                                    <Tooltip title="Delete the downloaded files">
+                                                        <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, false, false)} size="large">
+                                                            {/* This deletes only the downloaded files, the video mappings and the video are not deleted */}
+                                                            <DeleteForeverIcon color="success" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 ) : (
-                                                    <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, false, true, false)} size="large">
-                                                        {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
-                                                        <DeleteOutlineIcon color="warning" />
-                                                    </IconButton>
+                                                    <Tooltip title="Delete the video from playlist">
+                                                        <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, false, true, false)} size="large">
+                                                            {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
+                                                            <DeleteOutlineIcon color="warning" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 )}
                                             </Box>
                                             <Box>
-                                                <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, true, true)} size="large">
-                                                    {/* This deletes everything */}
-                                                    <DeleteSweepIcon color="error" />
-                                                </IconButton>
+                                                <Tooltip title="Delete everything">
+                                                    <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, true, true)} size="large">
+                                                        {/* This deletes everything */}
+                                                        <DeleteSweepIcon color="error" />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Box>
                                             <Box>
                                                 {meta.downloadStatus ? (
-                                                    <IconButton onClick={() => getFileAndDownload(playlistDirectory, meta.fileName)} size="large">
-                                                        <CheckCircleIcon color="success" />
-                                                    </IconButton>
+                                                    <Tooltip title="Download file">
+                                                        <IconButton onClick={() => getFileAndDownload(playlistDirectory, meta.fileName)} size="large">
+                                                            <FileDownloadIcon color="success" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 ) : (
                                                     <IconButton disabled>
                                                         <CancelIcon color="error" />

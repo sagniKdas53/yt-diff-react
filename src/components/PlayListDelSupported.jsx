@@ -25,6 +25,7 @@ import PropTypes from "prop-types";
 import IconButton from "@mui/material/IconButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TablePaginationActions from "./Pagination.jsx";
+import Tooltip from "@mui/material/Tooltip";
 
 import debounce from "lodash.debounce";
 
@@ -146,6 +147,15 @@ export default function PlayList({
     }
   };
 
+  /**
+   * Delete a playlist.
+   * @param {string} playListUrl The playlist to delete.
+   * @param {string} title The title of the playlist to delete.
+   * @param {boolean} deleteAllVideosInPlaylist Whether to delete all videos in the playlist.
+   * @param {boolean} deletePlaylist Whether to delete the playlist itself.
+   * @param {boolean} cleanUp Whether to clean up the downloaded files.
+   * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+   */
   const deletePlaylist = async (playListUrl, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
     setSnack(`Deleting: ${title}`, "info");
     const response = await fetch(backEnd + "/delplay", {
@@ -169,7 +179,7 @@ export default function PlayList({
       const data = await response.text();
       const json_data = JSON.parse(data);
       console.log("deletePlaylist response: ", json_data);
-      setSnack(`Deleted: ${title ? title : playListUrl}, ${JSON.stringify(json_data)}`, "success");
+      setSnack(`Deleted: ${title ? title : playListUrl}, ${json_data.message}`, "success");
       // Do the refetch conditionally
       setReFetch(`${playListUrl}-del`);
     }
@@ -397,6 +407,13 @@ export default function PlayList({
               >
                 Load
               </TableCell>
+              <TableCell
+                key="play-head-delete"
+                align="center"
+                style={{ paddingInline: "8px" }}
+              >
+                Delete
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -409,10 +426,6 @@ export default function PlayList({
                     style={{ paddingInlineEnd: "0px" }}
                   >
                     {+element.sortOrder + 1}
-                    <IconButton onClick={() => deletePlaylist(element.playlistUrl, element.title, false, true, true)} size="large">
-                      {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
-                      <DeleteOutlineIcon color="warning" />
-                    </IconButton>
                   </TableCell>
                   <TableCell
                     key={element.sortOrder + "-title"}
@@ -469,6 +482,18 @@ export default function PlayList({
                     >
                       {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
                     </Button>
+                  </TableCell>
+                  <TableCell
+                    key={element.sortOrder + "-delete"}
+                    align="center"
+                    style={{ paddingInline: "8px" }}
+                  >
+                    <Tooltip title="Delete everything">
+                      <IconButton onClick={() => deletePlaylist(element.playlistUrl, element.title, true, true, true)} size="large">
+                        {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
+                        <DeleteOutlineIcon color="error" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               );
