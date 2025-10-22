@@ -23,12 +23,13 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TablePaginationActions from "./Pagination.jsx";
 
-import debounce from "lodash.debounce";
 import { Typography } from "@mui/material";
+import debounce from "lodash.debounce";
 
 export default function PlayList({
   setUrl,
@@ -428,13 +429,6 @@ export default function PlayList({
               >
                 Load
               </TableCell>
-              <TableCell
-                key="play-head-delete"
-                align="center"
-                style={{ paddingInline: "8px" }}
-              >
-                Delete
-              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -444,9 +438,48 @@ export default function PlayList({
                   <TableCell
                     key={element.sortOrder + "-order"}
                     align="justify"
-                    style={{ paddingInlineEnd: "0px" }}
+                    style={{ paddingInlineEnd: "0px", justifyContent: "space-evenly" }}
                   >
                     {+element.sortOrder + 1}
+                    <Tooltip title="Delete options">
+                      <IconButton
+                        aria-label="more"
+                        id={index + "-long-button"}
+                        aria-controls={longButton ? 'long-menu' : undefined}
+                        aria-expanded={longButton ? 'true' : undefined}
+                        aria-haspopup="true"
+                        onClick={handleClickAnchor}
+                        sx={{ m: 0, p: 0 }}
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Menu
+                      id={index + "-long-menu"}
+                      anchorEl={anchorEl}
+                      open={longButton}
+                      onClose={handleCloseAnchor}
+                      slotProps={{
+                        paper: {
+                          style: {
+                            maxHeight: ITEM_HEIGHT * 4.5,
+                            width: '20ch',
+                          },
+                        },
+                        list: {
+                          'aria-labelledby': 'long-button',
+                        },
+                      }}
+                    >
+                      {options.map((option) => (
+                        <MenuItem key={option[0]} selected={option[0] === 'Delete Playlist'} onClick={handleCloseAnchor}>
+                          <Button size="small"
+                            onClick={() => deletePlaylist(element.playlistUrl, element.title, option[1], option[2], option[3])}>
+                            <Typography textAlign="center" color="error">{option[0]}</Typography>
+                          </Button>
+                        </MenuItem>
+                      ))}
+                    </Menu>
                   </TableCell>
                   <TableCell
                     key={element.sortOrder + "-title"}
@@ -503,49 +536,6 @@ export default function PlayList({
                     >
                       {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
                     </Button>
-                  </TableCell>
-                  <TableCell
-                    key={element.sortOrder + "-delete"}
-                    align="center"
-                    style={{ paddingInline: "8px" }}
-                  >
-                    <IconButton
-                      aria-label="more"
-                      id={index + "-long-button"}
-                      aria-controls={longButton ? 'long-menu' : undefined}
-                      aria-expanded={longButton ? 'true' : undefined}
-                      aria-haspopup="true"
-                      onClick={handleClickAnchor}
-                      sx={{ maxWidth: "5%", m: 0, p: 0 }}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                    <Menu
-                      id={index + "-long-menu"}
-                      anchorEl={anchorEl}
-                      open={longButton}
-                      onClose={handleCloseAnchor}
-                      slotProps={{
-                        paper: {
-                          style: {
-                            maxHeight: ITEM_HEIGHT * 4.5,
-                            width: '20ch',
-                          },
-                        },
-                        list: {
-                          'aria-labelledby': 'long-button',
-                        },
-                      }}
-                    >
-                      {options.map((option) => (
-                        <MenuItem key={option[0]} selected={option[0] === 'Delete Playlist'} onClick={handleCloseAnchor}>
-                          <Button size="small"
-                            onClick={() => deletePlaylist(element.playlistUrl, element.title, option[1], option[2], option[3])}>
-                            <Typography textAlign="center" color="error">{option[0]}</Typography>
-                          </Button>
-                        </MenuItem>
-                      ))}
-                    </Menu>
                   </TableCell>
                 </TableRow>
               );

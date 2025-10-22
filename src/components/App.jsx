@@ -14,7 +14,7 @@ import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, us
 import io from "socket.io-client";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
-const PlayList = lazy(() => import("./PlayListDelSupported.jsx"));
+const PlayList = lazy(() => import("./PlayListDel.jsx"));
 const SubList = lazy(() => import("./SubListMedia.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 const Signup = lazy(() => import("./Signup.jsx"));
