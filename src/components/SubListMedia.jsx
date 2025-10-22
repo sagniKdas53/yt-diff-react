@@ -6,6 +6,7 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import DownloadIcon from "@mui/icons-material/Download";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Box from "@mui/material/Box";
+import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
@@ -536,7 +537,7 @@ export default function SubList({
                             const meta = element.video_metadatum || {};
                             const thumb = meta.thumbNailFile || "";
                             return (
-                                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                                <Grid item xs={12} sm={6} md={6} lg={3} key={index}>
                                     <Card
                                         variant="outlined"
                                         sx={{
@@ -583,14 +584,14 @@ export default function SubList({
                                                 </Link>
                                             </Typography>
                                         </CardContent>
-                                        <CardActions sx={{ justifyContent: "right" }}>
+                                        <CardActions sx={{ justifyContent: "space-between" }}>
                                             <Checkbox
                                                 color="primary"
                                                 checked={selectedItems[meta.videoUrl] || false}
                                                 onChange={handleSelection}
                                                 id={meta.videoUrl}
                                             />
-                                            <Box>
+                                            <ButtonGroup size="small">
                                                 {meta.downloadStatus ? (
                                                     <Tooltip title="Delete the downloaded files">
                                                         <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, false, false)} size="large">
@@ -606,20 +607,16 @@ export default function SubList({
                                                         </IconButton>
                                                     </Tooltip>
                                                 )}
-                                            </Box>
-                                            <Box>
                                                 <Tooltip title="Delete everything">
                                                     <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, true, true)} size="large">
                                                         {/* This deletes everything */}
                                                         <DeleteSweepIcon color="error" />
                                                     </IconButton>
                                                 </Tooltip>
-                                            </Box>
-                                            <Box>
                                                 {meta.downloadStatus ? (
                                                     <Tooltip title="Download file">
                                                         <IconButton onClick={() => getFileAndDownload(playlistDirectory, meta.fileName)} size="large">
-                                                            <FileDownloadIcon color="success" />
+                                                            <FileDownloadIcon color="success" sx={{ pt: 0.3 }} />
                                                         </IconButton>
                                                     </Tooltip>
                                                 ) : (
@@ -627,7 +624,7 @@ export default function SubList({
                                                         <CancelIcon color="error" />
                                                     </IconButton>
                                                 )}
-                                            </Box>
+                                            </ButtonGroup>
                                         </CardActions>
                                     </Card>
                                 </Grid>
@@ -651,7 +648,7 @@ export default function SubList({
                 </Box>
             </Box>
             <TablePagination
-                rowsPerPageOptions={[10, 25, 50, 100]}
+                rowsPerPageOptions={[1, 8, 16, 32, 64]}
                 component="div"
                 count={itemCount}
                 rowsPerPage={rowsPerPage}

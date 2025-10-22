@@ -641,10 +641,11 @@ export default function PlayList({
                 label="Rows per page"
                 onChange={(event) => setRowsPerPageSubList(event.target.value)}
               >
-                <MenuItem value={10}>10</MenuItem>
-                <MenuItem value={25}>25</MenuItem>
-                <MenuItem value={50}>50</MenuItem>
-                <MenuItem value={100}>100</MenuItem>
+                <MenuItem value={1}>1</MenuItem>
+                <MenuItem value={8}>8</MenuItem>
+                <MenuItem value={16}>10</MenuItem>
+                <MenuItem value={32}>25</MenuItem>
+                <MenuItem value={64}>50</MenuItem>
               </Select>
             </FormControl>
           </Box>
