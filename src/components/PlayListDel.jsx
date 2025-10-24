@@ -66,6 +66,10 @@ export default function PlayList({
   // Long-button
   const [anchorEl, setAnchorEl] = useState(null);
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  // Confirmation dialog for delete operations
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmOption, setConfirmOption] = useState(null);
+  const [confirmIndex, setConfirmIndex] = useState(null);
   // Update your handlers
   const handleClickAnchor = (event, index) => {
     setAnchorEl(event.currentTarget);
@@ -264,7 +268,7 @@ export default function PlayList({
   }, [memoizedFetch]);
 
   const handleChangePage = useCallback(
-    (event, newPage) => {
+    (_event, newPage) => {
       const validPage = Math.max(0, newPage);
       setPage(validPage);
       setStart(validPage * rowsPerPage);
@@ -656,18 +660,17 @@ export default function PlayList({
           <MenuItem
             key={openMenuIndex + "-" + option[0]}
             selected={option[0] === 'Delete Playlist'}
-            onClick={handleCloseAnchor}
+            onClick={() => {
+              // close menu and open confirmation dialog with selected option
+              handleCloseAnchor();
+              setConfirmIndex(openMenuIndex);
+              setConfirmOption(option);
+              setConfirmOpen(true);
+            }}
           >
             <Typography
               textAlign="center"
               color="error"
-              onClick={() => deletePlaylist(
-                items[openMenuIndex].playlistUrl,
-                items[openMenuIndex].title,
-                option[1],
-                option[2],
-                option[3]
-              )}
               variant="button"
             >
               {option[0]}
@@ -675,6 +678,47 @@ export default function PlayList({
           </MenuItem>
         ))}
       </Menu>
+      {/* Confirmation dialog for delete operations */}
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        aria-labelledby="confirm-delete-title"
+      >
+        <DialogTitle id="confirm-delete-title">Confirm delete</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {confirmIndex !== null && items[confirmIndex] ? (
+              <>
+                Are you sure you want to <strong>{confirmOption && confirmOption[0]}</strong> for playlist <strong>{items[confirmIndex].title}</strong>?
+              </>
+            ) : (
+              "Are you sure you want to perform this delete operation?"
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} color="primary">Cancel</Button>
+          <Button
+            onClick={() => {
+              if (confirmIndex !== null && items[confirmIndex] && confirmOption) {
+                // call the delete API with the saved parameters
+                deletePlaylist(
+                  items[confirmIndex].playlistUrl,
+                  items[confirmIndex].title,
+                  confirmOption[1],
+                  confirmOption[2],
+                  confirmOption[3]
+                );
+              }
+              setConfirmOpen(false);
+            }}
+            color="error"
+            variant="contained"
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

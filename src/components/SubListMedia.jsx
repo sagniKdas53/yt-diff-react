@@ -6,12 +6,17 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import DownloadIcon from "@mui/icons-material/Download";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Box from "@mui/material/Box";
+import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import Checkbox from "@mui/material/Checkbox";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Fab from "@mui/material/Fab";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
@@ -63,10 +68,13 @@ export default function SubList({
     const [lastUrl, setLastUrl] = useState("");
     const [playlistDirectory, setPlaylistDirectory] = useState("init");
     const [thumbUrls, setThumbUrls] = useState({});
+    // Confirmation dialog state for delete actions on sub list items
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmPayload, setConfirmPayload] = useState(null);
     const baseUrl = import.meta.env.PROD ? window.location.origin : "";
     // const functions and normal functions
     const handleChangePage = useCallback(
-        (event, newPage) => {
+        (_event, newPage) => {
             const validPage = Math.max(0, newPage);
             setPage(validPage);
             setStart(validPage * rowsPerPage);
@@ -594,21 +602,60 @@ export default function SubList({
                                             <ButtonGroup size="small">
                                                 {meta.downloadStatus ? (
                                                     <Tooltip title="Delete the downloaded files">
-                                                        <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, false, false)} size="large">
+                                                        <IconButton
+                                                            onClick={() => {
+                                                                setConfirmPayload({
+                                                                    playListUrl: loadedPlayList,
+                                                                    videoUrl: meta.videoUrl,
+                                                                    title: meta.title,
+                                                                    cleanUp: true,
+                                                                    deleteVideoMappings: false,
+                                                                    deleteVideosInDB: false,
+                                                                });
+                                                                setConfirmOpen(true);
+                                                            }}
+                                                            size="large"
+                                                        >
                                                             {/* This deletes only the downloaded files, the video mappings and the video are not deleted */}
                                                             <DeleteForeverIcon color="success" />
                                                         </IconButton>
                                                     </Tooltip>
                                                 ) : (
                                                     <Tooltip title="Delete the video from playlist">
-                                                        <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, false, true, false)} size="large">
+                                                        <IconButton
+                                                            onClick={() => {
+                                                                setConfirmPayload({
+                                                                    playListUrl: loadedPlayList,
+                                                                    videoUrl: meta.videoUrl,
+                                                                    title: meta.title,
+                                                                    cleanUp: false,
+                                                                    deleteVideoMappings: true,
+                                                                    deleteVideosInDB: false,
+                                                                });
+                                                                setConfirmOpen(true);
+                                                            }}
+                                                            size="large"
+                                                        >
                                                             {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
                                                             <DeleteOutlineIcon color="warning" />
                                                         </IconButton>
                                                     </Tooltip>
                                                 )}
                                                 <Tooltip title="Delete everything">
-                                                    <IconButton onClick={() => deleteVideo(loadedPlayList, meta.videoUrl, meta.title, true, true, true)} size="large">
+                                                    <IconButton
+                                                        onClick={() => {
+                                                            setConfirmPayload({
+                                                                playListUrl: loadedPlayList,
+                                                                videoUrl: meta.videoUrl,
+                                                                title: meta.title,
+                                                                cleanUp: true,
+                                                                deleteVideoMappings: true,
+                                                                deleteVideosInDB: true,
+                                                            });
+                                                            setConfirmOpen(true);
+                                                        }}
+                                                        size="large"
+                                                    >
                                                         {/* This deletes everything */}
                                                         <DeleteSweepIcon color="error" />
                                                     </IconButton>
@@ -657,7 +704,48 @@ export default function SubList({
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 ActionsComponent={TablePaginationActions}
             />
-
+            {/* Confirmation dialog for sub list delete actions */}
+            <Dialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                aria-labelledby="confirm-delete-title-sub"
+            >
+                <DialogTitle id="confirm-delete-title-sub">Confirm delete</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2">
+                        {confirmPayload ? (
+                            <>
+                                Are you sure you want to <strong>{confirmPayload.cleanUp && confirmPayload.deleteVideoMappings && confirmPayload.deleteVideosInDB ? 'Delete everything' : confirmPayload.cleanUp && !confirmPayload.deleteVideoMappings ? 'Delete downloaded files' : !confirmPayload.cleanUp && confirmPayload.deleteVideoMappings ? 'Delete video mapping' : 'Delete'}</strong> for video <strong>{confirmPayload.title}</strong>?
+                            </>
+                        ) : (
+                            "Are you sure you want to perform this delete operation?"
+                        )}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmOpen(false)} color="primary">Cancel</Button>
+                    <Button
+                        onClick={() => {
+                            if (confirmPayload) {
+                                deleteVideo(
+                                    confirmPayload.playListUrl,
+                                    confirmPayload.videoUrl,
+                                    confirmPayload.title,
+                                    confirmPayload.cleanUp,
+                                    confirmPayload.deleteVideoMappings,
+                                    confirmPayload.deleteVideosInDB
+                                );
+                            }
+                            setConfirmOpen(false);
+                            setConfirmPayload(null);
+                        }}
+                        color="error"
+                        variant="contained"
+                    >
+                        Confirm
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
