@@ -64,15 +64,17 @@ export default function PlayList({
   const [urlList, setUrlList] = useState("");
   const [watch, setWatch] = useState("N/A");
   // Long-button
-  const [longButton, setLongButton] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const handleClickAnchor = (event) => {
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  // Update your handlers
+  const handleClickAnchor = (event, index) => {
     setAnchorEl(event.currentTarget);
-    setLongButton(true);
+    setOpenMenuIndex(index);
   };
+
   const handleCloseAnchor = () => {
     setAnchorEl(null);
-    setLongButton(false);
+    setOpenMenuIndex(null);
   };
   const ITEM_HEIGHT = 48;
   const options = [
@@ -177,7 +179,6 @@ export default function PlayList({
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
   const deletePlaylist = async (playListUrl, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
-    console.log("deletePlaylist: ", playListUrl, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp);
     setSnack(`Deleting: ${title}`, "info");
     const response = await fetch(backEnd + "/delplay", {
       method: "post",
@@ -199,7 +200,7 @@ export default function PlayList({
     if (response.ok) {
       const data = await response.text();
       const json_data = JSON.parse(data);
-      console.log("deletePlaylist response: ", json_data);
+      //console.log("deletePlaylist response: ", json_data);
       setSnack(`Deleted: ${title ? title : playListUrl}, ${json_data.message}`, "success");
       // Do the refetch conditionally
       // Delete-playlist is not getting re-fetched
@@ -433,53 +434,39 @@ export default function PlayList({
           </TableHead>
           <TableBody>
             {items.map((element, index) => {
+              const isMenuOpen = openMenuIndex === index;
               return (
                 <TableRow hover role="checkbox" tabIndex={-1} key={index}>
                   <TableCell
                     key={element.sortOrder + "-order"}
-                    align="justify"
-                    style={{ paddingInlineEnd: "0px", justifyContent: "space-evenly" }}
+                    align="left"
+                    style={{ paddingInlineEnd: "0px" }}
                   >
-                    {+element.sortOrder + 1}
-                    <Tooltip title="Delete options">
-                      <IconButton
-                        aria-label="more"
-                        id={index + "-long-button"}
-                        aria-controls={longButton ? 'long-menu' : undefined}
-                        aria-expanded={longButton ? 'true' : undefined}
-                        aria-haspopup="true"
-                        onClick={handleClickAnchor}
-                        sx={{ m: 0, p: 0 }}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Menu
-                      id={index + "-long-menu"}
-                      anchorEl={anchorEl}
-                      open={longButton}
-                      onClose={handleCloseAnchor}
-                      slotProps={{
-                        paper: {
-                          style: {
-                            maxHeight: ITEM_HEIGHT * 4.5,
-                            width: '20ch',
-                          },
-                        },
-                        list: {
-                          'aria-labelledby': 'long-button',
-                        },
-                      }}
-                    >
-                      {options.map((option) => (
-                        <MenuItem key={option[0]} selected={option[0] === 'Delete Playlist'} onClick={handleCloseAnchor}>
-                          <Button size="small"
-                            onClick={() => deletePlaylist(element.playlistUrl, element.title, option[1], option[2], option[3])}>
-                            <Typography textAlign="center" color="error">{option[0]}</Typography>
-                          </Button>
-                        </MenuItem>
-                      ))}
-                    </Menu>
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      whiteSpace: 'nowrap',
+                      justifyContent: "space-between",
+                      m: 0,
+                      p: 0
+                    }}>
+                      <Typography variant="body2" component="div" sx={{ m: 0, p: 0 }}>
+                        {+element.sortOrder + 1}
+                      </Typography>
+                      <Tooltip title="Delete options">
+                        <IconButton
+                          aria-label="more"
+                          id={index + "-long-button"}
+                          aria-controls={isMenuOpen ? 'long-menu' : undefined}
+                          aria-expanded={isMenuOpen ? 'true' : undefined}
+                          aria-haspopup="true"
+                          onClick={(e) => handleClickAnchor(e, index)}
+                          sx={{ m: 0, pb: 0.3, pt: 0, px: 0 }}
+                        >
+                          <MoreVertIcon size="small" sx={{ m: 0, p: 0 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                   <TableCell
                     key={element.sortOrder + "-title"}
@@ -560,7 +547,7 @@ export default function PlayList({
         </Box>
       </TableContainer>
       <TablePagination
-        rowsPerPageOptions={[10, 25, 50, 100]}
+        rowsPerPageOptions={[10, 25, 50]}
         component="div"
         count={totalItems}
         rowsPerPage={rowsPerPage}
@@ -569,6 +556,7 @@ export default function PlayList({
         onRowsPerPageChange={handleChangeRowsPerPage}
         ActionsComponent={TablePaginationActions}
       />
+      { /* Dialog for adding urls */}
       <Dialog open={open} onClose={handleClose} fullWidth sx={{
         zIndex: 100,
         // this passes the width to the parent container and paper
@@ -646,6 +634,47 @@ export default function PlayList({
           </Box>
         </DialogActions>
       </Dialog>
+      {/* Single Menu component outside the loop - this fixes the lag and wrong deletion */}
+      <Menu
+        id="long-menu"
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseAnchor}
+        slotProps={{
+          paper: {
+            style: {
+              maxHeight: ITEM_HEIGHT * 4.5,
+              width: '20ch',
+            },
+          },
+          list: {
+            'aria-labelledby': 'long-button',
+          },
+        }}
+      >
+        {openMenuIndex !== null && options.map((option) => (
+          <MenuItem
+            key={openMenuIndex + "-" + option[0]}
+            selected={option[0] === 'Delete Playlist'}
+            onClick={handleCloseAnchor}
+          >
+            <Typography
+              textAlign="center"
+              color="error"
+              onClick={() => deletePlaylist(
+                items[openMenuIndex].playlistUrl,
+                items[openMenuIndex].title,
+                option[1],
+                option[2],
+                option[3]
+              )}
+              variant="button"
+            >
+              {option[0]}
+            </Typography>
+          </MenuItem>
+        ))}
+      </Menu>
     </Box>
   );
 }
