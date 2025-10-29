@@ -86,7 +86,7 @@ export default function App() {
     // and sub-list when an event needs to let the user know that something has changed
     // this is a bit of a hack, but it works, without it the app would need to poll 
     // the server for changes, which is not ideal, will fix this later
-    const [reFetch, setReFetch] = useState("");
+    const [reFetch, setReFetch] = useState({});
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
     const progressRef = useRef(0);

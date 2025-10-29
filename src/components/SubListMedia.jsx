@@ -53,6 +53,9 @@ export default function SubList({
     setSnack,
     progressRef
 }) {
+    // Items loading state
+    const [, setIsLoading] = useState(false);
+    // Query and sort state
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
     // These are the controls
@@ -75,6 +78,7 @@ export default function SubList({
     // const functions and normal functions
     const handleChangePage = useCallback(
         (_event, newPage) => {
+            console.log("handleChangePage: Page: ", newPage);
             const validPage = Math.max(0, newPage);
             setPage(validPage);
             setStart(validPage * rowsPerPage);
@@ -84,7 +88,7 @@ export default function SubList({
     );
 
     const handleChangeRowsPerPage = (event) => {
-        //console.log("handleChangeRowsPerPage: Page: ", page, "Start: ", start, "Stop: ", start + event.target.value, "Rows: ", event.target.value);
+        console.log("handleChangeRowsPerPage: Rows per page: ", event.target.value);
         // I plan to persist he relative page when rows change but not now
         setPage(0);
         setStart(0);
@@ -234,79 +238,120 @@ export default function SubList({
         if (response.ok) {
             setSnack(`Deleted: ${title ? title : videoUrl}`, "success");
             //console.log(`Deleted: ${videoUrl}`);
-            setReFetch(`${videoUrl}-del`);
+            setReFetch({
+                type: "delete-sublist-item",
+                playListUrl: playListUrl,
+                videoUrl: videoUrl,
+                start: start,
+                stop: stop,
+                sort: sort,
+                query: query,
+                loadedPlayList: loadedPlayList,
+                page: page,
+                timestamp: Date.now()
+            });
         }
         if (!response.ok) {
             setSnack(`Failed to delete: ${title ? title : videoUrl}`, "error");
         }
     }
 
-    // useEffects and useMemos
-    // use the memoized fetch to set the items state
-    const memoizedFetch = useMemo(async () => {
-        // TODO: Use refetch to get the updates of the list operation from the backend
-        // the socket one not the http one
-        //console.log("start: ", start, "stop: ", stop, "sort: ",
-        //    sort, "query: ", query, "url: ", url, "query: ", query, "lastUrl: ", lastUrl, "reFetch: ", reFetch);
-        if (loadedPlayList !== "init") {
-            if (loadedPlayList !== lastUrl) {
-                //console.log("changing page to zero")
-                setLastUrl(loadedPlayList);
-                handleChangePage(null, 0);
-            }
-            //console.log(url, lastUrl, start, stop, sort, query);
-            const response = await fetch(backEnd + "/getsub", {
-                method: "post",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-                mode: "cors",
-                body: JSON.stringify({
-                    start: start,
-                    stop: stop,
-                    sortDownloaded: sort,
-                    query: query,
-                    url: loadedPlayList
-                }),
+    // useEffects  to load items
+    useEffect(() => {
+        if (loadedPlayList === "init") {
+            setItems([]);
+            setItemCount(0);
+            return;
+        }
+
+        if (loadedPlayList !== lastUrl) {
+            console.log("Loaded playlist changed, resetting page to zero");
+            setLastUrl(loadedPlayList);
+            handleChangePage(null, 0);
+            return; // Exit early, let the next effect run with updated page
+        }
+
+        let isCancelled = false;
+        setIsLoading(true);
+
+        const fetchData = async () => {
+            console.log("Fetching subtitles with params: ", {
+                start, stop, sort, query, url: loadedPlayList
             });
-            if (response.ok) {
-                const data = await response.text();
-                const json_data = JSON.parse(data);
-                return json_data;
-            } else {
-                if (response.status === 401) {
-                    setSnack("Token expired please re-login", "error");
-                    setToken(null);
-                }
-                return {
-                    "count": 1, "rows": [{
+
+            try {
+                const response = await fetch(backEnd + "/getsub", {
+                    method: "post",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    mode: "cors",
+                    body: JSON.stringify({
+                        start, stop,
+                        sortDownloaded: sort,
+                        query, url: loadedPlayList
+                    }),
+                });
+
+                if (isCancelled) return; // Don't update state if component unmounted
+
+                if (response.ok) {
+                    const data = await response.text();
+                    const json_data = JSON.parse(data);
+                    setItems(json_data["rows"]);
+                    setPlaylistDirectory(json_data["saveDirectory"]);
+                    setItemCount(parseInt(json_data["count"]));
+                } else {
+                    if (response.status === 401) {
+                        setSnack("Token expired please re-login", "error");
+                        setToken(null);
+                    }
+                    setItems([{
                         "positionInPlaylist": 1,
                         "playlistUrl": loadedPlayList,
                         "video_metadatum": {
                             "title": `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
-                            "videoId": "",
-                            "videoUrl": "",
-                            "downloadStatus": false,
-                            "isAvailable": false
+                            "videoId": "", "videoUrl": "",
+                            "downloadStatus": false, "isAvailable": false
                         }
-                    }]
-                };
+                    }]);
+                    setItemCount(1);
+                }
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error("Fetch error:", error);
+                    // Handle error appropriately
+                }
+            } finally {
+                if (!isCancelled) {
+                    setIsLoading(false);
+                }
             }
-        } else {
-            return { count: 0, rows: [] };
-        }
+        };
+
+        fetchData();
+
+        return () => {
+            isCancelled = true; // Cleanup to prevent state updates after unmount
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, start, stop, sort, loadedPlayList, query, reFetch]);
+    }, [backEnd, start, stop, sort, query, loadedPlayList, token]);
 
     useEffect(() => {
-        memoizedFetch.then((data) => {
-            setItems(data["rows"]);
-            setPlaylistDirectory(data["saveDirectory"]);
-            setItemCount(parseInt(data["count"]));
-        });
-    }, [memoizedFetch]);
+        if (reFetch &&
+            reFetch.playListUrl === loadedPlayList &&
+            reFetch.type === "delete-sublist-item") {
+            console.log("Refetch triggered for current playlist after delete, updating list");
+            setStart(reFetch.start);
+            setStop(reFetch.stop);
+            updateQuery(reFetch.query);
+            updateSort(reFetch.sort);
+            setReFetch({}); // Clear immediately
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reFetch, loadedPlayList]);
 
     // Refs for card elements and the scrollable container
     const cardsContainerRef = useRef(null);
@@ -540,7 +585,6 @@ export default function SubList({
                 {/* Scrollable cards area */}
                 <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto' }} aria-label="sub-list cards">
                     <Grid container spacing={2} alignItems="stretch">
-
                         {items.map((element, index) => {
                             const meta = element.video_metadatum || {};
                             const thumb = meta.thumbNailFile || "";
@@ -756,7 +800,7 @@ SubList.propTypes = {
     backEnd: PropTypes.string.isRequired,
     subListIndex: PropTypes.number.isRequired,
     downloadedItem: PropTypes.object.isRequired,
-    reFetch: PropTypes.string.isRequired,
+    reFetch: PropTypes.object.isRequired,
     setReFetch: PropTypes.func.isRequired,
     tableContainerHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,

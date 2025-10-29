@@ -729,7 +729,7 @@ PlayList.propTypes = {
   backEnd: PropTypes.string.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
-  reFetch: PropTypes.string.isRequired,
+  reFetch: PropTypes.object.isRequired,
   setReFetch: PropTypes.func.isRequired,
   tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
