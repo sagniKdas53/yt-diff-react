@@ -86,7 +86,8 @@ export default function App() {
     // and sub-list when an event needs to let the user know that something has changed
     // this is a bit of a hack, but it works, without it the app would need to poll 
     // the server for changes, which is not ideal, will fix this later
-    const [reFetch, setReFetch] = useState({});
+    const [reFetch, setReFetch] = useState(Date.now().toString());
+    // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
     const progressRef = useRef(0);
@@ -240,7 +241,7 @@ export default function App() {
             // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
             // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
             // but it works, so I will leave it for now
-            setReFetch(data.url + data.processedChunks);
+            setReFetch(data.url + data.processedChunks + Date.now().toString());
             addNotification(`Successful Added Playlist: ${data.playlistTitle}`);
             //console.log("Listing done: ", data);
         });
@@ -341,6 +342,7 @@ export default function App() {
                         setSnack={setSnack}
                         reFetch={reFetch}
                         setReFetch={setReFetch}
+                        setSubListIndex={setSubListIndex}
                         tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPageSubList={rowsPerPageSubList}
                         setRowsPerPageSubList={setRowsPerPageSubList}
@@ -357,6 +359,7 @@ export default function App() {
                         setPlayListUrl={setPlayListUrl}
                         backEnd={backEnd}
                         subListIndex={subListIndex}
+                        setSubListIndex={setSubListIndex}
                         downloadedItem={downloadedItem.current}
                         reFetch={reFetch}
                         setReFetch={setReFetch}

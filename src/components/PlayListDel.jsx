@@ -39,6 +39,7 @@ export default function PlayList({
   setSnack,
   reFetch,
   setReFetch,
+  setSubListIndex,
   tableContainerHeight,
   rowsPerPageSubList,
   setRowsPerPageSubList,
@@ -285,6 +286,7 @@ export default function PlayList({
 
   const handleLoad = (url) => {
     setUrl(url);
+    setSubListIndex(0);
   };
 
   const debouncedQuery = useMemo(
@@ -729,8 +731,9 @@ PlayList.propTypes = {
   backEnd: PropTypes.string.isRequired,
   setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
-  reFetch: PropTypes.object.isRequired,
+  reFetch: PropTypes.string.isRequired,
   setReFetch: PropTypes.func.isRequired,
+  setSubListIndex: PropTypes.func.isRequired,
   tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
   setRowsPerPageSubList: PropTypes.func.isRequired,

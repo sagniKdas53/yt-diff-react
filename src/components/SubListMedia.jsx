@@ -41,6 +41,7 @@ export default function SubList({
     setPlayListUrl,
     loadedPlayList,
     subListIndex,
+    setSubListIndex,
     downloadedItem,
     backEnd,
     reFetch,
@@ -53,22 +54,21 @@ export default function SubList({
     setSnack,
     progressRef
 }) {
-    // Items loading state
-    const [, setIsLoading] = useState(false);
+    // Refs for card elements and the scrollable container
+    const cardsContainerRef = useRef(null);
+    const cardRefs = useRef({});
     // Query and sort state
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
     // These are the controls
     const [start, setStart] = useState(0);
-    const [stop, setStop] = useState(10);
+    const [stop, setStop] = useState(8);
     const [page, setPage] = useState(0);
-    // const [rowsPerPage, setRowsPerPage] = useState(10);
     // actual table data
     const [items, setItems] = useState([]);
     const [itemCount, setItemCount] = useState(0);
     const [selectedItems, updateSelected] = useState({});
     const [selectAll, setSelectAll] = useState(false);
-    const [lastUrl, setLastUrl] = useState("");
     const [playlistDirectory, setPlaylistDirectory] = useState("init");
     const [thumbUrls, setThumbUrls] = useState({});
     // Confirmation dialog state for delete actions on sub list items
@@ -78,7 +78,7 @@ export default function SubList({
     // const functions and normal functions
     const handleChangePage = useCallback(
         (_event, newPage) => {
-            console.log("handleChangePage: Page: ", newPage);
+            //console.log("handleChangePage: Page: ", newPage);
             const validPage = Math.max(0, newPage);
             setPage(validPage);
             setStart(validPage * rowsPerPage);
@@ -88,7 +88,7 @@ export default function SubList({
     );
 
     const handleChangeRowsPerPage = (event) => {
-        console.log("handleChangeRowsPerPage: Rows per page: ", event.target.value);
+        //console.log("handleChangeRowsPerPage: Rows per page: ", event.target.value);
         // I plan to persist he relative page when rows change but not now
         setPage(0);
         setStart(0);
@@ -118,6 +118,7 @@ export default function SubList({
         setPlayListUrl("init");
         setPlaylistDirectory("init");
         handleChangePage(null, 0);
+        setSubListIndex(0);
     };
 
     function downloadFunc() {
@@ -238,124 +239,119 @@ export default function SubList({
         if (response.ok) {
             setSnack(`Deleted: ${title ? title : videoUrl}`, "success");
             //console.log(`Deleted: ${videoUrl}`);
-            setReFetch({
-                type: "delete-sublist-item",
-                playListUrl: playListUrl,
-                videoUrl: videoUrl,
-                start: start,
-                stop: stop,
-                sort: sort,
-                query: query,
-                loadedPlayList: loadedPlayList,
-                page: page,
-                timestamp: Date.now()
-            });
+            setReFetch("delete-sublist-item" + playListUrl + videoUrl + Date.now().toString());
+            setSubListIndex(start); // Reset to start index after deletion
         }
         if (!response.ok) {
             setSnack(`Failed to delete: ${title ? title : videoUrl}`, "error");
         }
     }
 
+    // const prevDepsRef = useRef();
+
+    // useEffect(() => {
+    //     const prev = prevDepsRef.current;
+    //     const curr = { backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page };
+
+    //     if (!prev) {
+    //        //console.log("[effect] initial deps:", curr);
+    //     } else {
+    //         const changed = Object.keys(curr).filter(k => {
+    //             try {
+    //                 return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+    //             } catch {
+    //                 return prev[k] !== curr[k];
+    //             }
+    //         });
+
+    //         if (changed.length) {
+    //            //console.group(`[effect] deps changed: ${changed.join(", ")}`);
+    //             changed.forEach(k => {
+    //                //console.log(k, "prev:", prev[k], "curr:", curr[k]);
+    //             });
+    //             //console.trace();
+    //            //console.groupEnd();
+    //         } else {
+    //            //console.log("[effect] ran but no dep change detected (unexpected)");
+    //         }
+    //     }
+
+    //     prevDepsRef.current = { ...curr };
+
+    //     // --- rest of your effect follows ---
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [backEnd, start, stop, sort, query, page, reFetch, loadedPlayList, items, itemCount, page]);
+
+
+
+    /**
+     * Fetches sub-list items from the backend with the given parameters
+     * @param {AbortController} controller - an AbortController to handle aborting the request
+     * @returns {Promise<void>} - a promise that resolves when the request is complete
+     */
+    const fetchData = async (controller) => {
+        //console.log("Fetching items with params: ", { start, stop, sort, query, url: loadedPlayList });
+
+        try {
+            const response = await fetch(backEnd + "/getsub", {
+                method: "post",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                mode: "cors",
+                body: JSON.stringify({
+                    start, stop,
+                    sortDownloaded: sort,
+                    query, url: loadedPlayList
+                }),
+            });
+
+            if (controller.signal.aborted) return; // Don't update state if component unmounted
+
+            if (response.ok) {
+                const data = await response.text();
+                const json_data = JSON.parse(data);
+                setItems(json_data["rows"]);
+                setPlaylistDirectory(json_data["saveDirectory"]);
+                setItemCount(parseInt(json_data["count"]));
+            } else {
+                if (response.status === 401) {
+                    setSnack("Token expired please re-login", "error");
+                    setToken(null);
+                }
+                setItems([{
+                    "positionInPlaylist": 1,
+                    "playlistUrl": loadedPlayList,
+                    "video_metadatum": {
+                        "title": `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
+                        "videoId": "", "videoUrl": "",
+                        "downloadStatus": false, "isAvailable": false
+                    }
+                }]);
+                setItemCount(1);
+            }
+        } catch (error) {
+            if (!controller.signal.aborted) {
+                //console.error("Fetch error:", error);
+            }
+        }
+    };
     // useEffects  to load items
+    // Fetch data when dependencies change
     useEffect(() => {
+        // Handle initial "init" playlist state
         if (loadedPlayList === "init") {
             setItems([]);
             setItemCount(0);
             return;
         }
-
-        if (loadedPlayList !== lastUrl) {
-            console.log("Loaded playlist changed, resetting page to zero");
-            setLastUrl(loadedPlayList);
-            handleChangePage(null, 0);
-            return; // Exit early, let the next effect run with updated page
-        }
-
-        let isCancelled = false;
-        setIsLoading(true);
-
-        const fetchData = async () => {
-            console.log("Fetching subtitles with params: ", {
-                start, stop, sort, query, url: loadedPlayList
-            });
-
-            try {
-                const response = await fetch(backEnd + "/getsub", {
-                    method: "post",
-                    headers: {
-                        Accept: "application/json",
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`,
-                    },
-                    mode: "cors",
-                    body: JSON.stringify({
-                        start, stop,
-                        sortDownloaded: sort,
-                        query, url: loadedPlayList
-                    }),
-                });
-
-                if (isCancelled) return; // Don't update state if component unmounted
-
-                if (response.ok) {
-                    const data = await response.text();
-                    const json_data = JSON.parse(data);
-                    setItems(json_data["rows"]);
-                    setPlaylistDirectory(json_data["saveDirectory"]);
-                    setItemCount(parseInt(json_data["count"]));
-                } else {
-                    if (response.status === 401) {
-                        setSnack("Token expired please re-login", "error");
-                        setToken(null);
-                    }
-                    setItems([{
-                        "positionInPlaylist": 1,
-                        "playlistUrl": loadedPlayList,
-                        "video_metadatum": {
-                            "title": `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
-                            "videoId": "", "videoUrl": "",
-                            "downloadStatus": false, "isAvailable": false
-                        }
-                    }]);
-                    setItemCount(1);
-                }
-            } catch (error) {
-                if (!isCancelled) {
-                    console.error("Fetch error:", error);
-                    // Handle error appropriately
-                }
-            } finally {
-                if (!isCancelled) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        fetchData();
-
-        return () => {
-            isCancelled = true; // Cleanup to prevent state updates after unmount
-        };
+        const abortController = new AbortController();
+        fetchData(abortController);
+        return () => abortController.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, start, stop, sort, query, loadedPlayList, token]);
-
-    useEffect(() => {
-        if (reFetch &&
-            reFetch.playListUrl === loadedPlayList &&
-            reFetch.type === "delete-sublist-item") {
-            console.log("Refetch triggered for current playlist after delete, updating list");
-            setStart(reFetch.start);
-            setStop(reFetch.stop);
-            updateQuery(reFetch.query);
-            updateSort(reFetch.sort);
-            setReFetch({}); // Clear immediately
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reFetch, loadedPlayList]);
-
-    // Refs for card elements and the scrollable container
-    const cardsContainerRef = useRef(null);
-    const cardRefs = useRef({});
+    }, [backEnd, start, stop, sort, query, loadedPlayList, reFetch]);
 
     // Responsive card media height using MUI breakpoints
     const theme = useTheme();
@@ -799,8 +795,9 @@ SubList.propTypes = {
     loadedPlayList: PropTypes.string,
     backEnd: PropTypes.string.isRequired,
     subListIndex: PropTypes.number.isRequired,
+    setSubListIndex: PropTypes.func.isRequired,
     downloadedItem: PropTypes.object.isRequired,
-    reFetch: PropTypes.object.isRequired,
+    reFetch: PropTypes.string.isRequired,
     setReFetch: PropTypes.func.isRequired,
     tableContainerHeight: PropTypes.string.isRequired,
     rowsPerPage: PropTypes.number.isRequired,
