@@ -165,40 +165,40 @@ export default function App() {
 
     const setSnackRef = useRef(setSnack);
     useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
-    const prevDepsRef = useRef();
 
-    useEffect(() => {
-        const prev = prevDepsRef.current;
-        const curr = { backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex };
+    // const prevDepsRef = useRef();
+    // useEffect(() => {
+    //     const prev = prevDepsRef.current;
+    //     const curr = { backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex };
 
-        if (!prev) {
-            console.log("[effect] app initial deps:", curr);
-        } else {
-            const changed = Object.keys(curr).filter(k => {
-                try {
-                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-                } catch {
-                    return prev[k] !== curr[k];
-                }
-            });
+    //     if (!prev) {
+    //         console.log("[effect] app initial deps:", curr);
+    //     } else {
+    //         const changed = Object.keys(curr).filter(k => {
+    //             try {
+    //                 return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+    //             } catch {
+    //                 return prev[k] !== curr[k];
+    //             }
+    //         });
 
-            if (changed.length) {
-                console.group(`[effect] app deps changed: ${changed.join(", ")}`);
-                changed.forEach(k => {
-                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
-                });
-                //console.trace();
-                console.groupEnd();
-            } else {
-                console.log("[effect] ran but no dep change detected (unexpected)");
-            }
-        }
+    //         if (changed.length) {
+    //             console.group(`[effect] app deps changed: ${changed.join(", ")}`);
+    //             changed.forEach(k => {
+    //                 console.log(k, "prev:", prev[k], "curr:", curr[k]);
+    //             });
+    //             //console.trace();
+    //             console.groupEnd();
+    //         } else {
+    //             console.log("[effect] ran but no dep change detected (unexpected)");
+    //         }
+    //     }
 
-        prevDepsRef.current = { ...curr };
+    //     prevDepsRef.current = { ...curr };
 
-        // --- rest of your effect follows ---
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex]);
+    //     // --- rest of your effect follows ---
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex]);
 
     useEffect(() => {
         if (!socket) return; // guard
@@ -277,7 +277,7 @@ export default function App() {
         };
 
         const onListingPlaylistComplete = (data) => {
-            console.log("Listing playlist done: ", data);
+            //console.log("Listing playlist done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
@@ -305,25 +305,25 @@ export default function App() {
         };
 
         const onListingPlaylistChunkComplete = (data) => {
-            console.log("Listing chunk complete: ", data);
-            console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
+            //console.log("Listing chunk complete: ", data);
+            //console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
 
             const current = playListUrlRef.current;
             if ((current === "init") && (data.processedChunks === 1)) {
-                console.log("Changing playlist url to: ", data.url, " and seeking to index: ", data.seekPlaylistListTo);
+                //console.log("Changing playlist url to: ", data.url, " and seeking to index: ", data.seekPlaylistListTo);
                 setIndeterminate(false);
                 setPlayListUrl(data.url);
                 setPlayListIndex(data.seekPlaylistListTo);
             } else if ((current === data.url) && (data.processedChunks > 1)) {
                 const msg = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
-                console.log("Setting refetch to: ", msg);
+                //console.log("Setting refetch to: ", msg);
                 setIndeterminate(false);
                 progressRef.current = 0;
                 setReFetchSubList(msg);
                 setPlayListIndex(data.seekPlaylistListTo);
             } else {
                 // optional: ignore or handle chunks for other playlists
-                console.log("Chunk event ignored (other playlist or state mismatch).");
+                //console.log("Chunk event ignored (other playlist or state mismatch).");
             }
         };
 
@@ -386,7 +386,7 @@ export default function App() {
                 socket.off("listing-error", onListingError);
             } catch (e) {
                 // socket might already be closed; ignore
-                console.warn("Error removing socket listeners", e);
+                //console.warn("Error removing socket listeners", e);
             }
         };
     }, [socket]); // only recreate if socket reference changes

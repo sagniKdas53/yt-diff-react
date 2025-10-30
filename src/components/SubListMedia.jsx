@@ -248,40 +248,39 @@ export default function SubList({
         }
     }
 
-    const prevDepsRefSubList = useRef();
+    // const prevDepsRefSubList = useRef();
+    // useEffect(() => {
+    //     const prev = prevDepsRefSubList.current;
+    //     const curr = { backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page };
 
-    useEffect(() => {
-        const prev = prevDepsRefSubList.current;
-        const curr = { backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page };
+    //     if (!prev) {
+    //         console.log("[effect] sublist initial deps:", curr);
+    //     } else {
+    //         const changed = Object.keys(curr).filter(k => {
+    //             try {
+    //                 return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+    //             } catch {
+    //                 return prev[k] !== curr[k];
+    //             }
+    //         });
 
-        if (!prev) {
-            console.log("[effect] sublist initial deps:", curr);
-        } else {
-            const changed = Object.keys(curr).filter(k => {
-                try {
-                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-                } catch {
-                    return prev[k] !== curr[k];
-                }
-            });
+    //         if (changed.length) {
+    //             console.group(`[effect] sublist deps changed: ${changed.join(", ")}`);
+    //             changed.forEach(k => {
+    //                 console.log(k, "prev:", prev[k], "curr:", curr[k]);
+    //             });
+    //             //console.trace();
+    //             console.groupEnd();
+    //         } else {
+    //             console.log("[effect] ran but no dep change detected (unexpected)");
+    //         }
+    //     }
 
-            if (changed.length) {
-                console.group(`[effect] sublist deps changed: ${changed.join(", ")}`);
-                changed.forEach(k => {
-                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
-                });
-                //console.trace();
-                console.groupEnd();
-            } else {
-                console.log("[effect] ran but no dep change detected (unexpected)");
-            }
-        }
+    //     prevDepsRefSubList.current = { ...curr };
 
-        prevDepsRefSubList.current = { ...curr };
-
-        // --- rest of your effect follows ---
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, start, stop, sort, query, page, reFetch, loadedPlayList, items, itemCount, page]);
+    //     // --- rest of your effect follows ---
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [backEnd, start, stop, sort, query, page, reFetch, loadedPlayList, items, itemCount, page]);
 
 
 

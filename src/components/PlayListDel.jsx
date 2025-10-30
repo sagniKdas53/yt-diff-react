@@ -25,11 +25,13 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TablePaginationActions from "./Pagination.jsx";
 
 import { Typography } from "@mui/material";
 import debounce from "lodash.debounce";
+
+// import { useRef } from "react";
 
 export default function PlayList({
   setUrl,
@@ -78,40 +80,39 @@ export default function PlayList({
     setOpenMenuIndex(index);
   };
 
-  const prevDepsRefPlayList = useRef();
+  // const prevDepsRefPlayList = useRef();
+  // useEffect(() => {
+  //   const prev = prevDepsRefPlayList.current;
+  //   const curr = { backEnd, start, stop, sort, query, reFetch, urlList, items, totalItems, page };
 
-  useEffect(() => {
-    const prev = prevDepsRefPlayList.current;
-    const curr = { backEnd, start, stop, sort, query, reFetch, urlList, items, totalItems, page };
+  //   if (!prev) {
+  //     console.log("[effect] playlist initial deps:", curr);
+  //   } else {
+  //     const changed = Object.keys(curr).filter(k => {
+  //       try {
+  //         return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+  //       } catch {
+  //         return prev[k] !== curr[k];
+  //       }
+  //     });
 
-    if (!prev) {
-      console.log("[effect] playlist initial deps:", curr);
-    } else {
-      const changed = Object.keys(curr).filter(k => {
-        try {
-          return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-        } catch {
-          return prev[k] !== curr[k];
-        }
-      });
+  //     if (changed.length) {
+  //       console.group(`[effect] playlist deps changed: ${changed.join(", ")}`);
+  //       changed.forEach(k => {
+  //         console.log(k, "prev:", prev[k], "curr:", curr[k]);
+  //       });
+  //       //console.trace();
+  //       console.groupEnd();
+  //     } else {
+  //       console.log("[effect] ran but no dep change detected (unexpected)");
+  //     }
+  //   }
 
-      if (changed.length) {
-        console.group(`[effect] playlist deps changed: ${changed.join(", ")}`);
-        changed.forEach(k => {
-          console.log(k, "prev:", prev[k], "curr:", curr[k]);
-        });
-        //console.trace();
-        console.groupEnd();
-      } else {
-        console.log("[effect] ran but no dep change detected (unexpected)");
-      }
-    }
+  //   prevDepsRefPlayList.current = { ...curr };
 
-    prevDepsRefPlayList.current = { ...curr };
-
-    // --- rest of your effect follows ---
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backEnd, start, stop, sort, query, page, reFetch, urlList, items, totalItems, page]);
+  //   // --- rest of your effect follows ---
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [backEnd, start, stop, sort, query, page, reFetch, urlList, items, totalItems, page]);
 
   const handleCloseAnchor = () => {
     setAnchorEl(null);
