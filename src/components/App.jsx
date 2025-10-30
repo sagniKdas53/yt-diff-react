@@ -317,8 +317,9 @@ export default function App() {
             } else if ((current === data.url) && (data.processedChunks > 1)) {
                 const msg = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
                 //console.log("Setting refetch to: ", msg);
-                setIndeterminate(false);
-                progressRef.current = 0;
+                // Since this is a chunk, we only re-fetch the playlist list, not update the intermediate state
+                //setIndeterminate(false);
+                //progressRef.current = 0;
                 setReFetchSubList(msg);
                 setPlayListIndex(data.seekPlaylistListTo);
             } else {
