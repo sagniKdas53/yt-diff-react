@@ -51,7 +51,7 @@ export default function PlayList({
   setPlayListIndex
 }) {
   const [query, updateQuery] = useState("");
-  // 1 == ID [Default], 3 == updatedAt
+  // 1 == ID [Default], 3 == lastUpdatedByScheduler
   const [sort, updateSort] = useState(1);
   // 1 == ASC [Default], 2 == DESC
   const [order, updateOrder] = useState(1);
@@ -247,7 +247,14 @@ export default function PlayList({
       // Do the refetch conditionally
       // Delete-playlist is not getting re-fetched
       setReFetch(`${playListUrl}-del-${new Date().getTime()}`);
-      setPlayListIndex(start); // Preserve the current index so that we don't jump to start
+      let startIndex = start;
+      if (order === 2) {
+        // DESC order
+        //console.log("Total items before deletion: ", totalItems, " startIndex: ", startIndex);
+        startIndex = Math.min(totalItems - 1, startIndex);
+        //console.log("Adjusted startIndex for DESC order: ", startIndex);
+      }
+      setPlayListIndex(startIndex);
     }
     if (!response.ok) {
       setSnack(`Failed to delete: ${title ? title : playListUrl}`, "error");
@@ -539,7 +546,7 @@ export default function PlayList({
                       size="small"
                     >
                       <InputLabel id={element.sortOrder + "-label"}>
-                        {lastUpdateCalc(element.updatedAt)}
+                        {lastUpdateCalc(element.lastUpdatedByScheduler)}
                       </InputLabel>
                       <Select
                         labelId={element.sortOrder + "-label"}

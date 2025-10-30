@@ -286,6 +286,14 @@ export default function App() {
             if (current === "init") {
                 setPlayListUrl(data.url);
                 setPlayListIndex(data.seekPlaylistListTo);
+                // TODO: Handle order when setting index
+                // if (order === 2) {
+                //     // DESC order
+                //     const totalItems = data.totalItems || 0;
+                //     setPlayListIndex(Math.max(0, totalItems - data.seekPlaylistListTo - 1));
+                // } else {
+                //     setPlayListIndex(data.seekPlaylistListTo);
+                // }
             } else if (current === data.url) {
                 const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
                 setReFetchPlaylist(tag);
