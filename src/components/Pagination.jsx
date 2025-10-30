@@ -6,10 +6,16 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import { useTheme } from '@mui/material/styles';
 import PropTypes from 'prop-types';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 
-export default function TablePaginationActions(props) {
+export default function TablePaginationActions({
+    count,
+    page,
+    rowsPerPage,
+    onPageChange,
+}) {
     const theme = useTheme();
-    const { count, page, rowsPerPage, onPageChange } = props;
 
     const handleFirstPageButtonClick = (event) => {
         onPageChange(event, 0);
@@ -43,6 +49,20 @@ export default function TablePaginationActions(props) {
             >
                 {theme.direction === 'rtl' ? <KeyboardArrowRight /> : <KeyboardArrowLeft />}
             </IconButton>
+            {/* <Typography variant="body2"
+                sx={{ m: 0, p: 0, display: 'inline-block' }}>
+                    {page + 1} / {Math.max(1, Math.ceil(count / rowsPerPage))}
+            </Typography> */}
+            <Select value={page + 1} onChange={(e) => {
+                const newPage = Math.max(0,
+                    Math.min(Math.ceil(count / rowsPerPage) - 1,
+                        e.target.value - 1));
+                onPageChange(null, newPage);
+            }} sx={{ m: 0, p: 0 }} autoWidth variant="standard">
+                {Array.from({ length: Math.max(1, Math.ceil(count / rowsPerPage)) }, (_, i) => i + 1).map((pageNum) => (
+                    <MenuItem key={pageNum} value={pageNum}>{pageNum}</MenuItem>
+                ))}
+            </Select>
             <IconButton
                 onClick={handleNextButtonClick}
                 disabled={page >= Math.ceil(count / rowsPerPage) - 1}
@@ -57,7 +77,7 @@ export default function TablePaginationActions(props) {
             >
                 {theme.direction === 'rtl' ? <FirstPageIcon /> : <LastPageIcon />}
             </IconButton>
-        </Box>
+        </Box >
     );
 }
 

@@ -86,7 +86,8 @@ export default function App() {
     // and sub-list when an event needs to let the user know that something has changed
     // this is a bit of a hack, but it works, without it the app would need to poll 
     // the server for changes, which is not ideal, will fix this later
-    const [reFetch, setReFetch] = useState(Date.now().toString());
+    const [reFetchPlaylist, setReFetchPlaylist] = useState(Date.now().toString());
+    const [reFetchSubList, setReFetchSubList] = useState(Date.now().toString());
     // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
@@ -125,63 +126,116 @@ export default function App() {
 
     const toggleProgressCallBack = useCallback((next) => toggleProgress(next), []);
 
-    // helper for snackbar
-    const setSnack = (msg, type) => {
+    // stable callbacks
+    const setSnack = useCallback((msg, type) => {
         setSnackMsgTxt(msg);
         setSnackSeverity(type);
         setSnackVisibility(true);
-    };
+    }, []);
 
-    // notification helpers
-    const addNotification = (message) => {
+    const addNotification = useCallback((message) => {
         const newNotification = {
             id: Date.now() + "-" + notificationRef.current.toString(),
             message,
         };
         notificationRef.current += 1;
         setNotifications((prev) => [...prev, newNotification]);
-    };
+    }, []);
+
+    // keep refs in sync so socket handlers use latest functions
+    useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
+    useEffect(() => { addNotificationRef.current = addNotification; }, [addNotification]);
 
     const dismissNotification = (id) => {
         setNotifications((prev) => prev.filter((note) => note.id !== id));
     };
 
-    // socket event handlers
+    // --- Refs to avoid stale closures ---
+    const playListUrlRef = useRef(playListUrl);
+    useEffect(() => { playListUrlRef.current = playListUrl; }, [playListUrl]);
+
+    const disableProgressRef = useRef(disableProgress);
+    useEffect(() => { disableProgressRef.current = disableProgress; }, [disableProgress]);
+
+    const toggleProgressCallBackRef = useRef(toggleProgressCallBack);
+    useEffect(() => { toggleProgressCallBackRef.current = toggleProgressCallBack; }, [toggleProgressCallBack]);
+
+    const addNotificationRef = useRef(addNotification);
+    useEffect(() => { addNotificationRef.current = addNotification; }, [addNotification]);
+
+    const setSnackRef = useRef(setSnack);
+    useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
+    const prevDepsRef = useRef();
+
     useEffect(() => {
-        // this one sets up sockets
-        socket.on("init", (data) => {
+        const prev = prevDepsRef.current;
+        const curr = { backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex };
+
+        if (!prev) {
+            console.log("[effect] app initial deps:", curr);
+        } else {
+            const changed = Object.keys(curr).filter(k => {
+                try {
+                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+                } catch {
+                    return prev[k] !== curr[k];
+                }
+            });
+
+            if (changed.length) {
+                console.group(`[effect] app deps changed: ${changed.join(", ")}`);
+                changed.forEach(k => {
+                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
+                });
+                //console.trace();
+                console.groupEnd();
+            } else {
+                console.log("[effect] ran but no dep change detected (unexpected)");
+            }
+        }
+
+        prevDepsRef.current = { ...curr };
+
+        // --- rest of your effect follows ---
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex]);
+
+    useEffect(() => {
+        if (!socket) return; // guard
+
+        // helpers
+        const nowTag = () => Date.now().toString();
+
+        // Handlers (use refs for any "current" state / callbacks)
+        const onInit = (data) => {
             setConnectionId(data.id);
             setIndeterminate(false);
             progressRef.current = 0;
-            toggleProgressCallBack(false);
-            setSnack("Connected: " + data.id, "success");
+            // call latest callback
+            toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
+            setSnackRef.current && setSnackRef.current("Connected: " + data.id, "success");
             socket.emit("acknowledge", { data: "Connected", id: data.id });
-        });
-        // shows errors
-        socket.on("error", (data) => {
-            //console.log("Error: ", data);
-            setSnack(`${data.message}`, "error");
-        });
-        // when token expires this receives the event and sets the token to null
-        // also removes it from localStorage, there is reason to suspect that saving
-        // the token as a ref would be better
-        socket.on("token-expired", () => {
-            setSnack("Token Expired", "error");
+        };
+
+        const onError = (data) => {
+            setSnackRef.current && setSnackRef.current(`${data.message}`, "error");
+        };
+
+        const onTokenExpired = () => {
+            setSnackRef.current && setSnackRef.current("Token Expired", "error");
             setToken(null);
             localStorage.setItem("ytdiff_token", "null");
-        });
-        socket.on("connection-error", () => setSnack("Max web-sockets reached", "error"));
-        // Download events
-        // triggered when a download starts, as progress may not start right away
-        socket.on("download-started", (data) => {
-            //console.log("Download started: ", data);
-            // put the progress bar in an indeterminate state
+        };
+
+        const onConnectionError = () => setSnackRef.current && setSnackRef.current("Max web-sockets reached", "error");
+
+        const onDownloadStarted = (data) => {
             setIndeterminate(true);
             progressRef.current = +data.percentage;
-            toggleProgressCallBack(false);
-        });
-        socket.on("download-done", (data) => {
-            //console.log("Download done: ", data);
+            toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
+        };
+
+        const onDownloadDone = (data) => {
             setIndeterminate(false);
             progressRef.current = 0;
             downloadedItem.current = {
@@ -194,101 +248,148 @@ export default function App() {
                 subTitleFile: data.subTitleFile || null,
                 descriptionFile: data.descriptionFile || null,
             };
-            setSnack(`${data.title}`, "success");
-            addNotification(`Downloaded: ${data.title}`);
-        });
-        socket.on("download-failed", (data) => {
-            //console.log("Download failed: ", data);
+            setSnackRef.current && setSnackRef.current(`${data.title}`, "success");
+            addNotificationRef.current && addNotificationRef.current(`Downloaded: ${data.title}`);
+        };
+
+        const onDownloadFailed = (data) => {
             setIndeterminate(false);
             progressRef.current = 0;
-            setSnack(`${data.title}`, "error");
-            addNotification(`Download Failed: ${data.title}`);
-        });
-        // gives incremental progress updates at 10% intervals also
-        // used to keep the state updated of background activity
-        socket.on("downloading-percent-update", (data) => {
-            //console.log("downloading-percent-update: ", data);
+            setSnackRef.current && setSnackRef.current(`${data.title}`, "error");
+            addNotificationRef.current && addNotificationRef.current(`Download Failed: ${data.title}`);
+        };
+
+        const onDownloadingPercentUpdate = (data) => {
+            // use the ref for disableProgress
             if (data.percentage >= 99) {
                 setIndeterminate(true);
                 progressRef.current = 101;
-                toggleProgressCallBack(true);
-            } else if (!disableProgress) {
-                // if the disableProgress is false then update percentage
-                //setProgress(data.percentage);
+                toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(true);
+            } else if (!disableProgressRef.current) {
                 progressRef.current = data.percentage;
             }
-        });
-        // Listing events
-        // Earlier this was not needed but now it may actually be needed
-        // TODO: Fine tune the fetching of events to not be so aggressive
-        // This is sent before any type of listing starts
-        socket.on("listing-started", (data) => {
-            //console.log("Listing started: ", data);
-            // put the progress bar in an indeterminate state
+        };
+
+        const onListingStarted = (data) => {
             setIndeterminate(true);
             progressRef.current = +data.percentage;
-            toggleProgressCallBack(false);
-        });
-        // Listing playlists
-        socket.on("listing-playlist-complete", (data) => {
-            //console.log("Listing playlist done: ", data);
-            // enable the buttons and reset progress
+            toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
+        };
+
+        const onListingPlaylistComplete = (data) => {
+            console.log("Listing playlist done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
-            setSnack(`${data.playlistTitle}`, "success");
-            // use this to update the playlists, which will in turn update the sub-list if it is selected
-            //reFetch.current = !reFetch.current;
-            // This data.id is used to set the reFetch id so that requests can be made when websocket emits an event
-            // although this is stupid, it works I don't like it at all it doesn't follow MVC pattern
-            // but it works, so I will leave it for now
-            setReFetch(data.url + data.processedChunks + Date.now().toString());
-            addNotification(`Successful Added Playlist: ${data.playlistTitle}`);
-            //console.log("Listing done: ", data);
-        });
-        socket.on("playlist-skipped", (data) => {
-            //console.log("Playlist item skipped: ", data);
+            setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
+
+            const current = playListUrlRef.current;
+            if (current === "init") {
+                setPlayListUrl(data.url);
+                setPlayListIndex(data.seekPlaylistListTo);
+            } else if (current === data.url) {
+                const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
+                setReFetchPlaylist(tag);
+                setReFetchSubList(tag);
+            } else {
+                setPlayListIndex(data.seekPlaylistListTo);
+            }
+
+            addNotificationRef.current && addNotificationRef.current(`Successful Added Playlist: ${data.playlistTitle}`);
+        };
+
+        const onPlaylistSkipped = (data) => {
             setIndeterminate(false);
             progressRef.current = 0;
-            setSnack(`${data.message}`, "info");
-            addNotification(`${data.message}`);
-        });
-        socket.on("listing-playlist-chunk-complete", (data) => {
-            //console.log("Listing chunk complete: ", data);
-            if (playListUrl === "init" && data.processedChunks === 1) {
-                //console.log("Changing playlist url to: ", data.url);
+            setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
+            addNotificationRef.current && addNotificationRef.current(`${data.message}`);
+        };
+
+        const onListingPlaylistChunkComplete = (data) => {
+            console.log("Listing chunk complete: ", data);
+            console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
+
+            const current = playListUrlRef.current;
+            if ((current === "init") && (data.processedChunks === 1)) {
+                console.log("Changing playlist url to: ", data.url, " and seeking to index: ", data.seekPlaylistListTo);
                 setIndeterminate(false);
                 setPlayListUrl(data.url);
                 setPlayListIndex(data.seekPlaylistListTo);
-            } else if (playListUrl === data.url && data.processedChunks > 1) {
-                //console.log("Setting refetch to: ", data.url + data.processedChunks);
+            } else if ((current === data.url) && (data.processedChunks > 1)) {
+                const msg = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
+                console.log("Setting refetch to: ", msg);
                 setIndeterminate(false);
-                setReFetch(data.url + data.processedChunks);
                 progressRef.current = 0;
+                setReFetchSubList(msg);
+                setPlayListIndex(data.seekPlaylistListTo);
+            } else {
+                // optional: ignore or handle chunks for other playlists
+                console.log("Chunk event ignored (other playlist or state mismatch).");
             }
-        });
-        // Listing single item
-        socket.on("listing-single-item-complete", (data) => {
-            //console.log("Listing single item: ", data);
+        };
+
+        const onListingSingleItemComplete = (data) => {
             setIndeterminate(false);
             progressRef.current = 0;
-            setReFetch(data.url);
-            if (playListUrl === "init" || playListUrl === "None") {
+            setReFetchSubList("listing-single-item-complete-" + data.url + "-" + nowTag());
+
+            const current = playListUrlRef.current;
+            if (current === "init" || current === "None") {
                 setPlayListUrl("None");
                 setSubListIndex(data.seekSubListTo);
             }
-            addNotification(`Successful Added Video: ${data.title}`);
-        });
-        // Failed listing
-        socket.on("listing-error", (data) => {
-            //console.log("Listing failed: ", data);
-            // enable the buttons and reset progress
+            addNotificationRef.current && addNotificationRef.current(`Successful Added Video: ${data.title}`);
+        };
+
+        const onListingError = (data) => {
             setIndeterminate(false);
             progressRef.current = 0;
-            setSnack(`${data.url}`, "error");
-            addNotification(`Failed Listing: ${data.url}`);
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [socket, toggleProgressCallBack]);
+            setSnackRef.current && setSnackRef.current(`${data.url}`, "error");
+            addNotificationRef.current && addNotificationRef.current(`Failed Listing: ${data.url}`);
+        };
+
+        // Register listeners
+        socket.on("init", onInit);
+        socket.on("error", onError);
+        socket.on("token-expired", onTokenExpired);
+        socket.on("connection-error", onConnectionError);
+
+        socket.on("download-started", onDownloadStarted);
+        socket.on("download-done", onDownloadDone);
+        socket.on("download-failed", onDownloadFailed);
+        socket.on("downloading-percent-update", onDownloadingPercentUpdate);
+
+        socket.on("listing-started", onListingStarted);
+        socket.on("listing-playlist-complete", onListingPlaylistComplete);
+        socket.on("playlist-skipped", onPlaylistSkipped);
+        socket.on("listing-playlist-chunk-complete", onListingPlaylistChunkComplete);
+        socket.on("listing-single-item-complete", onListingSingleItemComplete);
+        socket.on("listing-error", onListingError);
+
+        // Cleanup on unmount or when socket changes
+        return () => {
+            try {
+                socket.off("init", onInit);
+                socket.off("error", onError);
+                socket.off("token-expired", onTokenExpired);
+                socket.off("connection-error", onConnectionError);
+
+                socket.off("download-started", onDownloadStarted);
+                socket.off("download-done", onDownloadDone);
+                socket.off("download-failed", onDownloadFailed);
+                socket.off("downloading-percent-update", onDownloadingPercentUpdate);
+
+                socket.off("listing-started", onListingStarted);
+                socket.off("listing-playlist-complete", onListingPlaylistComplete);
+                socket.off("playlist-skipped", onPlaylistSkipped);
+                socket.off("listing-playlist-chunk-complete", onListingPlaylistChunkComplete);
+                socket.off("listing-single-item-complete", onListingSingleItemComplete);
+                socket.off("listing-error", onListingError);
+            } catch (e) {
+                // socket might already be closed; ignore
+                console.warn("Error removing socket listeners", e);
+            }
+        };
+    }, [socket]); // only recreate if socket reference changes
 
     // renders login/signup grid
     const renderAuth = () => (
@@ -337,11 +438,12 @@ export default function App() {
                         setUrl={setPlayListUrl}
                         backEnd={backEnd}
                         playListIndex={playListIndex}
+                        setPlayListIndex={setPlayListIndex}
                         disableButtons={false}
                         setIndeterminate={setIndeterminate}
                         setSnack={setSnack}
-                        reFetch={reFetch}
-                        setReFetch={setReFetch}
+                        reFetch={reFetchPlaylist}
+                        setReFetch={setReFetchPlaylist}
                         setSubListIndex={setSubListIndex}
                         tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPageSubList={rowsPerPageSubList}
@@ -361,8 +463,8 @@ export default function App() {
                         subListIndex={subListIndex}
                         setSubListIndex={setSubListIndex}
                         downloadedItem={downloadedItem.current}
-                        reFetch={reFetch}
-                        setReFetch={setReFetch}
+                        reFetch={reFetchSubList}
+                        setReFetch={setReFetchSubList}
                         tableContainerHeight={`${tableContainerHeight}px`}
                         rowsPerPage={rowsPerPageSubList}
                         setRowsPerPage={setRowsPerPageSubList}

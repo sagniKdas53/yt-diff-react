@@ -92,6 +92,7 @@ export default function SubList({
         // I plan to persist he relative page when rows change but not now
         setPage(0);
         setStart(0);
+        setSubListIndex(0);
         setStop(parseInt(event.target.value));
         setRowsPerPage(parseInt(event.target.value));
     };
@@ -247,40 +248,40 @@ export default function SubList({
         }
     }
 
-    // const prevDepsRef = useRef();
+    const prevDepsRefSubList = useRef();
 
-    // useEffect(() => {
-    //     const prev = prevDepsRef.current;
-    //     const curr = { backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page };
+    useEffect(() => {
+        const prev = prevDepsRefSubList.current;
+        const curr = { backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page };
 
-    //     if (!prev) {
-    //        //console.log("[effect] initial deps:", curr);
-    //     } else {
-    //         const changed = Object.keys(curr).filter(k => {
-    //             try {
-    //                 return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-    //             } catch {
-    //                 return prev[k] !== curr[k];
-    //             }
-    //         });
+        if (!prev) {
+            console.log("[effect] sublist initial deps:", curr);
+        } else {
+            const changed = Object.keys(curr).filter(k => {
+                try {
+                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+                } catch {
+                    return prev[k] !== curr[k];
+                }
+            });
 
-    //         if (changed.length) {
-    //            //console.group(`[effect] deps changed: ${changed.join(", ")}`);
-    //             changed.forEach(k => {
-    //                //console.log(k, "prev:", prev[k], "curr:", curr[k]);
-    //             });
-    //             //console.trace();
-    //            //console.groupEnd();
-    //         } else {
-    //            //console.log("[effect] ran but no dep change detected (unexpected)");
-    //         }
-    //     }
+            if (changed.length) {
+                console.group(`[effect] sublist deps changed: ${changed.join(", ")}`);
+                changed.forEach(k => {
+                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
+                });
+                //console.trace();
+                console.groupEnd();
+            } else {
+                console.log("[effect] ran but no dep change detected (unexpected)");
+            }
+        }
 
-    //     prevDepsRef.current = { ...curr };
+        prevDepsRefSubList.current = { ...curr };
 
-    //     // --- rest of your effect follows ---
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, [backEnd, start, stop, sort, query, page, reFetch, loadedPlayList, items, itemCount, page]);
+        // --- rest of your effect follows ---
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [backEnd, start, stop, sort, query, page, reFetch, loadedPlayList, items, itemCount, page]);
 
 
 
@@ -737,6 +738,7 @@ export default function SubList({
             <TablePagination
                 rowsPerPageOptions={[1, 8, 16, 32, 64]}
                 component="div"
+                labelRowsPerPage="Items per page:"
                 count={itemCount}
                 rowsPerPage={rowsPerPage}
                 page={page}
