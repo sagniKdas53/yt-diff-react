@@ -673,9 +673,9 @@ export default function PlayList({
               >
                 <MenuItem value={1}>1</MenuItem>
                 <MenuItem value={8}>8</MenuItem>
-                <MenuItem value={16}>10</MenuItem>
-                <MenuItem value={32}>25</MenuItem>
-                <MenuItem value={64}>50</MenuItem>
+                <MenuItem value={16}>16</MenuItem>
+                <MenuItem value={32}>32</MenuItem>
+                <MenuItem value={64}>64</MenuItem>
               </Select>
             </FormControl>
           </Box>
