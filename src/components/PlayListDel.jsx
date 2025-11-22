@@ -34,7 +34,7 @@ import debounce from "lodash.debounce";
 // import { useRef } from "react";
 
 export default function PlayList({
-  setUrl,
+  setPlayListUrl,
   playListUrl,
   backEnd,
   setIndeterminate,
@@ -213,14 +213,14 @@ export default function PlayList({
 
   /**
    * Delete a playlist.
-   * @param {string} playListUrl The playlist to delete.
+   * @param {string} playListUrlToDelete The playlist to delete.
    * @param {string} title The title of the playlist to delete.
    * @param {boolean} deleteAllVideosInPlaylist Whether to delete all videos in the playlist.
    * @param {boolean} deletePlaylist Whether to delete the playlist itself.
    * @param {boolean} cleanUp Whether to clean up the downloaded files.
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
-  const deletePlaylist = async (playListUrl, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
+  const deletePlaylist = async (playListUrlToDelete, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
     setSnack(`Deleting: ${title}`, "info");
     const response = await fetch(backEnd + "/delplay", {
       method: "post",
@@ -232,7 +232,7 @@ export default function PlayList({
       mode: "cors",
       body: JSON.stringify(
         {
-          "playListUrl": playListUrl,
+          "playListUrl": playListUrlToDelete,
           "deleteAllVideosInPlaylist": deleteAllVideosInPlaylist,
           "deletePlaylist": deletePlaylist,
           "cleanUp": cleanUp
@@ -243,10 +243,10 @@ export default function PlayList({
       const data = await response.text();
       const json_data = JSON.parse(data);
       //console.log("deletePlaylist response: ", json_data);
-      setSnack(`Deleted: ${title ? title : playListUrl}, ${json_data.message}`, "success");
+      setSnack(`Deleted: ${title ? title : playListUrlToDelete}, ${json_data.message}`, "success");
       // Do the refetch conditionally
       // Delete-playlist is not getting re-fetched
-      setReFetch(`${playListUrl}-del-${new Date().getTime()}`);
+      setReFetch(`${playListUrlToDelete}-del-${new Date().getTime()}`);
       let startIndex = start;
       if (order === 2) {
         // DESC order
@@ -255,9 +255,13 @@ export default function PlayList({
         //console.log("Adjusted startIndex for DESC order: ", startIndex);
       }
       setPlayListIndex(startIndex);
+      // Finally if the playlist was loaded unload it
+      if (playListUrlToDelete === playListUrl) {
+        setPlayListUrl("init");
+      }
     }
     if (!response.ok) {
-      setSnack(`Failed to delete: ${title ? title : playListUrl}`, "error");
+      setSnack(`Failed to delete: ${title ? title : playListUrlToDelete}`, "error");
     }
   }
 
@@ -330,7 +334,7 @@ export default function PlayList({
   };
 
   const handleLoad = (url) => {
-    setUrl(url);
+    setPlayListUrl(url);
     setSubListIndex(0);
   };
 
@@ -772,7 +776,7 @@ export default function PlayList({
 }
 
 PlayList.propTypes = {
-  setUrl: PropTypes.func.isRequired,
+  setPlayListUrl: PropTypes.func.isRequired,
   playListUrl: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
   setIndeterminate: PropTypes.func.isRequired,

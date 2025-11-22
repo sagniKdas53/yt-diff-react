@@ -356,6 +356,13 @@ export default function App() {
             addNotificationRef.current && addNotificationRef.current(`Failed Listing: ${data.url}`);
         };
 
+        const onListingVideoSkippedBecauseDownloaded = (data) => {
+            setIndeterminate(false);
+            progressRef.current = 0;
+            setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
+            addNotificationRef.current && addNotificationRef.current(`${data.message}`);
+        };
+
         // Register listeners
         socket.on("init", onInit);
         socket.on("error", onError);
@@ -373,6 +380,7 @@ export default function App() {
         socket.on("listing-playlist-chunk-complete", onListingPlaylistChunkComplete);
         socket.on("listing-single-item-complete", onListingSingleItemComplete);
         socket.on("listing-error", onListingError);
+        socket.on("listing-video-skipped-because-downloaded", onListingVideoSkippedBecauseDownloaded);
 
         // Cleanup on unmount or when socket changes
         return () => {
@@ -393,6 +401,7 @@ export default function App() {
                 socket.off("listing-playlist-chunk-complete", onListingPlaylistChunkComplete);
                 socket.off("listing-single-item-complete", onListingSingleItemComplete);
                 socket.off("listing-error", onListingError);
+                socket.off("listing-video-skipped-because-downloaded", onListingVideoSkippedBecauseDownloaded);
             } catch (e) {
                 // socket might already be closed; ignore
                 //console.warn("Error removing socket listeners", e);
@@ -444,7 +453,7 @@ export default function App() {
                 <Suspense fallback={<Loader />}>
                     <PlayList
                         playListUrl={playListUrl}
-                        setUrl={setPlayListUrl}
+                        setPlayListUrl={setPlayListUrl}
                         backEnd={backEnd}
                         playListIndex={playListIndex}
                         setPlayListIndex={setPlayListIndex}
