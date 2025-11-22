@@ -55,9 +55,6 @@ export default function SubList({
     setSnack,
     progressRef
 }) {
-    // Refs for card elements and the scrollable container
-    const cardsContainerRef = useRef(null);
-    const cardRefs = useRef({});
     // Query and sort state
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
@@ -329,83 +326,66 @@ export default function SubList({
     const isMd = useMediaQuery(theme.breakpoints.between("md", "lg"));
     const mediaHeight = isXs ? 220 : isSm ? 200 : isMd ? 160 : 140;
 
-    // IntersectionObserver-based lazy fetch for thumbnails
+    // Bulk fetch thumbnails
     useEffect(() => {
-        if (!items || items.length === 0) return;
+        if (!items || items.length === 0 || playlistDirectory === "init") return;
 
-        const observerOptions = {
-            root: cardsContainerRef.current || null,
-            rootMargin: "200px",
-            threshold: 0.05,
-        };
-
-        const observer = new IntersectionObserver(async (entries) => {
-            for (const entry of entries) {
-                if (entry.isIntersecting) {
-                    const thumb = entry.target.getAttribute("data-thumb");
-                    if (!thumb) continue;
-                    // If already fetched or in-progress, skip
-                    if (thumbUrls[thumb] !== undefined) {
-                        observer.unobserve(entry.target);
-                        continue;
+        const fetchThumbnails = async () => {
+            const filesToFetch = items
+                .map((item) => {
+                    const thumb = item.video_metadatum?.thumbNailFile;
+                    if (thumb && thumbUrls[thumb] === undefined) {
+                        return { saveDirectory: playlistDirectory, fileName: thumb };
                     }
-                    // Mark as in-progress to avoid duplicate fetches
-                    setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
-                    try {
-                        const response = await fetch(backEnd + "/getfile", {
-                            method: "post",
-                            headers: {
-                                Accept: "application/json",
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${token}`,
-                            },
-                            mode: "cors",
-                            body: JSON.stringify({ saveDirectory: playlistDirectory, fileName: thumb }),
-                        });
-                        if (response.ok) {
-                            const data = await response.text();
-                            const json_data = JSON.parse(data);
-                            if (json_data.status === "success" && json_data.signedUrlId) {
-                                const baseUrl = import.meta.env.PROD ? window.location.origin : "";
-                                const signed = baseUrl + backEnd + "/getfile?fileId=" + json_data.signedUrlId;
-                                setThumbUrls((prev) => ({ ...prev, [thumb]: signed }));
+                    return null;
+                })
+                .filter(Boolean);
+
+            if (filesToFetch.length === 0) return;
+
+            // Mark as in-progress
+            const newThumbUrls = {};
+            filesToFetch.forEach(f => newThumbUrls[f.fileName] = null);
+            setThumbUrls(prev => ({ ...prev, ...newThumbUrls }));
+
+            try {
+                const response = await fetch(backEnd + "/getfiles", {
+                    method: "post",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    mode: "cors",
+                    body: JSON.stringify({ files: filesToFetch }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "success" && data.files) {
+                        const baseUrl = import.meta.env.PROD ? window.location.origin : "";
+                        const updates = {};
+                        Object.entries(data.files).forEach(([fileName, signedUrlId]) => {
+                            if (signedUrlId) {
+                                updates[fileName] = baseUrl + backEnd + "/getfile?fileId=" + signedUrlId;
                             } else {
-                                setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
+                                updates[fileName] = null;
                             }
-                        } else {
-                            if (response.status === 401) {
-                                setSnack("Token expired please re-login", "error");
-                                setToken(null);
-                                return;
-                            }
-                            setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
-                        }
-                    } catch (err) {
-                        setThumbUrls((prev) => ({ ...prev, [thumb]: null }));
-                    } finally {
-                        observer.unobserve(entry.target);
+                        });
+                        setThumbUrls(prev => ({ ...prev, ...updates }));
                     }
+                } else if (response.status === 401) {
+                    setSnack("Token expired please re-login", "error");
+                    setToken(null);
                 }
+            } catch (error) {
+                //console.error("Error fetching thumbnails:", error);
             }
-        }, observerOptions);
-
-        // Observe card elements for thumbs that lack a fetched URL
-        items.forEach((element) => {
-            const meta = element.video_metadatum || {};
-            const thumb = meta.thumbNailFile;
-            if (!thumb) return;
-            const el = cardRefs.current[thumb];
-            if (el && thumbUrls[thumb] === undefined) {
-                observer.observe(el);
-            }
-        });
-
-        return () => {
-            observer.disconnect();
         };
-        // We intentionally omit thumbUrls to avoid re-creating observer while fetches are in progress
+
+        fetchThumbnails();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [items, playlistDirectory, backEnd, token, setSnack, setToken]);
+    }, [items, playlistDirectory, backEnd, token]);
 
     useEffect(() => {
         if (downloadedItem.url !== null) {
@@ -438,6 +418,7 @@ export default function SubList({
         updateSelected({});
         setSelectAll(false);
         updateSort(false);
+        setThumbUrls({});
     }, [loadedPlayList]);
 
     useEffect(() => {
@@ -564,10 +545,6 @@ export default function SubList({
                                             borderColor: 'divider',
                                             minWidth: 125
                                         }}
-                                        ref={(el) => {
-                                            if (thumb) cardRefs.current[thumb] = el;
-                                        }}
-                                        data-thumb={thumb || undefined}
                                     >
                                         <CardMedia
                                             component="img"
