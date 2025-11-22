@@ -152,7 +152,7 @@ export default function App() {
 
     // --- Refs to avoid stale closures ---
     const playListUrlRef = useRef(playListUrl);
-    useEffect(() => { playListUrlRef.current = playListUrl; }, [playListUrl]);
+    useEffect(() => { console.log("updating playListUrlRef as playListUrl changed"); playListUrlRef.current = playListUrl; }, [playListUrl]);
 
     const disableProgressRef = useRef(disableProgress);
     useEffect(() => { disableProgressRef.current = disableProgress; }, [disableProgress]);
@@ -166,39 +166,39 @@ export default function App() {
     const setSnackRef = useRef(setSnack);
     useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
 
-    // const prevDepsRef = useRef();
-    // useEffect(() => {
-    //     const prev = prevDepsRef.current;
-    //     const curr = { backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex };
+    const prevDepsRef = useRef();
+    useEffect(() => {
+        const prev = prevDepsRef.current;
+        const curr = { socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex };
 
-    //     if (!prev) {
-    //         console.log("[effect] app initial deps:", curr);
-    //     } else {
-    //         const changed = Object.keys(curr).filter(k => {
-    //             try {
-    //                 return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-    //             } catch {
-    //                 return prev[k] !== curr[k];
-    //             }
-    //         });
+        if (!prev) {
+            console.log("[effect] app initial deps:", curr);
+        } else {
+            const changed = Object.keys(curr).filter(k => {
+                try {
+                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+                } catch {
+                    return prev[k] !== curr[k];
+                }
+            });
 
-    //         if (changed.length) {
-    //             console.group(`[effect] app deps changed: ${changed.join(", ")}`);
-    //             changed.forEach(k => {
-    //                 console.log(k, "prev:", prev[k], "curr:", curr[k]);
-    //             });
-    //             //console.trace();
-    //             console.groupEnd();
-    //         } else {
-    //             console.log("[effect] ran but no dep change detected (unexpected)");
-    //         }
-    //     }
+            if (changed.length) {
+                console.group(`[effect] app deps changed: ${changed.join(", ")}`);
+                changed.forEach(k => {
+                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
+                });
+                //console.trace();
+                console.groupEnd();
+            } else {
+                console.log("[effect] ran but no dep change detected (unexpected)");
+            }
+        }
 
-    //     prevDepsRef.current = { ...curr };
+        prevDepsRef.current = { ...curr };
 
-    //     // --- rest of your effect follows ---
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, [backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex]);
+        // --- rest of your effect follows ---
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex]);
 
     useEffect(() => {
         if (!socket) return; // guard
@@ -271,36 +271,40 @@ export default function App() {
         };
 
         const onListingStarted = (data) => {
+            console.log("Listing started: ", data);
             setIndeterminate(true);
             progressRef.current = +data.percentage;
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
         };
 
         const onListingPlaylistComplete = (data) => {
-            //console.log("Listing playlist done: ", data);
+            console.log("Listing playlist done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
-
+            const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
             const current = playListUrlRef.current;
             if (current === "init") {
+                // Load the playlist
                 setPlayListUrl(data.url);
+                // Re-fetch the playlist
+                setReFetchPlaylist(tag);
+                // Set the playlist index
                 setPlayListIndex(data.seekPlaylistListTo);
-                // TODO: Handle order when setting index
-                // if (order === 2) {
-                //     // DESC order
-                //     const totalItems = data.totalItems || 0;
-                //     setPlayListIndex(Math.max(0, totalItems - data.seekPlaylistListTo - 1));
-                // } else {
-                //     setPlayListIndex(data.seekPlaylistListTo);
-                // }
             } else if (current === data.url) {
-                const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
                 setReFetchPlaylist(tag);
                 setReFetchSubList(tag);
             } else {
                 setPlayListIndex(data.seekPlaylistListTo);
             }
+            // TODO: Handle order when setting index
+            // if (order === 2) {
+            //     // DESC order
+            //     const totalItems = data.totalItems || 0;
+            //     setPlayListIndex(Math.max(0, totalItems - data.seekPlaylistListTo - 1));
+            // } else {
+            //     setPlayListIndex(data.seekPlaylistListTo);
+            // }
 
             addNotificationRef.current && addNotificationRef.current(`Successful Added Playlist: ${data.playlistTitle}`);
         };
@@ -313,27 +317,36 @@ export default function App() {
         };
 
         const onListingPlaylistChunkComplete = (data) => {
-            //console.log("Listing chunk complete: ", data);
-            //console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
+            console.log("Listing chunk complete: ", data);
+            console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
 
             const current = playListUrlRef.current;
+            const tag = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
+            // If the current url is init (i.e. No playlist is loaded) and the processed chunks is 1, then it is the first chunk so load it
             if ((current === "init") && (data.processedChunks === 1)) {
                 //console.log("Changing playlist url to: ", data.url, " and seeking to index: ", data.seekPlaylistListTo);
                 setIndeterminate(false);
+                // Set the playlist url
                 setPlayListUrl(data.url);
+                // Set the playlist index
                 setPlayListIndex(data.seekPlaylistListTo);
-            } else if ((current === data.url) && (data.processedChunks > 1)) {
-                const msg = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
+                // Re-fetch the playlist
+                setReFetchPlaylist(tag);
+            }
+            // If the current url is the same as the data url and the processed chunks is greater than 1, then it is a chunk so re-fetch the playlist list
+            else if ((current === data.url) && (data.processedChunks > 1)) {
                 //console.log("Setting refetch to: ", msg);
                 // Since this is a chunk, we only re-fetch the playlist list, not update the intermediate state
                 //setIndeterminate(false);
                 //progressRef.current = 0;
-                setReFetchSubList(msg);
+                setReFetchSubList(tag);
                 setPlayListIndex(data.seekPlaylistListTo);
-            } else {
-                // optional: ignore or handle chunks for other playlists
-                //console.log("Chunk event ignored (other playlist or state mismatch).");
             }
+            // If the current url is not the same as the data url, then it is a different playlist so ignore it
+            // else {
+            //     // optional: ignore or handle chunks for other playlists
+            //     //console.log("Chunk event ignored (other playlist or state mismatch).");
+            // }
         };
 
         const onListingSingleItemComplete = (data) => {
@@ -376,10 +389,10 @@ export default function App() {
 
         socket.on("listing-started", onListingStarted);
         socket.on("listing-playlist-complete", onListingPlaylistComplete);
-        socket.on("playlist-skipped", onPlaylistSkipped);
         socket.on("listing-playlist-chunk-complete", onListingPlaylistChunkComplete);
         socket.on("listing-single-item-complete", onListingSingleItemComplete);
         socket.on("listing-error", onListingError);
+        socket.on("listing-playlist-skipped-because-same-monitoring", onPlaylistSkipped);
         socket.on("listing-video-skipped-because-downloaded", onListingVideoSkippedBecauseDownloaded);
 
         // Cleanup on unmount or when socket changes
@@ -397,10 +410,10 @@ export default function App() {
 
                 socket.off("listing-started", onListingStarted);
                 socket.off("listing-playlist-complete", onListingPlaylistComplete);
-                socket.off("playlist-skipped", onPlaylistSkipped);
                 socket.off("listing-playlist-chunk-complete", onListingPlaylistChunkComplete);
                 socket.off("listing-single-item-complete", onListingSingleItemComplete);
                 socket.off("listing-error", onListingError);
+                socket.off("listing-playlist-skipped-because-same-monitoring", onPlaylistSkipped);
                 socket.off("listing-video-skipped-because-downloaded", onListingVideoSkippedBecauseDownloaded);
             } catch (e) {
                 // socket might already be closed; ignore
