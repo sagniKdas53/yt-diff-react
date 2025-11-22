@@ -339,14 +339,14 @@ export default function App() {
                 // Since this is a chunk, we only re-fetch the playlist list, not update the intermediate state
                 //setIndeterminate(false);
                 //progressRef.current = 0;
+                setReFetchPlaylist(tag);
                 setReFetchSubList(tag);
                 setPlayListIndex(data.seekPlaylistListTo);
             }
-            // If the current url is not the same as the data url, then it is a different playlist so ignore it
-            // else {
-            //     // optional: ignore or handle chunks for other playlists
-            //     //console.log("Chunk event ignored (other playlist or state mismatch).");
-            // }
+            // If the current url is not the same as the data url, then it is a different playlist so re-fetch the playlist list
+            else {
+                setReFetchPlaylist(tag);
+            }
         };
 
         const onListingSingleItemComplete = (data) => {
