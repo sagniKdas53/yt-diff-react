@@ -168,7 +168,7 @@ export default function PlayList({
     if (response.ok) {
       const data = await response.text();
       const json_data = JSON.parse(data);
-      console.log("postUrl response: ", json_data);
+      //console.log("postUrl response: ", json_data);
       return json_data;
     } else {
       if (response.status === 401) {
