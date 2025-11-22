@@ -11,6 +11,10 @@ import AppBar from "@mui/material/AppBar";
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import IconButton from '@mui/material/IconButton';
@@ -33,15 +37,26 @@ export default function Navigation({
     notifications,
     onDismissNotification
 }) {
+    const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+
     const themeSwitcherHandler = (themeMode) => {
         localStorage.setItem("ytdiff_theme", themeMode);
         themeSwitcher(themeMode);
     };
-    const logoutHandler = () => {
+
+    const handleLogoutClick = () => {
+        if (token) {
+            setLogoutConfirmOpen(true);
+        }
+    };
+
+    const confirmLogout = () => {
         setToken(null);
         setConnectionId("");
         localStorage.setItem("ytdiff_token", "null");
-    }
+        setLogoutConfirmOpen(false);
+    };
+
     return (
         <>
             <AppBar position="static">
@@ -73,7 +88,17 @@ export default function Navigation({
                         notifications={notifications}
                         onDismissNotification={onDismissNotification}
                     />
-                    <Button onClick={() => logoutHandler()} color="inherit">
+                    <Button
+                        onClick={() => {
+                            if (token) {
+                                setLogoutConfirmOpen(true);
+                            } else {
+                                // If it's "Login", we just ensure state is clear or do nothing as App.jsx handles the view
+                                setToken(null);
+                            }
+                        }}
+                        color="inherit"
+                    >
                         {token ? <LogoutIcon /> : <LoginIcon />}
                         <Typography
                             variant="caption"
@@ -84,6 +109,27 @@ export default function Navigation({
                     </Button>
                 </Toolbar>
             </AppBar>
+
+            <Dialog
+                open={logoutConfirmOpen}
+                onClose={() => setLogoutConfirmOpen(false)}
+                aria-labelledby="confirm-logout-title"
+            >
+                <DialogTitle id="confirm-logout-title">Confirm Logout</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2">
+                        Are you sure you want to logout?
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setLogoutConfirmOpen(false)} color="primary">
+                        Cancel
+                    </Button>
+                    <Button onClick={confirmLogout} color="error" variant="contained">
+                        Logout
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
