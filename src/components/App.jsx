@@ -284,27 +284,21 @@ export default function App() {
             setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
             const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
             const current = playListUrlRef.current;
+
+            // Always re-fetch the playlist list to show final status
+            setReFetchPlaylist(tag);
+
             if (current === "init") {
-                // Load the playlist
+                // Load the playlist if none is loaded
                 setPlayListUrl(data.url);
-                // Re-fetch the playlist
-                setReFetchPlaylist(tag);
-                // Set the playlist index
                 setPlayListIndex(data.seekPlaylistListTo);
             } else if (current === data.url) {
-                setReFetchPlaylist(tag);
+                // If viewing the completed playlist, refresh the sublist
                 setReFetchSubList(tag);
             } else {
+                // Just update the index
                 setPlayListIndex(data.seekPlaylistListTo);
             }
-            // TODO: Handle order when setting index
-            // if (order === 2) {
-            //     // DESC order
-            //     const totalItems = data.totalItems || 0;
-            //     setPlayListIndex(Math.max(0, totalItems - data.seekPlaylistListTo - 1));
-            // } else {
-            //     setPlayListIndex(data.seekPlaylistListTo);
-            // }
 
             addNotificationRef.current && addNotificationRef.current(`Successful Added Playlist: ${data.playlistTitle}`);
         };
@@ -322,30 +316,21 @@ export default function App() {
 
             const current = playListUrlRef.current;
             const tag = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
+
+            // Always re-fetch the playlist list to show updated status/counts
+            setReFetchPlaylist(tag);
+
             // If the current url is init (i.e. No playlist is loaded) and the processed chunks is 1, then it is the first chunk so load it
             if ((current === "init") && (data.processedChunks === 1)) {
-                //console.log("Changing playlist url to: ", data.url, " and seeking to index: ", data.seekPlaylistListTo);
-                setIndeterminate(false);
-                // Set the playlist url
-                setPlayListUrl(data.url);
-                // Set the playlist index
-                setPlayListIndex(data.seekPlaylistListTo);
-                // Re-fetch the playlist
-                setReFetchPlaylist(tag);
-            }
-            // If the current url is the same as the data url and the processed chunks is greater than 1, then it is a chunk so re-fetch the playlist list
-            else if ((current === data.url) && (data.processedChunks > 1)) {
-                //console.log("Setting refetch to: ", msg);
-                // Since this is a chunk, we only re-fetch the playlist list, not update the intermediate state
                 //setIndeterminate(false);
-                //progressRef.current = 0;
-                setReFetchPlaylist(tag);
+                setPlayListUrl(data.url);
+                setPlayListIndex(data.seekPlaylistListTo);
+            }
+            // If the current url is the same as the data url, it means we are viewing the playlist being processed
+            else if (current === data.url) {
+                // Re-fetch the sublist to show new videos
                 setReFetchSubList(tag);
                 setPlayListIndex(data.seekPlaylistListTo);
-            }
-            // If the current url is not the same as the data url, then it is a different playlist so re-fetch the playlist list
-            else {
-                setReFetchPlaylist(tag);
             }
         };
 
