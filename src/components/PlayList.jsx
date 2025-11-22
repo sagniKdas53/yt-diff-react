@@ -26,7 +26,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useDependencyLogger } from "../hooks/useDependencyLogger";
+import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 
 import { Typography } from "@mui/material";

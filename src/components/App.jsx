@@ -15,8 +15,8 @@ import { useDependencyLogger } from "../hooks/useDependencyLogger";
 import io from "socket.io-client";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
-const PlayList = lazy(() => import("./PlayListDel.jsx"));
-const SubList = lazy(() => import("./SubListMedia.jsx"));
+const PlayList = lazy(() => import("./PlayList.jsx"));
+const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 const Signup = lazy(() => import("./Signup.jsx"));
 
