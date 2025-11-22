@@ -35,6 +35,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDependencyLogger } from "../hooks/useDependencyLogger";
 import TablePaginationActions from "./Pagination.jsx";
 
 export default function SubList({
@@ -248,39 +249,7 @@ export default function SubList({
         }
     }
 
-    const prevDepsRefSubList = useRef();
-    useEffect(() => {
-        const prev = prevDepsRefSubList.current;
-        const curr = { backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page };
-
-        if (!prev) {
-            console.log("[effect] sublist initial deps:", curr);
-        } else {
-            const changed = Object.keys(curr).filter(k => {
-                try {
-                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-                } catch {
-                    return prev[k] !== curr[k];
-                }
-            });
-
-            if (changed.length) {
-                console.group(`[effect] sublist deps changed: ${changed.join(", ")}`);
-                changed.forEach(k => {
-                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
-                });
-                //console.trace();
-                console.groupEnd();
-            } else {
-                console.log("[effect] ran but no dep change detected (unexpected)");
-            }
-        }
-
-        prevDepsRefSubList.current = { ...curr };
-
-        // --- rest of your effect follows ---
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [backEnd, start, stop, sort, query, page, reFetch, loadedPlayList, items, itemCount, page]);
+    useDependencyLogger({ backEnd, start, stop, sort, query, reFetch, loadedPlayList, items, itemCount, page }, "SubList");
 
 
 

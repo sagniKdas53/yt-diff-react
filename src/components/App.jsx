@@ -10,6 +10,7 @@ import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Grid from "@mui/material/Unstable_Grid2";
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDependencyLogger } from "../hooks/useDependencyLogger";
 
 import io from "socket.io-client";
 
@@ -152,7 +153,7 @@ export default function App() {
 
     // --- Refs to avoid stale closures ---
     const playListUrlRef = useRef(playListUrl);
-    useEffect(() => { console.log("updating playListUrlRef as playListUrl changed"); playListUrlRef.current = playListUrl; }, [playListUrl]);
+    useEffect(() => { playListUrlRef.current = playListUrl; }, [playListUrl]);
 
     const disableProgressRef = useRef(disableProgress);
     useEffect(() => { disableProgressRef.current = disableProgress; }, [disableProgress]);
@@ -166,39 +167,7 @@ export default function App() {
     const setSnackRef = useRef(setSnack);
     useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
 
-    const prevDepsRef = useRef();
-    useEffect(() => {
-        const prev = prevDepsRef.current;
-        const curr = { socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex };
-
-        if (!prev) {
-            console.log("[effect] app initial deps:", curr);
-        } else {
-            const changed = Object.keys(curr).filter(k => {
-                try {
-                    return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-                } catch {
-                    return prev[k] !== curr[k];
-                }
-            });
-
-            if (changed.length) {
-                console.group(`[effect] app deps changed: ${changed.join(", ")}`);
-                changed.forEach(k => {
-                    console.log(k, "prev:", prev[k], "curr:", curr[k]);
-                });
-                //console.trace();
-                console.groupEnd();
-            } else {
-                console.log("[effect] ran but no dep change detected (unexpected)");
-            }
-        }
-
-        prevDepsRef.current = { ...curr };
-
-        // --- rest of your effect follows ---
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex]);
+    useDependencyLogger({ socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex }, "App");
 
     useEffect(() => {
         if (!socket) return; // guard
@@ -271,14 +240,14 @@ export default function App() {
         };
 
         const onListingStarted = (data) => {
-            console.log("Listing started: ", data);
+            //console.log("Listing started: ", data);
             setIndeterminate(true);
             progressRef.current = +data.percentage;
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
         };
 
         const onListingPlaylistComplete = (data) => {
-            console.log("Listing playlist done: ", data);
+            //console.log("Listing playlist done: ", data);
             setIndeterminate(false);
             progressRef.current = 0;
             setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
@@ -311,8 +280,8 @@ export default function App() {
         };
 
         const onListingPlaylistChunkComplete = (data) => {
-            console.log("Listing chunk complete: ", data);
-            console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
+            //console.log("Listing chunk complete: ", data);
+            //console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
 
             const current = playListUrlRef.current;
             const tag = "listing-playlist-chunk-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
