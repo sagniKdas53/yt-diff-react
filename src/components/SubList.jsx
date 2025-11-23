@@ -574,7 +574,7 @@ export default function SubList({
                                                     target="_blank"
                                                     rel="noreferrer"
                                                 >
-                                                    {meta.title.replaceAll("_", " ")}
+                                                    {meta.title}
                                                 </Link>
                                             </Typography>
                                         </CardContent>
