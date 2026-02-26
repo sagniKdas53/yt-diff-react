@@ -44,11 +44,11 @@ export default function Navigation({
         themeSwitcher(themeMode);
     };
 
-    const handleLogoutClick = () => {
-        if (token) {
-            setLogoutConfirmOpen(true);
-        }
-    };
+    // const handleLogoutClick = () => {
+    //     if (token) {
+    //         setLogoutConfirmOpen(true);
+    //     }
+    // };
 
     const confirmLogout = () => {
         setToken(null);
