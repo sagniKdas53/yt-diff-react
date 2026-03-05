@@ -530,7 +530,8 @@ export default function PlayList({
                       >
                         <MenuItem value={"N/A"}>N/A</MenuItem>
                         <MenuItem value={"Full"}>Full</MenuItem>
-                        <MenuItem value={"Fast"}>Fast</MenuItem>
+                        <MenuItem value={"Start"}>Start</MenuItem>
+                        <MenuItem value={"End"}>End</MenuItem>
                       </Select>
                     </FormControl>
                   </TableCell>
@@ -626,7 +627,8 @@ export default function PlayList({
               >
                 <MenuItem value={"N/A"}>N/A</MenuItem>
                 <MenuItem value={"Full"}>Full</MenuItem>
-                <MenuItem value={"Fast"}>Fast</MenuItem>
+                <MenuItem value={"Start"}>Start</MenuItem>
+                <MenuItem value={"End"}>End</MenuItem>
               </Select>
             </FormControl>
             <FormControl
