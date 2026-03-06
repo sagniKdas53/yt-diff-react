@@ -529,7 +529,6 @@ export default function PlayList({
                         onChange={(e) => changeWatch(e, element.playlistUrl)}
                       >
                         <MenuItem value={"N/A"}>N/A</MenuItem>
-                        <MenuItem value={"Full"}>Full</MenuItem>
                         <MenuItem value={"Start"}>Start</MenuItem>
                         <MenuItem value={"End"}>End</MenuItem>
                       </Select>
@@ -626,9 +625,9 @@ export default function PlayList({
                 onChange={(event) => setWatch(event.target.value)}
               >
                 <MenuItem value={"N/A"}>N/A</MenuItem>
-                <MenuItem value={"Full"}>Full</MenuItem>
                 <MenuItem value={"Start"}>Start</MenuItem>
                 <MenuItem value={"End"}>End</MenuItem>
+                <MenuItem value={"Refresh"}>Refresh</MenuItem>
               </Select>
             </FormControl>
             <FormControl
