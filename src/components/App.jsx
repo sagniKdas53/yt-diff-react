@@ -168,6 +168,16 @@ export default function App() {
     const setSnackRef = useRef(setSnack);
     useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
 
+    const activeDownloadsRef = useRef(activeDownloads);
+    // Wrapper: updates both state and ref synchronously so hasActiveDownloads() is never stale
+    const updateActiveDownloads = (updater) => {
+        setActiveDownloads(prev => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            activeDownloadsRef.current = next;
+            return next;
+        });
+    };
+
     useDependencyLogger({ socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex }, "App");
 
     useEffect(() => {
@@ -181,7 +191,7 @@ export default function App() {
             setConnectionId(data.id);
             setIndeterminate(false);
             progressRef.current = 0;
-            setActiveDownloads(prev => Object.keys(prev).length ? {} : prev);
+            updateActiveDownloads(prev => Object.keys(prev).length ? {} : prev);
             // call latest callback
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
             setSnackRef.current && setSnackRef.current("Connected: " + data.id, "success");
@@ -201,7 +211,7 @@ export default function App() {
         const onConnectionError = () => setSnackRef.current && setSnackRef.current("Max web-sockets reached", "error");
 
         const removeActiveDownload = (url) => {
-            setActiveDownloads(prev => {
+            updateActiveDownloads(prev => {
                 const next = { ...prev };
                 delete next[url];
                 return next;
@@ -209,13 +219,15 @@ export default function App() {
         };
 
         const onDownloadStarted = (data) => {
+            //console.log("[Socket] download-started", data);
             const url = data.url || "unknown";
             const percent = isNaN(+data.percentage) ? 0 : +data.percentage;
-            setActiveDownloads(prev => ({ ...prev, [url]: percent }));
+            updateActiveDownloads(prev => ({ ...prev, [url]: percent }));
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
         };
 
         const onDownloadDone = (data) => {
+            //console.log("[Socket] download-done", data);
             removeActiveDownload(data.url);
             downloadedItem.current = {
                 url: data.url,
@@ -232,39 +244,48 @@ export default function App() {
         };
 
         const onDownloadFailed = (data) => {
+            //console.log("[Socket] download-failed", data);
             removeActiveDownload(data.url);
             setSnackRef.current && setSnackRef.current(`${data.title}`, "error");
             addNotificationRef.current && addNotificationRef.current(`Download Failed: ${data.title}`);
         };
 
         const onDownloadingPercentUpdate = (data) => {
+            //console.log("Downloading percent update", { url: data.url, percent: data.percentage });
             const url = data.url || "unknown";
             const percent = parseFloat(data.percentage);
 
             if (isNaN(percent)) return;
 
             if (percent >= 99) {
-                setActiveDownloads(prev => ({ ...prev, [url]: 100 }));
+                updateActiveDownloads(prev => ({ ...prev, [url]: 100 }));
                 toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(true);
             } else if (!disableProgressRef.current) {
-                setActiveDownloads(prev => {
+                updateActiveDownloads(prev => {
                     if (prev[url] >= 100 && prev[url] !== 101) return prev;
                     return { ...prev, [url]: percent };
                 });
             }
         };
 
+        // Helper: returns true if any downloads are actively tracked
+        const hasActiveDownloads = () => Object.keys(activeDownloadsRef.current).length > 0;
+
         const onListingStarted = (data) => {
             //console.log("Listing started: ", data);
-            setIndeterminate(true);
-            progressRef.current = +data.percentage;
+            if (!hasActiveDownloads()) {
+                setIndeterminate(true);
+                progressRef.current = +data.percentage;
+            }
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
         };
 
         const onListingPlaylistComplete = (data) => {
             //console.log("Listing playlist done: ", data);
-            setIndeterminate(false);
-            progressRef.current = 0;
+            if (!hasActiveDownloads()) {
+                setIndeterminate(false);
+                progressRef.current = 0;
+            }
             setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
             const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
             const current = playListUrlRef.current;
@@ -288,8 +309,10 @@ export default function App() {
         };
 
         const onPlaylistSkipped = (data) => {
-            setIndeterminate(false);
-            progressRef.current = 0;
+            if (!hasActiveDownloads()) {
+                setIndeterminate(false);
+                progressRef.current = 0;
+            }
             setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
             addNotificationRef.current && addNotificationRef.current(`${data.message}`);
         };
@@ -319,8 +342,10 @@ export default function App() {
         };
 
         const onListingSingleItemComplete = (data) => {
-            setIndeterminate(false);
-            progressRef.current = 0;
+            if (!hasActiveDownloads()) {
+                setIndeterminate(false);
+                progressRef.current = 0;
+            }
             setReFetchSubList("listing-single-item-complete-" + data.url + "-" + nowTag());
 
             const current = playListUrlRef.current;
@@ -332,15 +357,19 @@ export default function App() {
         };
 
         const onListingError = (data) => {
-            setIndeterminate(false);
-            progressRef.current = 0;
+            if (!hasActiveDownloads()) {
+                setIndeterminate(false);
+                progressRef.current = 0;
+            }
             setSnackRef.current && setSnackRef.current(`${data.url}`, "error");
             addNotificationRef.current && addNotificationRef.current(`Failed Listing: ${data.url}`);
         };
 
         const onListingVideoSkippedBecauseDownloaded = (data) => {
-            setIndeterminate(false);
-            progressRef.current = 0;
+            if (!hasActiveDownloads()) {
+                setIndeterminate(false);
+                progressRef.current = 0;
+            }
             setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
             addNotificationRef.current && addNotificationRef.current(`${data.message}`);
         };
@@ -403,6 +432,7 @@ export default function App() {
         const progress = validCount > 0 ? total / validCount : progressRef.current;
         const values = keys.map(k => activeDownloads[k]).filter(v => !isNaN(v));
         const isIndet = indeterminate || (keys.length > 0 && values.length > 0 && values.every(v => v >= 101 || v === 0));
+        console.log("Progress", { progress, isIndet, keys, values });
         return { calculatedProgress: progress, isActuallyIndeterminate: isIndet };
     }, [activeDownloads, indeterminate]);
 
@@ -466,6 +496,7 @@ export default function App() {
                         setRowsPerPageSubList={setRowsPerPageSubList}
                         token={token}
                         setToken={setToken}
+                        activeDownloads={activeDownloads}
                     />
                 </Suspense>
             </Grid>
