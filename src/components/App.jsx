@@ -432,7 +432,7 @@ export default function App() {
         const progress = validCount > 0 ? total / validCount : progressRef.current;
         const values = keys.map(k => activeDownloads[k]).filter(v => !isNaN(v));
         const isIndet = indeterminate || (keys.length > 0 && values.length > 0 && values.every(v => v >= 101 || v === 0));
-        console.log("Progress", { progress, isIndet, keys, values });
+        //console.log("Progress", { progress, isIndet, keys, values });
         return { calculatedProgress: progress, isActuallyIndeterminate: isIndet };
     }, [activeDownloads, indeterminate]);
 

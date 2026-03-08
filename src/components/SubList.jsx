@@ -547,7 +547,9 @@ export default function SubList({
                                             image={
                                                 thumbUrls[thumb]
                                                     ? thumbUrls[thumb]
-                                                    : (baseUrl + backEnd + "/404.png")
+                                                    : meta.downloadStatus
+                                                        ? (baseUrl + backEnd + "/404.png")
+                                                        : (baseUrl + backEnd + "/204.png")
                                             }
                                             alt={meta.title}
                                             loading="lazy"
