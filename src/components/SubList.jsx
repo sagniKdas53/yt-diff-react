@@ -53,7 +53,7 @@ export default function SubList({
     token,
     setToken,
     setSnack,
-    progressRef
+    activeDownloads
 }) {
     // Query and sort state
     const [query, updateQuery] = useState("");
@@ -197,9 +197,9 @@ export default function SubList({
         } catch (error) {
             setSnack(`Error downloading file: ${error.message}`, "error");
             //console.error(`File download error: ${absolutePath}`, error.message);
-            if (progressRef && progressRef.current !== undefined) {
-                progressRef.current = 0;
-            }
+            // if (progressRef && progressRef.current !== undefined) {
+            //     progressRef.current = 0;
+            // }
         }
     }
 
@@ -752,7 +752,7 @@ SubList.propTypes = {
     token: PropTypes.string.isRequired,
     setToken: PropTypes.func.isRequired,
     setSnack: PropTypes.func.isRequired,
-    progressRef: PropTypes.object.isRequired,
+    activeDownloads: PropTypes.object.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download }) {

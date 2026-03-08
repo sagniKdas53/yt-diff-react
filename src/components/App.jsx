@@ -92,6 +92,7 @@ export default function App() {
     // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
+    const [activeDownloads, setActiveDownloads] = useState({});
     const progressRef = useRef(0);
     const notificationRef = useRef(0);
     const downloadedItem = useRef({ url: null, title: null, fileName: null, saveDirectory: null });
@@ -167,7 +168,7 @@ export default function App() {
     const setSnackRef = useRef(setSnack);
     useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
 
-    useDependencyLogger({ socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex }, "App");
+    useDependencyLogger({ socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex, activeDownloads }, "App");
 
     useEffect(() => {
         if (!socket) return; // guard
@@ -180,6 +181,7 @@ export default function App() {
             setConnectionId(data.id);
             setIndeterminate(false);
             progressRef.current = 0;
+            setActiveDownloads(prev => Object.keys(prev).length ? {} : prev);
             // call latest callback
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
             setSnackRef.current && setSnackRef.current("Connected: " + data.id, "success");
@@ -199,14 +201,26 @@ export default function App() {
         const onConnectionError = () => setSnackRef.current && setSnackRef.current("Max web-sockets reached", "error");
 
         const onDownloadStarted = (data) => {
-            setIndeterminate(true);
-            progressRef.current = +data.percentage;
+            // TODO: Remove the console.logs
+            console.log("[Socket] download-started", data);
+            const url = data.url || "unknown";
+            const percent = isNaN(+data.percentage) ? 0 : +data.percentage;
+            // No need to setIndeterminate(true) here! The calculation block below will handle it based on the queue state.
+            setActiveDownloads(prev => ({ ...prev, [url]: percent }));
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
         };
 
         const onDownloadDone = (data) => {
-            setIndeterminate(false);
-            progressRef.current = 0;
+            // TODO: Remove the console.logs
+            console.log("[Socket] download-done", data);
+            // Not sure if making this false is a good idea as other items could still be downloading,
+            // Once all the downloads are done the use-effct down the file will set it false (should?)
+            //setIndeterminate(false);
+            setActiveDownloads(prev => {
+                const newDownloads = { ...prev };
+                delete newDownloads[data.url];
+                return newDownloads;
+            });
             downloadedItem.current = {
                 url: data.url,
                 title: data.title,
@@ -222,20 +236,38 @@ export default function App() {
         };
 
         const onDownloadFailed = (data) => {
-            setIndeterminate(false);
-            progressRef.current = 0;
+            // TODO: Remove the console.logs
+            console.log("[Socket] download-failed", data);
+            //setIndeterminate(false);
+            setActiveDownloads(prev => {
+                const newDownloads = { ...prev };
+                delete newDownloads[data.url];
+                return newDownloads;
+            });
             setSnackRef.current && setSnackRef.current(`${data.title}`, "error");
             addNotificationRef.current && addNotificationRef.current(`Download Failed: ${data.title}`);
         };
 
         const onDownloadingPercentUpdate = (data) => {
-            // use the ref for disableProgress
-            if (data.percentage >= 99) {
-                setIndeterminate(true);
-                progressRef.current = 101;
+            // TODO: Remove the console.logs
+            console.log("[Socket] downloading-percent-update", data);
+            const url = data.url || "unknown";
+            const percent = parseFloat(data.percentage);
+
+            if (isNaN(percent)) return; // Ignore NaN updates to prevent breaking math
+
+            // Manipulating determinsm here seems like a bad idea as it gets updated far too often
+            if (percent >= 99) {
+                //setIndeterminate(true);
+                setActiveDownloads(prev => ({ ...prev, [url]: 100 }));
                 toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(true);
             } else if (!disableProgressRef.current) {
-                progressRef.current = data.percentage;
+                //setIndeterminate(false);
+                setActiveDownloads(prev => {
+                    // It finished downloading once (100) or is queued (101), ignore any post-processing reverse progress
+                    if (prev[url] >= 100 && prev[url] !== 101) return prev;
+                    return { ...prev, [url]: percent };
+                });
             }
         };
 
@@ -376,6 +408,33 @@ export default function App() {
         };
     }, [socket]); // only recreate if socket reference changes
 
+    // Calculate average progress and log it
+    // Filter out 'unknown' tasks that might be spurious, and ignore NaN values
+    const activeDownloadKeys = Object.keys(activeDownloads).filter(k => k !== "unknown" && k !== "listing");
+    let validCount = 0;
+    const totalProgress = activeDownloadKeys.reduce((acc, key) => {
+        const val = activeDownloads[key];
+        // Only include in average if it hasn't finished (99 cutoff usually, but safe checking > 100)
+        // If it's >= 101, it means it's queued/starting, so we shouldn't inflate the average.
+        if (!isNaN(val) && val <= 100) {
+            validCount++;
+            return acc + val;
+        }
+        return acc;
+    }, 0);
+
+    // If no active downloads, use progressRef for listing progress
+    const calculatedProgress = validCount > 0 ? totalProgress / validCount : progressRef.current;
+
+    // It's indeterminate if explicit indeterminate state is true, or if no active tasks have started downloading yet (all >=101)
+    const activeValues = activeDownloadKeys.map(k => activeDownloads[k]).filter(v => !isNaN(v));
+    const isActuallyIndeterminate = indeterminate || (activeDownloadKeys.length > 0 && activeValues.length > 0 && activeValues.every(v => v >= 101 || v === 0));
+
+    useEffect(() => {
+        console.log("[State] activeDownloads:", activeDownloads, "avgProgress:", calculatedProgress, "indeterminate:", isActuallyIndeterminate);
+    }, [activeDownloads, calculatedProgress, isActuallyIndeterminate]);
+
+    // UI renders
     // renders login/signup grid
     const renderAuth = () => (
         <Grid container spacing={0}>
@@ -456,13 +515,14 @@ export default function App() {
                         token={token}
                         setToken={setToken}
                         setSnack={setSnack}
-                        progressRef={progressRef}
+                        activeDownloads={activeDownloads}
                     />
                 </Suspense>
             </Grid>
         </Grid>
     );
 
+    // main app
     return (
         <ThemeProvider theme={themeObj(theme)}>
             <Box sx={{ margin: 0, padding: 0, bgcolor: "background.default", height: "100%", position: "relative" }}>
@@ -483,9 +543,9 @@ export default function App() {
                         <Box sx={{ width: "100%", height: progressBarHeight + "px" }}>
                             <LinearProgress
                                 sx={{ height: "100%", borderRadius: 0 }}
-                                variant={indeterminate ? "indeterminate" : "determinate"}
+                                variant={isActuallyIndeterminate ? "indeterminate" : "determinate"}
                                 color="secondary"
-                                value={progressRef.current}
+                                value={calculatedProgress}
                             />
                         </Box>
                     </Box>
