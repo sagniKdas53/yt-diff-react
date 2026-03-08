@@ -444,13 +444,13 @@ export default function PlayList({
                   direction={order === 1 ? "asc" : "desc"}
                   onClick={() => createSortHandler(3)}
                 >
-                  Updated
+                  Watch
                 </TableSortLabel>
               </TableCell>
               <TableCell
                 key="play-head-expand"
                 align="center"
-                style={{ paddingInline: "8px" }}
+                style={{ paddingInline: "8px", paddingTop: "4px" }}
               >
                 Load
               </TableCell>
