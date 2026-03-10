@@ -82,7 +82,7 @@ export default function App() {
     const [snackSeverity, setSnackSeverity] = useState("success");
 
     // progress bar and re-fetch state
-    const [indeterminate, setIndeterminate] = useState(false);
+    const [activeListingCount, setActiveListingCount] = useState(0);
     // so the basic idea of reFetch is to use the socket to trigger a re-fetch of the playlist 
     // and sub-list when an event needs to let the user know that something has changed
     // this is a bit of a hack, but it works, without it the app would need to poll 
@@ -93,7 +93,7 @@ export default function App() {
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
     const [activeDownloads, setActiveDownloads] = useState({});
-    const progressRef = useRef(0);
+
     const notificationRef = useRef(0);
     const downloadedItem = useRef({ url: null, title: null, fileName: null, saveDirectory: null });
 
@@ -178,6 +178,22 @@ export default function App() {
         });
     };
 
+    const activeListingCountRef = useRef(0);
+    const incrementListings = () => {
+        setActiveListingCount(prev => {
+            const next = prev + 1;
+            activeListingCountRef.current = next;
+            return next;
+        });
+    };
+    const decrementListings = () => {
+        setActiveListingCount(prev => {
+            const next = Math.max(0, prev - 1);
+            activeListingCountRef.current = next;
+            return next;
+        });
+    };
+
     useDependencyLogger({ socket, backEnd, reFetchPlaylist, reFetchSubList, token, playListUrl, subListIndex, playListIndex }, "App");
 
     useEffect(() => {
@@ -189,9 +205,12 @@ export default function App() {
         // Handlers (use refs for any "current" state / callbacks)
         const onInit = (data) => {
             setConnectionId(data.id);
-            setIndeterminate(false);
-            progressRef.current = 0;
+
             updateActiveDownloads(prev => Object.keys(prev).length ? {} : prev);
+            setActiveListingCount(prev => {
+                activeListingCountRef.current = 0;
+                return prev !== 0 ? 0 : prev;
+            });
             // call latest callback
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
             setSnackRef.current && setSnackRef.current("Connected: " + data.id, "success");
@@ -268,24 +287,16 @@ export default function App() {
             }
         };
 
-        // Helper: returns true if any downloads are actively tracked
-        const hasActiveDownloads = () => Object.keys(activeDownloadsRef.current).length > 0;
 
         const onListingStarted = (data) => {
             //console.log("Listing started: ", data);
-            if (!hasActiveDownloads()) {
-                setIndeterminate(true);
-                progressRef.current = +data.percentage;
-            }
+            incrementListings();
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
         };
 
         const onListingPlaylistComplete = (data) => {
             //console.log("Listing playlist done: ", data);
-            if (!hasActiveDownloads()) {
-                setIndeterminate(false);
-                progressRef.current = 0;
-            }
+            decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.playlistTitle}`, "success");
             const tag = "listing-playlist-complete-" + data.url + "-" + data.processedChunks + "-" + nowTag();
             const current = playListUrlRef.current;
@@ -309,10 +320,7 @@ export default function App() {
         };
 
         const onPlaylistSkipped = (data) => {
-            if (!hasActiveDownloads()) {
-                setIndeterminate(false);
-                progressRef.current = 0;
-            }
+            decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
             addNotificationRef.current && addNotificationRef.current(`${data.message}`);
         };
@@ -342,10 +350,7 @@ export default function App() {
         };
 
         const onListingSingleItemComplete = (data) => {
-            if (!hasActiveDownloads()) {
-                setIndeterminate(false);
-                progressRef.current = 0;
-            }
+            decrementListings();
             setReFetchSubList("listing-single-item-complete-" + data.url + "-" + nowTag());
 
             const current = playListUrlRef.current;
@@ -357,19 +362,13 @@ export default function App() {
         };
 
         const onListingError = (data) => {
-            if (!hasActiveDownloads()) {
-                setIndeterminate(false);
-                progressRef.current = 0;
-            }
+            decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.url}`, "error");
             addNotificationRef.current && addNotificationRef.current(`Failed Listing: ${data.url}`);
         };
 
         const onListingVideoSkippedBecauseDownloaded = (data) => {
-            if (!hasActiveDownloads()) {
-                setIndeterminate(false);
-                progressRef.current = 0;
-            }
+            decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
             addNotificationRef.current && addNotificationRef.current(`${data.message}`);
         };
@@ -420,7 +419,7 @@ export default function App() {
         };
     }, [socket]); // only recreate if socket reference changes
 
-    // Derive average progress and indeterminate state from active downloads
+    // Derive average progress and indeterminate state from active downloads and listings
     const { calculatedProgress, isActuallyIndeterminate } = useMemo(() => {
         const keys = Object.keys(activeDownloads).filter(k => k !== "unknown" && k !== "listing");
         let validCount = 0;
@@ -429,12 +428,13 @@ export default function App() {
             if (!isNaN(val) && val <= 100) { validCount++; return acc + val; }
             return acc;
         }, 0);
-        const progress = validCount > 0 ? total / validCount : progressRef.current;
+        const progress = validCount > 0 ? total / validCount : 0;
         const values = keys.map(k => activeDownloads[k]).filter(v => !isNaN(v));
-        const isIndet = indeterminate || (keys.length > 0 && values.length > 0 && values.every(v => v >= 101 || v === 0));
-        //console.log("Progress", { progress, isIndet, keys, values });
+        const allDownloadsWaiting = keys.length > 0 && values.length > 0 && values.every(v => v >= 101 || v === 0);
+        // Indeterminate when: listings are running with no active downloads, or all downloads are still queued/waiting
+        const isIndet = (activeListingCount > 0 && keys.length === 0) || allDownloadsWaiting;
         return { calculatedProgress: progress, isActuallyIndeterminate: isIndet };
-    }, [activeDownloads, indeterminate]);
+    }, [activeDownloads, activeListingCount]);
 
     // UI renders
     // renders login/signup grid
@@ -486,7 +486,6 @@ export default function App() {
                         playListIndex={playListIndex}
                         setPlayListIndex={setPlayListIndex}
                         disableButtons={false}
-                        setIndeterminate={setIndeterminate}
                         setSnack={setSnack}
                         reFetch={reFetchPlaylist}
                         setReFetch={setReFetchPlaylist}
@@ -496,7 +495,6 @@ export default function App() {
                         setRowsPerPageSubList={setRowsPerPageSubList}
                         token={token}
                         setToken={setToken}
-                        activeDownloads={activeDownloads}
                     />
                 </Suspense>
             </Grid>

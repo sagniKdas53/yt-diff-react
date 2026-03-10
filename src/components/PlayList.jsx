@@ -38,7 +38,6 @@ export default function PlayList({
   setPlayListUrl,
   playListUrl,
   backEnd,
-  setIndeterminate,
   setSnack,
   reFetch,
   setReFetch,
@@ -49,10 +48,8 @@ export default function PlayList({
   token,
   setToken,
   playListIndex,
-  setPlayListIndex,
-  activeDownloads
+  setPlayListIndex
 }) {
-  const hasActiveDownloads = () => Object.keys(activeDownloads).length > 0;
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == lastUpdatedByScheduler
   const [sort, updateSort] = useState(1);
@@ -115,7 +112,6 @@ export default function PlayList({
   };
 
   const submitUrlList = async () => {
-    if (!hasActiveDownloads()) setIndeterminate(true);
     setOpen(false);
     const valid = Array.from(new Set(urlList.trim().split("\n").filter(validate)));
     try {
@@ -134,12 +130,10 @@ export default function PlayList({
     try {
       const url = new URL(element);
       if (url.protocol !== "https:" && url.protocol !== "http:") {
-        if (!hasActiveDownloads()) setIndeterminate(false);
         setSnack("Invalid url: " + element, "error");
         return false;
       }
     } catch (error) {
-      if (!hasActiveDownloads()) setIndeterminate(false);
       setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
       return false;
     }
@@ -176,7 +170,6 @@ export default function PlayList({
       if (response.status === 401) {
         setSnack("Token expired please re-login", "error");
         setToken(null);
-        if (!hasActiveDownloads()) setIndeterminate(false);
       }
       return {};
     }
@@ -751,7 +744,6 @@ PlayList.propTypes = {
   setPlayListUrl: PropTypes.func.isRequired,
   playListUrl: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
-  setIndeterminate: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   setReFetch: PropTypes.func.isRequired,
@@ -763,5 +755,4 @@ PlayList.propTypes = {
   setToken: PropTypes.func.isRequired,
   playListIndex: PropTypes.number.isRequired,
   setPlayListIndex: PropTypes.func.isRequired,
-  activeDownloads: PropTypes.object.isRequired,
 };
