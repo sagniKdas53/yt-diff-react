@@ -330,7 +330,7 @@ export default function SubList({
                 .map((item) => {
                     const thumb = item.video_metadatum?.thumbNailFile;
                     if (thumb && thumbUrls[thumb] === undefined) {
-                        return { saveDirectory: playlistDirectory, fileName: thumb };
+                        return { saveDirectory: item.video_metadatum?.saveDirectory ?? playlistDirectory, fileName: thumb };
                     }
                     return null;
                 })
@@ -399,6 +399,7 @@ export default function SubList({
                                 thumbNailFile: downloadedItem.thumbNailFile || null,
                                 subTitleFile: downloadedItem.subTitleFile || null,
                                 descriptionFile: downloadedItem.descriptionFile || null,
+                                saveDirectory: downloadedItem.saveDirectory ?? item.video_metadatum.saveDirectory,
                             }
                         };
                     }
@@ -645,7 +646,7 @@ export default function SubList({
                                                 </Tooltip>
                                                 {meta.downloadStatus ? (
                                                     <Tooltip title="Download file">
-                                                        <IconButton onClick={() => getFileAndDownload(playlistDirectory, meta.fileName)} size="large">
+                                                        <IconButton onClick={() => getFileAndDownload(meta.saveDirectory ?? playlistDirectory, meta.fileName)} size="large">
                                                             <FileDownloadIcon color="success" sx={{ pt: 0.3 }} />
                                                         </IconButton>
                                                     </Tooltip>
