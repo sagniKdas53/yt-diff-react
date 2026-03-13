@@ -288,7 +288,9 @@ export default function App() {
         };
 
 
-        const onListingStarted = (data) => {
+        const onListingStarted = (
+            //data
+        ) => {
             //console.log("Listing started: ", data);
             incrementListings();
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
