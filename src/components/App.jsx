@@ -43,7 +43,7 @@ const themeObj = (theme) =>
             }
         },
         typography: {
-            fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
             button: {
                 textTransform: 'none', // Modern buttons don't use all-caps
                 fontWeight: 600,
