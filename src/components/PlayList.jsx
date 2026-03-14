@@ -401,7 +401,7 @@ export default function PlayList({
 
   return (
     <Box sx={{ width: "100%", overflow: "hidden", position: "relative", m: 0, p: 0 }}>
-      <TableContainer sx={{ height: tableContainerHeight }}>
+      <TableContainer sx={{ height: tableContainerHeight, overflowX: "auto" }}>
         <Table stickyHeader size="small" aria-label="a dense table">
           <TableHead>
             <TableRow>
@@ -422,7 +422,7 @@ export default function PlayList({
               <TableCell
                 key="play-head-title"
                 align="left"
-                sx={{ width: "75%" }}
+                sx={{ width: { xs: "50%", sm: "60%", md: "75%" } }}
                 style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
               >
                 <TextField
@@ -430,7 +430,7 @@ export default function PlayList({
                   label="Title"
                   variant="outlined"
                   size="small"
-                  sx={{ width: "100%" }}
+                  sx={{ width: "100%", minWidth: "150px" }}
                   onKeyUp={debouncedQuery}
                 />
               </TableCell>

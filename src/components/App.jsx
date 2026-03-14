@@ -29,17 +29,17 @@ const themeObj = (theme) =>
         palette: {
             mode: theme ? "light" : "dark",
             primary: {
-                main: theme ? "#4f46e5" : "#bb86fc", // Indigo in light mode
+                main: theme ? "#007acc" : "#bb86fc", // VS Code Blue in light mode
             },
             secondary: {
-                main: theme ? "#f59e0b" : "#03dac6", // Amber in light mode
+                main: theme ? "#267f99" : "#03dac6", // VS Code Cyan in light mode
             },
             success: {
                 main: "#10b981",
             },
             background: {
-                default: theme ? "#f3f4f6" : "#121212", // Light gray in light mode
-                paper: theme ? "#ffffff" : "#1e1e1e",
+                default: theme ? "#ffffff" : "#121212", // Pure white in light mode
+                paper: theme ? "#f3f3f3" : "#1e1e1e", // Light gray for paper
             }
         },
         typography: {
