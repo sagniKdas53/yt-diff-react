@@ -20,6 +20,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import { useTheme } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -35,7 +36,6 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
-
 // import { useRef } from "react";
 
 export default function PlayList({
@@ -114,6 +114,9 @@ export default function PlayList({
     setOpen(false);
     setWatch("N/A");
   };
+
+  // Responsive card media height using MUI breakpoints
+  const theme = useTheme();
 
   const submitUrlList = async () => {
     setOpen(false);
@@ -556,7 +559,9 @@ export default function PlayList({
                       color={playListUrl === element.playlistUrl ? "success" : "secondary"}
                       onClick={() => handleLoad(element.playlistUrl)}
                     >
-                      {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
+                      <Typography variant="body2" component="div" sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
+                        {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
+                      </Typography>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -674,6 +679,7 @@ export default function PlayList({
         </DialogActions>
       </Dialog>
       {/* Single Menu component outside the loop - this fixes the lag and wrong deletion */}
+
       <Menu
         id="long-menu"
         anchorEl={anchorEl}
@@ -683,7 +689,8 @@ export default function PlayList({
           paper: {
             style: {
               maxHeight: ITEM_HEIGHT * 4.5,
-              width: '20ch',
+              width: '23ch',
+              backgroundColor: theme.palette.background.menu,
             },
           },
           list: {
@@ -693,7 +700,7 @@ export default function PlayList({
       >
         {openMenuIndex !== null && options.map((option) => (
           <Box key={openMenuIndex + "-" + option[0]}>
-            {option[4] === 'everything' && <Divider variant="middle" component="li" />}
+            {option[4] === 'everything' && <Divider variant="middle" />}
             <MenuItem
               onClick={() => {
                 // close menu and open confirmation dialog with selected option
@@ -760,7 +767,7 @@ export default function PlayList({
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Box >
   );
 }
 
