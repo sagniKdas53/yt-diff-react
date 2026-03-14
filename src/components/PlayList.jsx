@@ -1,15 +1,16 @@
 import AddIcon from "@mui/icons-material/Add";
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
+import Divider from '@mui/material/Divider';
 import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
@@ -29,13 +30,11 @@ import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
+import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
-
-import { Typography } from "@mui/material";
-import debounce from "lodash.debounce";
 
 // import { useRef } from "react";
 
@@ -95,7 +94,7 @@ export default function PlayList({
   const options = [
     // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
     ["Delete playlist", false, true, false, "playlist", "warning"],
-    ["Delete videos", true, false, false, "videos", "warning"],
+    ["Unlink videos", true, false, false, "videos", "secondary"],
     ["Delete everything", true, true, true, "everything", "error"]
   ];
   const updateUrls = (event) => {
@@ -460,17 +459,17 @@ export default function PlayList({
             {items.map((element, index) => {
               const isMenuOpen = openMenuIndex === index;
               return (
-                <TableRow 
-                  hover 
-                  role="checkbox" 
-                  tabIndex={-1} 
+                <TableRow
+                  hover
+                  role="checkbox"
+                  tabIndex={-1}
                   key={index}
-                  sx={{ 
-                    transition: 'all 0.2s', 
-                    '&:hover': { 
+                  sx={{
+                    transition: 'all 0.2s',
+                    '&:hover': {
                       transform: 'scale(1.005)',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)' 
-                    } 
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                    }
                   }}
                 >
                   <TableCell
@@ -692,9 +691,9 @@ export default function PlayList({
           },
         }}
       >
-        {openMenuIndex !== null && options.map((option, index) => (
+        {openMenuIndex !== null && options.map((option) => (
           <Box key={openMenuIndex + "-" + option[0]}>
-            {option[4] === 'everything' && <Divider sx={{ my: 0.5 }} />}
+            {option[4] === 'everything' && <Divider variant="middle" component="li" />}
             <MenuItem
               onClick={() => {
                 // close menu and open confirmation dialog with selected option
@@ -705,15 +704,14 @@ export default function PlayList({
               }}
             >
               <ListItemIcon sx={{ color: option[5] + '.main', minWidth: '32px' }}>
-                {option[4] === 'playlist' && <DeleteOutlineIcon fontSize="small" />}
-                {option[4] === 'videos' && <DeleteSweepIcon fontSize="small" />}
+                {option[4] === 'playlist' && <DeleteIcon fontSize="small" />}
+                {option[4] === 'videos' && <DeleteOutlineIcon fontSize="small" />}
                 {option[4] === 'everything' && <DeleteForeverIcon fontSize="small" />}
               </ListItemIcon>
               <Typography
                 textAlign="left"
                 color={option[5]}
                 variant="button"
-                sx={{ fontWeight: option[4] === 'everything' ? 700 : 500 }}
               >
                 {option[0]}
               </Typography>
