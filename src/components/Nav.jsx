@@ -67,7 +67,7 @@ export default function Navigation({
                     <Button color="inherit" onClick={() => setPlayListUrl("None")}>
                         <ListAltIcon />
                         <Typography
-                            variant="caption"
+                            variant="button"
                             display={{ xs: "none", sm: "none", md: "block" }}
                         >
                             Unlisted
@@ -76,7 +76,7 @@ export default function Navigation({
                     <Button onClick={() => themeSwitcherHandler(!theme)} color="inherit">
                         {theme ? <DarkModeIcon /> : <LightModeIcon />}
                         <Typography
-                            variant="caption"
+                            variant="button"
                             display={{ xs: "none", sm: "none", md: "block" }}
                         >
                             {theme ? "Dark" : "Light"}
@@ -101,7 +101,7 @@ export default function Navigation({
                     >
                         {token ? <LogoutIcon /> : <LoginIcon />}
                         <Typography
-                            variant="caption"
+                            variant="button"
                             display={{ xs: "none", sm: "none", md: "block" }}
                         >
                             {token ? "Logout" : "Login"}
@@ -169,7 +169,7 @@ function NotificationDrawer({
                     {connectionId ? <LeakAddIcon /> : <LeakRemoveIcon />}
                 </Badge>
                 <Typography
-                    variant="caption"
+                    variant="button"
                     display={{ xs: "none", sm: "none", md: "block" }}
                 >
                     {connectionId ? "Connected" : "Disconnected"}

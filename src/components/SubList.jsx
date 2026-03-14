@@ -525,7 +525,7 @@ export default function SubList({
 
 
                 {/* Scrollable cards area */}
-                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto' }} aria-label="sub-list cards">
+                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto', paddingBottom: '80px' }} aria-label="sub-list cards">
                     <Grid container spacing={2} alignItems="stretch">
                         {items.map((element, index) => {
                             const meta = element.video_metadatum || {};
@@ -539,12 +539,21 @@ export default function SubList({
                                             display: "flex",
                                             flexDirection: "column",
                                             borderColor: 'divider',
-                                            minWidth: 125
+                                            minWidth: 125,
+                                            transition: 'all 0.2s',
+                                            '&:hover': {
+                                                transform: 'translateY(-4px)',
+                                                boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                                            }
                                         }}
                                     >
                                         <CardMedia
                                             component="img"
                                             height={mediaHeight}
+                                            sx={{
+                                                transition: 'all 0.3s',
+                                                '&:hover': { opacity: 0.9 }
+                                            }}
                                             image={
                                                 thumbUrls[thumb]
                                                     ? thumbUrls[thumb]
@@ -667,8 +676,8 @@ export default function SubList({
                     sx={{
                         zIndex: 50,
                         position: "absolute",
-                        bottom: "10%",
-                        right: "10%",
+                        bottom: "24px",
+                        right: "24px",
                     }}
                 >
                     <SubListFab

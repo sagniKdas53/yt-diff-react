@@ -29,14 +29,70 @@ const themeObj = (theme) =>
         palette: {
             mode: theme ? "light" : "dark",
             primary: {
-                main: "#3f51b5",
+                main: theme ? "#4f46e5" : "#bb86fc", // Indigo in light mode
             },
             secondary: {
-                main: theme ? "#03a9f4" : "#f50057",
+                main: theme ? "#f59e0b" : "#03dac6", // Amber in light mode
             },
             success: {
-                main: "#2CCB36",
+                main: "#10b981",
+            },
+            background: {
+                default: theme ? "#f3f4f6" : "#121212", // Light gray in light mode
+                paper: theme ? "#ffffff" : "#1e1e1e",
             }
+        },
+        typography: {
+            fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+            button: {
+                textTransform: 'none', // Modern buttons don't use all-caps
+                fontWeight: 600,
+                fontSize: '1rem',
+            },
+        },
+        shape: {
+            borderRadius: 8, // Friendlier border radius
+        },
+        components: {
+            MuiButton: {
+                styleOverrides: {
+                    root: {
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                            transform: 'translateY(-1px)',
+                        },
+                    },
+                },
+            },
+            MuiPaper: {
+                styleOverrides: {
+                    root: {
+                        backgroundImage: 'none', // Remove default MUI dark mode elevation overlay
+                        boxShadow: theme
+                            ? '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                            : '0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5)',
+                    },
+                },
+            },
+            MuiTableCell: {
+                styleOverrides: {
+                    root: {
+                        borderBottom: `1px solid ${theme ? '#e2e8f0' : '#334155'}`,
+                    },
+                },
+            },
+            MuiFab: {
+                styleOverrides: {
+                    root: {
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        transition: 'transform 0.2s ease-in-out',
+                        '&:hover': {
+                            transform: 'scale(1.05) translateY(-2px)',
+                            boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+                        },
+                    },
+                },
+            },
         },
     });
 

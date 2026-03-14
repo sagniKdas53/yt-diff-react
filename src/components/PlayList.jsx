@@ -1,16 +1,21 @@
 import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import Divider from "@mui/material/Divider";
 import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
+import ListItemIcon from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
@@ -88,10 +93,10 @@ export default function PlayList({
   };
   const ITEM_HEIGHT = 48;
   const options = [
-    // deleteAllVideosInPlaylist, deletePlaylist, cleanUp
-    ["Delete playlist", false, true, false],
-    ["Delete videos", true, false, false],
-    ["Delete everything", true, true, true]
+    // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
+    ["Delete playlist", false, true, false, "playlist", "warning"],
+    ["Delete videos", true, false, false, "videos", "warning"],
+    ["Delete everything", true, true, true, "everything", "error"]
   ];
   const updateUrls = (event) => {
     setUrlList(event.target.value);
@@ -455,7 +460,19 @@ export default function PlayList({
             {items.map((element, index) => {
               const isMenuOpen = openMenuIndex === index;
               return (
-                <TableRow hover role="checkbox" tabIndex={-1} key={index}>
+                <TableRow 
+                  hover 
+                  role="checkbox" 
+                  tabIndex={-1} 
+                  key={index}
+                  sx={{ 
+                    transition: 'all 0.2s', 
+                    '&:hover': { 
+                      transform: 'scale(1.005)',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)' 
+                    } 
+                  }}
+                >
                   <TableCell
                     key={element.sortOrder + "-order"}
                     align="left"
@@ -469,7 +486,7 @@ export default function PlayList({
                       m: 0,
                       p: 0
                     }}>
-                      <Typography variant="body2" component="div" sx={{ m: 0, p: 0 }}>
+                      <Typography variant="body2" component="div" sx={{ m: 0, p: 0, fontWeight: 600 }}>
                         {+element.sortOrder + 1}
                       </Typography>
                       <Tooltip title="Delete options">
@@ -552,8 +569,8 @@ export default function PlayList({
           sx={{
             zIndex: 50,
             position: "absolute",
-            bottom: "10%",
-            right: "10%",
+            bottom: "76px",
+            right: "24px",
           }}
         >
           <Fab
@@ -564,6 +581,8 @@ export default function PlayList({
             <AddIcon />
           </Fab>
         </Box>
+        {/* Invisible box to ensure padding at the bottom so the FAB does not block the last rows */}
+        <Box sx={{ minHeight: '80px' }}></Box>
       </TableContainer>
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
@@ -673,26 +692,33 @@ export default function PlayList({
           },
         }}
       >
-        {openMenuIndex !== null && options.map((option) => (
-          <MenuItem
-            key={openMenuIndex + "-" + option[0]}
-            selected={option[0] === 'Delete Playlist'}
-            onClick={() => {
-              // close menu and open confirmation dialog with selected option
-              handleCloseAnchor();
-              setConfirmIndex(openMenuIndex);
-              setConfirmOption(option);
-              setConfirmOpen(true);
-            }}
-          >
-            <Typography
-              textAlign="center"
-              color="error"
-              variant="button"
+        {openMenuIndex !== null && options.map((option, index) => (
+          <Box key={openMenuIndex + "-" + option[0]}>
+            {option[4] === 'everything' && <Divider sx={{ my: 0.5 }} />}
+            <MenuItem
+              onClick={() => {
+                // close menu and open confirmation dialog with selected option
+                handleCloseAnchor();
+                setConfirmIndex(openMenuIndex);
+                setConfirmOption(option);
+                setConfirmOpen(true);
+              }}
             >
-              {option[0]}
-            </Typography>
-          </MenuItem>
+              <ListItemIcon sx={{ color: option[5] + '.main', minWidth: '32px' }}>
+                {option[4] === 'playlist' && <DeleteOutlineIcon fontSize="small" />}
+                {option[4] === 'videos' && <DeleteSweepIcon fontSize="small" />}
+                {option[4] === 'everything' && <DeleteForeverIcon fontSize="small" />}
+              </ListItemIcon>
+              <Typography
+                textAlign="left"
+                color={option[5]}
+                variant="button"
+                sx={{ fontWeight: option[4] === 'everything' ? 700 : 500 }}
+              >
+                {option[0]}
+              </Typography>
+            </MenuItem>
+          </Box>
         ))}
       </Menu>
       {/* Confirmation dialog for delete operations */}
