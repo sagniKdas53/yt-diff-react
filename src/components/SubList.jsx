@@ -558,8 +558,8 @@ export default function SubList({
                                                 thumbUrls[thumb]
                                                     ? thumbUrls[thumb]
                                                     : meta.downloadStatus
-                                                        ? (baseUrl + backEnd + "/404.png")
-                                                        : (baseUrl + backEnd + "/204.png")
+                                                        ? (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png"))
+                                                        : (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/204-light.png" : "/204.png"))
                                             }
                                             alt={meta.title}
                                             loading="lazy"
