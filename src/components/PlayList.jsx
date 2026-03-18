@@ -470,7 +470,6 @@ export default function PlayList({
                   sx={{
                     transition: 'all 0.2s',
                     '&:hover': {
-                      transform: 'scale(1.005)',
                       boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
                     }
                   }}
@@ -569,25 +568,23 @@ export default function PlayList({
             })}
           </TableBody>
         </Table>
-        <Box
-          sx={{
-            zIndex: 50,
-            position: "absolute",
-            bottom: "76px",
-            right: "24px",
-          }}
-        >
-          <Fab
-            color="primary"
-            aria-label="action"
-            onClick={handleClickOpen}
-          >
-            <AddIcon />
-          </Fab>
-        </Box>
-        {/* Invisible box to ensure padding at the bottom so the FAB does not block the last rows */}
-        <Box sx={{ minHeight: '80px' }}></Box>
       </TableContainer>
+      <Box
+        sx={{
+          zIndex: 50,
+          position: "absolute",
+          bottom: "76px",
+          right: "24px",
+        }}
+      >
+        <Fab
+          color="primary"
+          aria-label="action"
+          onClick={handleClickOpen}
+        >
+          <AddIcon />
+        </Fab>
+      </Box>
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
         component="div"

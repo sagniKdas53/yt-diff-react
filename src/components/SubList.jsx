@@ -525,13 +525,13 @@ export default function SubList({
 
 
                 {/* Scrollable cards area */}
-                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto', paddingBottom: '80px' }} aria-label="sub-list cards">
+                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto' }} aria-label="sub-list cards">
                     <Grid container spacing={2} alignItems="stretch">
                         {items.map((element, index) => {
                             const meta = element.video_metadatum || {};
                             const thumb = meta.thumbNailFile || "";
                             return (
-                                <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={index}>
+                                <Grid item xs={12} sm={6} md={6} lg={3} key={index}>
                                     <Card
                                         variant="outlined"
                                         sx={{
@@ -542,7 +542,6 @@ export default function SubList({
                                             minWidth: 125,
                                             transition: 'all 0.2s',
                                             '&:hover': {
-                                                transform: 'translateY(-4px)',
                                                 boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
                                             }
                                         }}
@@ -550,10 +549,6 @@ export default function SubList({
                                         <CardMedia
                                             component="img"
                                             height={mediaHeight}
-                                            sx={{
-                                                transition: 'all 0.3s',
-                                                '&:hover': { opacity: 0.9 }
-                                            }}
                                             image={
                                                 thumbUrls[thumb]
                                                     ? thumbUrls[thumb]
