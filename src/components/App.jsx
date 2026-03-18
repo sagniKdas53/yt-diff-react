@@ -29,67 +29,63 @@ const themeObj = (theme) =>
         palette: {
             mode: theme ? "light" : "dark",
             primary: {
-                main: theme ? "#3f51b5" : "#e613b1ff",
+                main: theme ? "#455a64" : "#82b1ff",
             },
             secondary: {
-                main: theme ? "#03a9f4" : "#f50057",
+                main: theme ? "#5c6bc0" : "#b39ddb",
             },
             success: {
-                main: "#2CCB36",
+                main: theme ? "#43a047" : "#66bb6a",
             },
             background: {
-                default: theme ? "#ffffff" : "#121212",
-                paper: theme ? "#f3f3f3" : "#1e1e1e",
-                menu: theme ? "#d7dad9ff" : "#333030ff",
+                default: theme ? "#f5f5f5" : "#121212",
+                paper: theme ? "#ffffff" : "#242424",
+                menu: theme ? "#eceff1" : "#2e2e2e",
             }
         },
         typography: {
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
             button: {
-                textTransform: 'none', // Modern buttons don't use all-caps
+                textTransform: 'none',
                 fontWeight: 600,
                 fontSize: '1rem',
             },
         },
         shape: {
-            borderRadius: 8, // Friendlier border radius
+            borderRadius: 8,
         },
         components: {
             MuiButton: {
                 styleOverrides: {
                     root: {
-                        transition: 'all 0.2s ease-in-out',
-                        '&:hover': {
-                            transform: 'translateY(-1px)',
-                        },
+                        transition: 'background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
                     },
                 },
             },
             MuiPaper: {
                 styleOverrides: {
                     root: {
-                        backgroundImage: 'none', // Remove default MUI dark mode elevation overlay
+                        backgroundImage: 'none',
                         boxShadow: theme
-                            ? '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-                            : '0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5)',
+                            ? '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)'
+                            : '0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4)',
                     },
                 },
             },
             MuiTableCell: {
                 styleOverrides: {
                     root: {
-                        borderBottom: `1px solid ${theme ? '#e2e8f0' : '#334155'}`,
+                        borderBottom: `1px solid ${theme ? '#e0e0e0' : '#333333'}`,
                     },
                 },
             },
             MuiFab: {
                 styleOverrides: {
                     root: {
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                        transition: 'transform 0.2s ease-in-out',
+                        boxShadow: '0 3px 8px rgba(0,0,0,0.25)',
+                        transition: 'box-shadow 0.15s ease-in-out',
                         '&:hover': {
-                            transform: 'scale(1.05) translateY(-2px)',
-                            boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
                         },
                     },
                 },
