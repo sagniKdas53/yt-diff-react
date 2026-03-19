@@ -669,9 +669,17 @@ export default function PlayList({
             </FormControl>
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>Clear</Button>
+          <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>
+            <Typography sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
+              Clear
+            </Typography>
+          </Button>
           <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-            <Button variant="contained" onClick={submitUrlList} sx={{ float: "right" }}>Submit</Button>
+            <Button variant="contained" onClick={submitUrlList} sx={{ float: "right" }}>
+              <Typography sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
+                Submit
+              </Typography>
+            </Button>
           </Box>
         </DialogActions>
       </Dialog>
