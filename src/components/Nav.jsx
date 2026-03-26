@@ -69,7 +69,6 @@ export default function Navigation({
                         <Typography
                             variant="button"
                             display={{ xs: "none", sm: "none", md: "block" }}
-                            sx={{ m: 0, px: 0, pt: "5px", pb: 0 }}
                         >
                             Unlisted
                         </Typography>
@@ -79,7 +78,6 @@ export default function Navigation({
                         <Typography
                             variant="button"
                             display={{ xs: "none", sm: "none", md: "block" }}
-                            sx={{ m: 0, px: 0, pt: "5px", pb: 0 }}
                         >
                             {theme ? "Dark" : "Light"}
                         </Typography>
@@ -105,7 +103,6 @@ export default function Navigation({
                         <Typography
                             variant="button"
                             display={{ xs: "none", sm: "none", md: "block" }}
-                            sx={{ m: 0, px: 0, pt: "5px", pb: 0 }}
                         >
                             {token ? "Logout" : "Login"}
                         </Typography>
@@ -174,7 +171,6 @@ function NotificationDrawer({
                 <Typography
                     variant="button"
                     display={{ xs: "none", sm: "none", md: "block" }}
-                    sx={{ m: 0, px: 0, pt: "5px", pb: 0 }}
                 >
                     {connectionId ? "Connected" : "Disconnected"}
                 </Typography>

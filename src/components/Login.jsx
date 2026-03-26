@@ -174,18 +174,14 @@ export default function Login({
                 <Grid xs={12}>
                     <Button fullWidth variant="contained" color="primary"
                         sx={{ float: "right" }} onClick={handleLogin}>
-                        <Typography sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
-                            Login
-                        </Typography>
+                        Login
                     </Button>
                 </Grid>
                 {isSignUpEnabled && (
                     <Grid xs={12}>
                         <Button fullWidth variant="contained" color="primary"
                             sx={{ float: "right" }} onClick={() => toggleSignUpComponent(true)}>
-                            <Typography sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
-                                Sign Up
-                            </Typography>
+                            Sign Up
                         </Button>
                     </Grid>
                 )}

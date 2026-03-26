@@ -558,7 +558,7 @@ export default function PlayList({
                       color={playListUrl === element.playlistUrl ? "success" : "secondary"}
                       onClick={() => handleLoad(element.playlistUrl)}
                     >
-                      <Typography variant="body2" component="div" sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
+                      <Typography variant="body2" component="div">
                         {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
                       </Typography>
                     </Button>
@@ -670,15 +670,11 @@ export default function PlayList({
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>
-            <Typography sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
-              Clear
-            </Typography>
+            Clear
           </Button>
           <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
             <Button variant="contained" onClick={submitUrlList} sx={{ float: "right" }}>
-              <Typography sx={{ m: 0, px: 0, pt: "3px", pb: 0, fontWeight: 600 }}>
-                Submit
-              </Typography>
+              Submit
             </Button>
           </Box>
         </DialogActions>
