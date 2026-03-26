@@ -44,9 +44,8 @@ const themeObj = (theme) =>
             }
         },
         typography: {
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
+            fontFamily: '-apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", Ubuntu, Cantarell, "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
             button: {
-                textTransform: 'none',
                 fontWeight: 600,
                 fontSize: '1rem',
             },

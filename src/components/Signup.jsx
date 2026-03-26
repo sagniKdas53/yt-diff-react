@@ -116,13 +116,17 @@ export default function Signup({
                     <Box sx={{ flexGrow: 1 }}></Box>
                     <Button fullWidth variant="contained" color="primary"
                         sx={{ float: "right" }} onClick={handleSignup}>
-                        Sign Up
+                        <Typography variant="button">
+                            Sign Up
+                        </Typography>
                     </Button>
                 </Grid>
                 <Grid xs={12}>
                     <Button fullWidth variant="contained" color="primary"
                         sx={{ float: "right" }} onClick={() => toggleSignUpComponent(false)}>
-                        Login
+                        <Typography variant="button">
+                            Login
+                        </Typography>
                     </Button>
                 </Grid>
             </Grid>
