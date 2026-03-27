@@ -46,8 +46,7 @@ const themeObj = (theme) =>
         typography: {
             fontFamily: '-apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", Ubuntu, Cantarell, "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
             button: {
-                fontWeight: 600,
-                fontSize: '1rem',
+                fontWeight: 600
             },
         },
         shape: {
