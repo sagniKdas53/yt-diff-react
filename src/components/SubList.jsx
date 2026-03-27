@@ -304,8 +304,8 @@ export default function SubList({
     // useEffects  to load items
     // Fetch data when dependencies change
     useEffect(() => {
-        // Handle initial "init" playlist state
-        if (loadedPlayList === "init") {
+        // Handle initial "init" playlist state, unless doing a global search
+        if (loadedPlayList === "init" && !query.startsWith("global:")) {
             setItems([]);
             setItemCount(0);
             return;
