@@ -20,6 +20,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Fab from "@mui/material/Fab";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
 import Link from "@mui/material/Link";
 import { useTheme } from "@mui/material/styles";
 import Table from "@mui/material/Table";
@@ -58,6 +59,7 @@ export default function SubList({
     const [query, updateQuery] = useState("");
     const [sort, updateSort] = useState(false);
     // These are the controls
+    const [localQuery, setLocalQuery] = useState("");
     const [start, setStart] = useState(0);
     const [stop, setStop] = useState(8);
     const [page, setPage] = useState(0);
@@ -444,9 +446,20 @@ export default function SubList({
     }, [selectedItems]);
 
     const debouncedQuery = useMemo(
-        () => debounce((event) => updateQuery(event.target.value.trim()), 1000),
+        () => debounce((value) => updateQuery(value.trim()), 1000),
         []
     );
+
+    const handleQueryChange = (event) => {
+        setLocalQuery(event.target.value);
+        debouncedQuery(event.target.value);
+    };
+
+    const clearQuery = () => {
+        setLocalQuery("");
+        updateQuery("");
+        debouncedQuery.cancel();
+    };
 
     useEffect(() => {
         if (subListIndex === -1) {
@@ -500,8 +513,18 @@ export default function SubList({
                                     label="Title"
                                     variant="outlined"
                                     size="small"
+                                    value={localQuery}
+                                    onChange={handleQueryChange}
                                     sx={{ width: "100%" }}
-                                    onKeyUp={debouncedQuery}
+                                    InputProps={{
+                                        endAdornment: localQuery ? (
+                                            <InputAdornment position="end">
+                                                <IconButton size="small" onClick={clearQuery} edge="end">
+                                                    <ClearIcon fontSize="small" />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ) : null,
+                                    }}
                                 />
                             </TableCell>
                             <TableCell
@@ -510,8 +533,8 @@ export default function SubList({
                                 style={{ minWidth: 10 }}
                             >
                                 <TableSortLabel
-                                    active={sort}
-                                    direction={sort ? "asc" : "desc"}
+                                    active={true}
+                                    direction={sort ? "desc" : "asc"}
                                     onClick={handleSort}
                                     sx={{ paddingInlineStart: 2 }}
                                 >

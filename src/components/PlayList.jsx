@@ -3,6 +3,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ClearIcon from "@mui/icons-material/Clear";
 import { Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -14,6 +15,7 @@ import Divider from '@mui/material/Divider';
 import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -60,6 +62,7 @@ export default function PlayList({
   // 1 == ASC [Default], 2 == DESC
   const [order, updateOrder] = useState(1);
   // These are the controls
+  const [localQuery, setLocalQuery] = useState("");
   const [start, setStart] = useState(0);
   const [stop, setStop] = useState(10);
   const [page, setPage] = useState(0);
@@ -310,9 +313,20 @@ export default function PlayList({
   };
 
   const debouncedQuery = useMemo(
-    () => debounce((event) => updateQuery(event.target.value.trim()), 1000),
+    () => debounce((value) => updateQuery(value.trim()), 1000),
     []
   );
+
+  const handleQueryChange = (event) => {
+    setLocalQuery(event.target.value);
+    debouncedQuery(event.target.value);
+  };
+
+  const clearQuery = () => {
+    setLocalQuery("");
+    updateQuery("");
+    debouncedQuery.cancel();
+  };
 
   useEffect(() => {
     if (playListIndex === -1) {
@@ -432,8 +446,18 @@ export default function PlayList({
                   label="Title"
                   variant="outlined"
                   size="small"
+                  value={localQuery}
+                  onChange={handleQueryChange}
                   sx={{ width: "100%", minWidth: "150px" }}
-                  onKeyUp={debouncedQuery}
+                  InputProps={{
+                    endAdornment: localQuery ? (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={clearQuery} edge="end">
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  }}
                 />
               </TableCell>
               <TableCell
