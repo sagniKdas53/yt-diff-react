@@ -306,6 +306,7 @@ export default function App() {
                 saveDirectory: data.saveDirectory || null,
                 isMetaDataSynced: data.isMetaDataSynced || null,
                 thumbNailFile: data.thumbNailFile || null,
+                onlineThumbnail: data.onlineThumbnail || null,
                 subTitleFile: data.subTitleFile || null,
                 descriptionFile: data.descriptionFile || null,
             };

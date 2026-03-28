@@ -399,6 +399,7 @@ export default function SubList({
                                 fileName: downloadedItem.fileName,
                                 isMetaDataSynced: downloadedItem.isMetaDataSynced || null,
                                 thumbNailFile: downloadedItem.thumbNailFile || null,
+                                onlineThumbnail: downloadedItem.onlineThumbnail || item.video_metadatum.onlineThumbnail || null,
                                 subTitleFile: downloadedItem.subTitleFile || null,
                                 descriptionFile: downloadedItem.descriptionFile || null,
                                 saveDirectory: downloadedItem.saveDirectory ?? item.video_metadatum.saveDirectory,
@@ -575,9 +576,11 @@ export default function SubList({
                                             image={
                                                 thumbUrls[thumb]
                                                     ? thumbUrls[thumb]
-                                                    : meta.downloadStatus
-                                                        ? (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png"))
-                                                        : (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/204-light.png" : "/204.png"))
+                                                    : meta.onlineThumbnail
+                                                        ? meta.onlineThumbnail
+                                                        : meta.downloadStatus
+                                                            ? (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png"))
+                                                            : (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/204-light.png" : "/204.png"))
                                             }
                                             alt={meta.title}
                                             loading="lazy"
