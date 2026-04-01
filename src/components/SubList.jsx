@@ -5,6 +5,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import DownloadIcon from "@mui/icons-material/Download";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import CloseIcon from "@mui/icons-material/Close";
 import Box from "@mui/material/Box";
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -38,6 +40,7 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
+import VideoPlayer from "./VideoPlayer.jsx";
 
 export default function SubList({
     setPlayListUrl,
@@ -73,7 +76,11 @@ export default function SubList({
     // Confirmation dialog state for delete actions on sub list items
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmPayload, setConfirmPayload] = useState(null);
-    const baseUrl = import.meta.env.PROD ? window.location.origin : "";
+    const [playerOpen, setPlayerOpen] = useState(false);
+    const [currentPlayerSaveDir, setCurrentPlayerSaveDir] = useState("");
+    const [currentPlayerFileName, setCurrentPlayerFileName] = useState("");
+    const [currentPlayerVideoTitle, setCurrentPlayerVideoTitle] = useState("");
+    const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
     // const functions and normal functions
     const handleChangePage = useCallback(
         (_event, newPage) => {
@@ -119,6 +126,19 @@ export default function SubList({
         setPlaylistDirectory("init");
         handleChangePage(null, 0);
         setSubListIndex(0);
+    };
+
+    const openPlayer = (saveDir, fileName, title) => {
+        setCurrentPlayerSaveDir(saveDir);
+        setCurrentPlayerFileName(fileName);
+        setCurrentPlayerVideoTitle(title);
+        setPlayerOpen(true);
+    };
+
+    const closePlayer = () => {
+        setPlayerOpen(false);
+        setCurrentPlayerSaveDir("");
+        setCurrentPlayerFileName("");
     };
 
     function downloadFunc() {
@@ -184,13 +204,13 @@ export default function SubList({
             const data = await response.text();
             const json_data = JSON.parse(data);
             if (json_data.status === "success" && json_data.signedUrlId) {
-                // When on PROD use window.location.origin else use ""
+                // When on PROD use globalThis.location.origin else use ""
                 // the backEnd will have the correct path on dev
                 const downloadUrl = new URL(baseUrl + backEnd + "/getfile");
                 downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
                 //console.log("Opening download URL: ", downloadUrl.toString());
                 // open in new tab
-                window.open(downloadUrl.toString(), "_blank", "noopener,noreferrer");
+                globalThis.open(downloadUrl.toString(), "_blank", "noopener,noreferrer");
                 setSnack(`Download started: ${fileName}`, "success");
             } else {
                 setSnack(`Failed to get download URL`, "error");
@@ -295,7 +315,7 @@ export default function SubList({
                 }]);
                 setItemCount(1);
             }
-        } catch (error) {
+        } catch (_error) {
             if (!controller.signal.aborted) {
                 //console.error("Fetch error:", error);
             }
@@ -360,7 +380,7 @@ export default function SubList({
                 if (response.ok) {
                     const data = await response.json();
                     if (data.status === "success" && data.files) {
-                        const baseUrl = import.meta.env.PROD ? window.location.origin : "";
+                        const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
                         const updates = {};
                         Object.entries(data.files).forEach(([fileName, signedUrlId]) => {
                             if (signedUrlId) {
@@ -375,7 +395,7 @@ export default function SubList({
                     setSnack("Token expired please re-login", "error");
                     setToken(null);
                 }
-            } catch (error) {
+            } catch (_error) {
                 //console.error("Error fetching thumbnails:", error);
             }
         };
@@ -534,7 +554,7 @@ export default function SubList({
                                 style={{ minWidth: 10 }}
                             >
                                 <TableSortLabel
-                                    active={true}
+                                    active
                                     direction={sort ? "desc" : "asc"}
                                     onClick={handleSort}
                                     sx={{ paddingInlineStart: 2 }}
@@ -570,21 +590,44 @@ export default function SubList({
                                             }
                                         }}
                                     >
-                                        <CardMedia
-                                            component="img"
-                                            height={mediaHeight}
-                                            image={
-                                                thumbUrls[thumb]
-                                                    ? thumbUrls[thumb]
-                                                    : meta.onlineThumbnail
-                                                        ? meta.onlineThumbnail
-                                                        : meta.downloadStatus
-                                                            ? (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png"))
-                                                            : (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/204-light.png" : "/204.png"))
-                                            }
-                                            alt={meta.title}
-                                            loading="lazy"
-                                        />
+                                        <Box sx={{ position: 'relative', height: mediaHeight, width: '100%', bgcolor: 'black' }}>
+                                            <CardMedia
+                                                component="img"
+                                                height={mediaHeight}
+                                                image={
+                                                    thumbUrls[thumb]
+                                                        ? thumbUrls[thumb]
+                                                        : meta.onlineThumbnail
+                                                            ? meta.onlineThumbnail
+                                                            : meta.downloadStatus
+                                                                ? (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png"))
+                                                                : (baseUrl + backEnd + (theme.palette.mode === 'light' ? "/204-light.png" : "/204.png"))
+                                                }
+                                                alt={meta.title}
+                                                loading="lazy"
+                                                sx={{ opacity: meta.downloadStatus ? 0.7 : 1, objectFit: 'contain' }}
+                                            />
+                                            {meta.downloadStatus && (
+                                                <IconButton
+                                                    onClick={() => openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title)}
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: '50%',
+                                                        left: '50%',
+                                                        transform: 'translate(-50%, -50%)',
+                                                        color: 'white',
+                                                        backgroundColor: 'rgba(0,0,0,0.6)',
+                                                        backdropFilter: 'blur(4px)',
+                                                        '&:hover': {
+                                                            backgroundColor: 'rgba(25, 118, 210, 0.8)',
+                                                        }
+                                                    }}
+                                                    size="large"
+                                                >
+                                                    <PlayArrowIcon sx={{ fontSize: 40 }} />
+                                                </IconButton>
+                                            )}
+                                        </Box>
                                         <CardContent sx={{ flex: 1, my: 0, pb: 0 }}>
                                             <Typography variant="subtitle1" component="div" >
                                                 <Link
@@ -760,6 +803,31 @@ export default function SubList({
                         Confirm
                     </Button>
                 </DialogActions>
+            </Dialog>
+            <Dialog
+                fullScreen
+                open={playerOpen}
+                onClose={closePlayer}
+            >
+                <IconButton
+                    edge="start"
+                    color="inherit"
+                    onClick={closePlayer}
+                    aria-label="close"
+                    sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1300, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
+                >
+                    <CloseIcon />
+                </IconButton>
+                {playerOpen && (
+                    <VideoPlayer
+                        saveDirectory={currentPlayerSaveDir}
+                        fileName={currentPlayerFileName}
+                        title={currentPlayerVideoTitle}
+                        backEnd={backEnd}
+                        token={token}
+                        onClose={closePlayer}
+                    />
+                )}
             </Dialog>
         </>
     );
