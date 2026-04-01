@@ -273,12 +273,12 @@ export default function App() {
         };
 
         const onTokenExpired = () => {
-            setSnackRef.current && setSnackRef.current("Token Expired", "error");
+            setSnackRef.current && setSnackRef.current("Your session has expired.", "error");
             setToken(null);
             localStorage.setItem("ytdiff_token", "null");
         };
 
-        const onConnectionError = () => setSnackRef.current && setSnackRef.current("Max web-sockets reached", "error");
+        const onConnectionError = () => setSnackRef.current && setSnackRef.current("Server is currently at maximum capacity.", "error");
 
         const removeActiveDownload = (url) => {
             updateActiveDownloads(prev => {
@@ -370,7 +370,7 @@ export default function App() {
                 setPlayListIndex(data.seekPlaylistListTo);
             }
 
-            addNotificationRef.current && addNotificationRef.current(`Successful Added Playlist: ${data.playlistTitle}`);
+            addNotificationRef.current && addNotificationRef.current(`Successfully imported playlist: ${data.playlistTitle}`);
         };
 
         const onPlaylistSkipped = (data) => {
@@ -412,7 +412,7 @@ export default function App() {
                 setPlayListUrl("None");
                 setSubListIndex(data.seekSubListTo);
             }
-            addNotificationRef.current && addNotificationRef.current(`Successful Added Video: ${data.title}`);
+            addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`);
         };
 
         const onListingError = (data) => {
@@ -549,6 +549,7 @@ export default function App() {
                         setRowsPerPageSubList={setRowsPerPageSubList}
                         token={token}
                         setToken={setToken}
+                        addNotification={addNotification}
                     />
                 </Suspense>
             </Grid>
@@ -570,6 +571,7 @@ export default function App() {
                         token={token}
                         setToken={setToken}
                         setSnack={setSnack}
+                        addNotification={addNotification}
                     />
                 </Suspense>
             </Grid>

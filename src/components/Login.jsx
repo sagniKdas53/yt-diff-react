@@ -71,8 +71,8 @@ export default function Login({
             } else {
                 setSnack(`${data.message}`, "error");
             }
-        } catch (error) {
-            setSnack("Error in signing in", "error");
+        } catch (_error) {
+            setSnack("Login failed. Please check your credentials.", "error");
         }
     };
 
@@ -101,7 +101,7 @@ export default function Login({
             } else {
                 setSnack(`${data.message}`, "error");
             }
-        } catch (error) {
+        } catch (_error) {
             setSnack("Error in checking signup availability", "error");
         }
     };

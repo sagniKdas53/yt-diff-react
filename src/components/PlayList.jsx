@@ -54,7 +54,8 @@ export default function PlayList({
   token,
   setToken,
   playListIndex,
-  setPlayListIndex
+  setPlayListIndex,
+  addNotification
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == lastUpdatedByScheduler
@@ -128,9 +129,8 @@ export default function PlayList({
       // This response is sent for only the first item ie: 0th item
       await postUrlList(valid);
       //console.log("Response: ", response);
-    } catch (error) {
-      //console.error(error);
-      setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
+    } catch (_error) {
+      setSnack("Invalid URL format", "error");
     }
     setUrlList("");
     setWatch("N/A");
@@ -140,11 +140,11 @@ export default function PlayList({
     try {
       const url = new URL(element);
       if (url.protocol !== "https:" && url.protocol !== "http:") {
-        setSnack("Invalid url: " + element, "error");
+        setSnack("Invalid URL", "error");
         return false;
       }
-    } catch (error) {
-      setSnack("Problem parsing url: " + error.message.split(":")[1], "error");
+    } catch (_error) {
+      setSnack("Invalid URL format", "error");
       return false;
     }
     return true;
@@ -178,8 +178,10 @@ export default function PlayList({
       return json_data;
     } else {
       if (response.status === 401) {
-        setSnack("Token expired please re-login", "error");
+        setSnack("Session expired. Please log in again.", "error");
         setToken(null);
+      } else if (response.status === 429) {
+        setSnack("Too many requests. Please wait before queuing more.", "error");
       }
       return {};
     }
@@ -195,7 +197,7 @@ export default function PlayList({
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
   const deletePlaylist = async (playListUrlToDelete, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
-    setSnack(`Deleting: ${title}`, "info");
+    setSnack("Deleting playlist...", "info");
     const response = await fetch(backEnd + "/delplay", {
       method: "post",
       headers: {
@@ -217,7 +219,8 @@ export default function PlayList({
       const data = await response.text();
       const json_data = JSON.parse(data);
       //console.log("deletePlaylist response: ", json_data);
-      setSnack(`Deleted: ${title ? title : playListUrlToDelete}, ${json_data.message}`, "success");
+      setSnack("Playlist deleted successfully.", "success");
+      addNotification(`Deleted ${(title ? title : playListUrlToDelete)}. Details: ${json_data.message}`);
       // Do the refetch conditionally
       // Delete-playlist is not getting re-fetched
       setReFetch(`${playListUrlToDelete}-del-${new Date().getTime()}`);
@@ -235,7 +238,7 @@ export default function PlayList({
       }
     }
     if (!response.ok) {
-      setSnack(`Failed to delete: ${title ? title : playListUrlToDelete}`, "error");
+      setSnack("Failed to delete playlist.", "error");
     }
   }
 
@@ -264,7 +267,7 @@ export default function PlayList({
       return json_data;
     } else {
       if (response.status === 401) {
-        setSnack("Token expired please re-login", "error");
+        setSnack("Session expired. Please log in again.", "error");
         setToken(null);
       }
 
@@ -371,7 +374,7 @@ export default function PlayList({
       }
     } else {
       if (response.status === 401) {
-        setSnack("Token expired please re-login", "error");
+        setSnack("Session expired. Please log in again.", "error");
         setToken(null);
       }
     }

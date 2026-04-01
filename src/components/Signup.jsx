@@ -54,13 +54,13 @@ export default function Signup({
         // Propagate it to the main app
         try {
             if (response.ok) {
-                setSnack("Signed up successfully", "success");
+                setSnack("Account successfully created.", "success");
                 toggleSignUpComponent(false);
             } else {
                 setSnack(`${data.message}`, "error");
             }
-        } catch (error) {
-            setSnack("Error in signing up", "error");
+        } catch (_error) {
+            setSnack("Signup failed.", "error");
         }
     };
 

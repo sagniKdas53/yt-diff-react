@@ -56,7 +56,8 @@ export default function SubList({
     setRowsPerPage,
     token,
     setToken,
-    setSnack
+    setSnack,
+    addNotification
 }) {
     // Query and sort state
     const [query, updateQuery] = useState("");
@@ -158,11 +159,13 @@ export default function SubList({
             }),
         }).then((response) => {
             if (response.ok) {
-                setSnack("Download started", "success");
+                setSnack("Initiated download...", "success");
             }
             if (response.status === 401) {
-                setSnack("Token expired please re-login", "error");
+                setSnack("Session expired. Please log in again.", "error");
                 setToken(null);
+            } else if (response.status === 429) {
+                setSnack("Too many downloads requested. Please wait.", "error");
             }
         })
     }
@@ -191,7 +194,7 @@ export default function SubList({
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    setSnack("Token expired please re-login", "error");
+                    setSnack("Session expired. Please log in again.", "error");
                     setToken(null);
                 } else {
                     const text = await response.json().catch(() => response.statusText);
@@ -253,7 +256,8 @@ export default function SubList({
             ),
         });
         if (response.ok) {
-            setSnack(`Deleted: ${title ? title : videoUrl}`, "success");
+            setSnack("Video deleted successfully.", "success");
+            addNotification(`Deleted ${(title ? title : videoUrl)}`);
             //console.log(`Deleted: ${videoUrl}`);
             setReFetch("delete-sublist-item" + playListUrl + videoUrl + Date.now().toString());
             setSubListIndex(start); // Reset to start index after deletion
@@ -301,7 +305,7 @@ export default function SubList({
                 setItemCount(parseInt(json_data["count"]));
             } else {
                 if (response.status === 401) {
-                    setSnack("Token expired please re-login", "error");
+                    setSnack("Session expired. Please log in again.", "error");
                     setToken(null);
                 }
                 setItems([{
@@ -392,7 +396,7 @@ export default function SubList({
                         setThumbUrls(prev => ({ ...prev, ...updates }));
                     }
                 } else if (response.status === 401) {
-                    setSnack("Token expired please re-login", "error");
+                    setSnack("Session expired. Please log in again.", "error");
                     setToken(null);
                 }
             } catch (_error) {
