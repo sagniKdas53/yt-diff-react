@@ -58,6 +58,7 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const pipSupported = "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
 
     const videoRef = useRef(null);
     const containerRef = useRef(null);
@@ -362,9 +363,11 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                         />
                     </Stack>
 
-                    <IconButton size="small" onClick={togglePiP} title="Picture in Picture" sx={{ color: "white" }}>
-                        <PictureInPictureAltIcon />
-                    </IconButton>
+                    {pipSupported && (
+                        <IconButton size="small" onClick={togglePiP} title="Picture in Picture" sx={{ color: "white" }}>
+                            <PictureInPictureAltIcon />
+                        </IconButton>
+                    )}
                     <IconButton size="small" onClick={handleOpenInNewTab} title="Open in New Tab" sx={{ color: "white" }}>
                         <OpenInNewIcon />
                     </IconButton>
