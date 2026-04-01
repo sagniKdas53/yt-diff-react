@@ -264,7 +264,7 @@ export default function App() {
             });
             // call latest callback
             toggleProgressCallBackRef.current && toggleProgressCallBackRef.current(false);
-            setSnackRef.current && setSnackRef.current("Connected: " + data.id, "success");
+            setSnackRef.current && setSnackRef.current("Connected to Backend", "success");
             socket.emit("acknowledge", { data: "Connected", id: data.id });
         };
 
