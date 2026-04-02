@@ -435,7 +435,7 @@ export default function VideoPlayer({
     const handleError = (_e) => {
         const vid = videoRef.current;
         if (!vid) return;
-        if (vid.error && (vid.error.code === 4 || vid.error.code === 3)) {
+        if (vid.error && (vid.error.code === 2 || vid.error.code === 3 || vid.error.code === 4)) {
             vid.pause();
             const time = vid.currentTime;
             fetchSignedUrl(true, time);
