@@ -30,12 +30,12 @@ import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import PictureInPictureAltIcon from "@mui/icons-material/PictureInPictureAlt";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
-import SyncDisabledIcon from "@mui/icons-material/SyncDisabled";
 
 import { styled, useTheme } from "@mui/material/styles";
 
-const ControlBar = styled(Box)(({ theme, show }) => ({
+const ControlBar = styled(Box, {
+    shouldForwardProp: (prop) => prop !== "show",
+})(({ theme, show }) => ({
     position: "absolute",
     bottom: 0,
     left: 0,
@@ -48,7 +48,9 @@ const ControlBar = styled(Box)(({ theme, show }) => ({
     zIndex: 2,
 }));
 
-const TopBar = styled(Box)(({ theme, show }) => ({
+const TopBar = styled(Box, {
+    shouldForwardProp: (prop) => prop !== "show",
+})(({ theme, show }) => ({
     position: "absolute",
     top: 0,
     left: 0,
@@ -62,8 +64,7 @@ const TopBar = styled(Box)(({ theme, show }) => ({
     pointerEvents: show ? "auto" : "none",
     zIndex: 2,
 }));
-
-const AutoPlaySwitch = styled(Switch)(({ theme }) => ({
+const AutoPlaySwitch = styled(Switch)(() => ({
   width: 42,
   height: 24,
   padding: 0,
