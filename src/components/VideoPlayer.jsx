@@ -13,6 +13,8 @@ import ListItemText from "@mui/material/ListItemText";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
@@ -61,6 +63,51 @@ const TopBar = styled(Box)(({ theme, show }) => ({
     zIndex: 2,
 }));
 
+const AutoPlaySwitch = styled(Switch)(({ theme }) => ({
+  width: 42,
+  height: 24,
+  padding: 0,
+  display: 'flex',
+  '& .MuiSwitch-switchBase': {
+    padding: 2,
+    '&.Mui-checked': {
+      transform: 'translateX(18px)',
+      color: '#fff',
+      '& + .MuiSwitch-track': {
+        opacity: 1,
+        backgroundColor: '#fff',
+      },
+      '& .MuiSwitch-thumb': {
+        backgroundColor: '#000',
+        '&:before': {
+          backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24"><path fill="white" d="M8 5v14l11-7z"/></svg>')`,
+        },
+      },
+    },
+  },
+  '& .MuiSwitch-thumb': {
+    width: 20,
+    height: 20,
+    backgroundColor: '#fff',
+    '&:before': {
+      content: "''",
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      left: 0,
+      top: 0,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24"><path fill="%23000" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>')`,
+    },
+  },
+  '& .MuiSwitch-track': {
+    borderRadius: 24 / 2,
+    opacity: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+}));
+
 export default function VideoPlayer({
     saveDirectory,
     fileName,
@@ -86,12 +133,22 @@ export default function VideoPlayer({
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [showControls, setShowControls] = useState(true);
-    const [volume, setVolume] = useState(1);
-    const [isMuted, setIsMuted] = useState(false);
+    const [volume, setVolume] = useState(() => {
+        const saved = localStorage.getItem("ytdiff_player_volume");
+        return saved !== null ? parseFloat(saved) : 1;
+    });
+    const [isMuted, setIsMuted] = useState(() => {
+        const saved = localStorage.getItem("ytdiff_player_muted");
+        return saved === "true";
+    });
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
+    const [autoPlayEnabled, setAutoPlayEnabled] = useState(() => {
+        const saved = localStorage.getItem("ytdiff_player_autoplay");
+        return saved === "true";
+    });
     const [pendingNextPage, setPendingNextPage] = useState(false);
+    const [pendingPrevPage, setPendingPrevPage] = useState(false);
 
     const pipSupported = "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
 
@@ -101,6 +158,8 @@ export default function VideoPlayer({
     const expiryRef = useRef(null);
     const timerRef = useRef(null);
     const controlsTimeoutRef = useRef(null);
+    const itemsAtTimeOfNext = useRef(null);
+    const itemsAtTimeOfPrev = useRef(null);
 
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
 
@@ -225,6 +284,7 @@ export default function VideoPlayer({
         if (videoRef.current) {
             videoRef.current.muted = !isMuted;
             setIsMuted(!isMuted);
+            localStorage.setItem("ytdiff_player_muted", !isMuted);
         }
     };
 
@@ -234,6 +294,8 @@ export default function VideoPlayer({
             videoRef.current.volume = value;
         }
         setIsMuted(value === 0);
+        localStorage.setItem("ytdiff_player_volume", value);
+        localStorage.setItem("ytdiff_player_muted", value === 0);
     };
 
     const toggleFullscreen = () => {
@@ -283,6 +345,7 @@ export default function VideoPlayer({
         // Hit the end of current page, request next page if available
         if (start + items.length < itemCount && setPage) {
             setPage(page + 1);
+            itemsAtTimeOfNext.current = items;
             setPendingNextPage(true);
         }
     }, [currentPlayerIndex, items, itemCount, openPlayer, page, playlistDirectory, setPage, start]);
@@ -296,7 +359,20 @@ export default function VideoPlayer({
                 return;
             }
         }
-    }, [currentPlayerIndex, items, openPlayer, playlistDirectory]);
+        
+        // If we reach the beginning of the page, request the previous page if available
+        if (page > 0 && setPage) {
+            setPage(page - 1);
+            itemsAtTimeOfPrev.current = items;
+            setPendingPrevPage(true);
+        }
+    }, [currentPlayerIndex, items, openPlayer, page, playlistDirectory, setPage]);
+
+    const toggleAutoPlay = () => {
+        const newVal = !autoPlayEnabled;
+        setAutoPlayEnabled(newVal);
+        localStorage.setItem("ytdiff_player_autoplay", newVal);
+    };
 
     const handleVideoEnded = () => {
         setIsPlaying(false);
@@ -307,19 +383,30 @@ export default function VideoPlayer({
 
     // Auto-resume across pagination
     useEffect(() => {
-        if (pendingNextPage && items && items.length > 0 && openPlayer) {
-            let found = false;
+        if (pendingNextPage && items !== itemsAtTimeOfNext.current && items && items.length > 0 && openPlayer) {
             for (let i = 0; i < items.length; i++) {
                 const meta = items[i].video_metadatum || {};
                 if (meta.downloadStatus) {
                     openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, i);
-                    found = true;
                     break;
                 }
             }
             setPendingNextPage(false);
+            itemsAtTimeOfNext.current = null;
         }
-    }, [items, pendingNextPage, openPlayer, playlistDirectory]);
+
+        if (pendingPrevPage && items !== itemsAtTimeOfPrev.current && items && items.length > 0 && openPlayer) {
+            for (let i = items.length - 1; i >= 0; i--) {
+                const meta = items[i].video_metadatum || {};
+                if (meta.downloadStatus) {
+                    openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, i);
+                    break;
+                }
+            }
+            setPendingPrevPage(false);
+            itemsAtTimeOfPrev.current = null;
+        }
+    }, [items, pendingNextPage, pendingPrevPage, openPlayer, playlistDirectory]);
 
     useEffect(() => {
         fetchSignedUrl();
@@ -330,6 +417,13 @@ export default function VideoPlayer({
         // Dependency on saveDirectory/fileName forces refresh on track change
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saveDirectory, fileName]);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.volume = volume;
+            videoRef.current.muted = isMuted;
+        }
+    }, [videoUrl]);
 
     const handleError = (_e) => {
         const vid = videoRef.current;
@@ -390,9 +484,11 @@ export default function VideoPlayer({
                     {truncatedTitle}
                 </Typography>
                 <Tooltip title={autoPlayEnabled ? "Auto-Play is ON" : "Auto-Play is OFF"}>
-                    <IconButton onClick={() => setAutoPlayEnabled(!autoPlayEnabled)} sx={{ color: autoPlayEnabled ? "#4caf50" : "rgba(255,255,255,0.5)" }}>
-                        {autoPlayEnabled ? <AutorenewIcon /> : <SyncDisabledIcon />}
-                    </IconButton>
+                    <FormControlLabel
+                        control={<AutoPlaySwitch checked={autoPlayEnabled} onChange={toggleAutoPlay} sx={{ ml: 2, mr: 1 }} />}
+                        label=""
+                        sx={{ margin: 0 }}
+                    />
                 </Tooltip>
                 <Tooltip title="Playlist">
                     <IconButton onClick={() => setDrawerOpen((prev) => !prev)} sx={{ color: drawerOpen ? "#1976d2" : "white", ml: 1 }}>
