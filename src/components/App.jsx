@@ -150,12 +150,12 @@ export default function App() {
 
     // socket setup
     const socket = useMemo(() => {
-        // for some reason socket.io likes to take base and path separately
-        const sock = io.connect(base, { path: path + "/socket.io" });
-        if (token) {
-            sock.auth = { token };
-            sock.connect();
-        }
+        if (!token) return null;
+        const sock = io(base, {
+            path: path + "/socket.io",
+            auth: { token },
+            forceNew: true
+        });
         return sock;
     }, [token]);
 
@@ -165,15 +165,16 @@ export default function App() {
     const appBarHeight = 48;
     const tablePaginationHeight = 52;
     const adjust = tablePaginationHeight + appBarHeight + progressBarHeight;
-    const [tableContainerHeight, setTableContainerHeight] = useState(window.innerHeight - adjust);
+    // TODO: Analyze if globalThis is better than window
+    const [tableContainerHeight, setTableContainerHeight] = useState(globalThis.innerHeight - adjust);
     const fullHeight = `${tableContainerHeight + 52}px`;
 
     useEffect(() => {
         function handleResize() {
-            setTableContainerHeight(window.innerHeight - adjust);
+            setTableContainerHeight(globalThis.innerHeight - adjust);
         }
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
+        globalThis.addEventListener("resize", handleResize);
+        return () => globalThis.removeEventListener("resize", handleResize);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -466,9 +467,9 @@ export default function App() {
                 socket.off("listing-error", onListingError);
                 socket.off("listing-playlist-skipped-because-same-monitoring", onPlaylistSkipped);
                 socket.off("listing-video-skipped-because-downloaded", onListingVideoSkippedBecauseDownloaded);
-            } catch (e) {
+            } catch (_e) {
                 // socket might already be closed; ignore
-                //console.warn("Error removing socket listeners", e);
+                //console.warn("Error removing socket listeners", _e);
             }
         };
     }, [socket]); // only recreate if socket reference changes
