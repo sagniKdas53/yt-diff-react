@@ -81,6 +81,7 @@ export default function SubList({
     const [currentPlayerSaveDir, setCurrentPlayerSaveDir] = useState("");
     const [currentPlayerFileName, setCurrentPlayerFileName] = useState("");
     const [currentPlayerVideoTitle, setCurrentPlayerVideoTitle] = useState("");
+    const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
     // const functions and normal functions
     const handleChangePage = useCallback(
@@ -129,10 +130,11 @@ export default function SubList({
         setSubListIndex(0);
     };
 
-    const openPlayer = (saveDir, fileName, title) => {
+    const openPlayer = (saveDir, fileName, title, index) => {
         setCurrentPlayerSaveDir(saveDir);
         setCurrentPlayerFileName(fileName);
         setCurrentPlayerVideoTitle(title);
+        setCurrentPlayerIndex(index);
         setPlayerOpen(true);
     };
 
@@ -140,6 +142,7 @@ export default function SubList({
         setPlayerOpen(false);
         setCurrentPlayerSaveDir("");
         setCurrentPlayerFileName("");
+        setCurrentPlayerIndex(-1);
     };
 
     function downloadFunc() {
@@ -613,7 +616,7 @@ export default function SubList({
                                             />
                                             {meta.downloadStatus && (
                                                 <IconButton
-                                                    onClick={() => openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title)}
+                                                    onClick={() => openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, index)}
                                                     sx={{
                                                         position: 'absolute',
                                                         top: '50%',
@@ -813,15 +816,6 @@ export default function SubList({
                 open={playerOpen}
                 onClose={closePlayer}
             >
-                <IconButton
-                    edge="start"
-                    color="inherit"
-                    onClick={closePlayer}
-                    aria-label="close"
-                    sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1300, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
-                >
-                    <CloseIcon />
-                </IconButton>
                 {playerOpen && (
                     <VideoPlayer
                         saveDirectory={currentPlayerSaveDir}
@@ -830,6 +824,16 @@ export default function SubList({
                         backEnd={backEnd}
                         token={token}
                         onClose={closePlayer}
+                        items={items}
+                        itemCount={itemCount}
+                        page={page}
+                        start={start}
+                        currentPlayerIndex={currentPlayerIndex}
+                        setCurrentPlayerIndex={setCurrentPlayerIndex}
+                        setPage={(newPage) => handleChangePage(null, newPage)}
+                        openPlayer={openPlayer}
+                        playlistDirectory={playlistDirectory}
+                        thumbUrls={thumbUrls}
                     />
                 )}
             </Dialog>

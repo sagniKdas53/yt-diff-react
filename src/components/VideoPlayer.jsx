@@ -6,8 +6,19 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
+import Drawer from "@mui/material/Drawer";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import ListItemAvatar from "@mui/material/ListItemAvatar";
+import Avatar from "@mui/material/Avatar";
+import Tooltip from "@mui/material/Tooltip";
+
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
+import SkipNextIcon from "@mui/icons-material/SkipNext";
+import SkipPreviousIcon from "@mui/icons-material/SkipPrevious";
+import QueueMusicIcon from "@mui/icons-material/QueueMusic";
 import Replay10Icon from "@mui/icons-material/Replay10";
 import Forward10Icon from "@mui/icons-material/Forward10";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
@@ -17,7 +28,10 @@ import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import PictureInPictureAltIcon from "@mui/icons-material/PictureInPictureAlt";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { styled } from "@mui/material/styles";
+import AutorenewIcon from "@mui/icons-material/Autorenew";
+import SyncDisabledIcon from "@mui/icons-material/SyncDisabled";
+
+import { styled, useTheme } from "@mui/material/styles";
 
 const ControlBar = styled(Box)(({ theme, show }) => ({
     position: "absolute",
@@ -47,7 +61,24 @@ const TopBar = styled(Box)(({ theme, show }) => ({
     zIndex: 2,
 }));
 
-export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, token, onClose }) {
+export default function VideoPlayer({
+    saveDirectory,
+    fileName,
+    title,
+    backEnd,
+    token,
+    onClose,
+    items = [],
+    itemCount = 0,
+    page = 0,
+    start = 0,
+    currentPlayerIndex = -1,
+    setPage,
+    openPlayer,
+    playlistDirectory,
+    thumbUrls = {}
+}) {
+    const theme = useTheme();
     const [videoUrl, setVideoUrl] = useState(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
@@ -58,6 +89,10 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
+    const [pendingNextPage, setPendingNextPage] = useState(false);
+
     const pipSupported = "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
 
     const videoRef = useRef(null);
@@ -164,11 +199,12 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
         setShowControls(true);
         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         controlsTimeoutRef.current = setTimeout(() => {
-            if (isPlaying) setShowControls(false);
+            if (isPlaying && !drawerOpen) setShowControls(false);
         }, 3000);
     };
 
     const togglePlay = () => {
+        if (!videoRef.current) return;
         if (videoRef.current.paused) {
             videoRef.current.play();
             setIsPlaying(true);
@@ -179,18 +215,24 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
     };
 
     const handleSeek = (_, value) => {
-        videoRef.current.currentTime = value;
-        setCurrentTime(value);
+        if (videoRef.current) {
+            videoRef.current.currentTime = value;
+            setCurrentTime(value);
+        }
     };
 
     const toggleMute = () => {
-        videoRef.current.muted = !isMuted;
-        setIsMuted(!isMuted);
+        if (videoRef.current) {
+            videoRef.current.muted = !isMuted;
+            setIsMuted(!isMuted);
+        }
     };
 
     const handleVolumeChange = (_, value) => {
         setVolume(value);
-        videoRef.current.volume = value;
+        if (videoRef.current) {
+            videoRef.current.volume = value;
+        }
         setIsMuted(value === 0);
     };
 
@@ -223,8 +265,61 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
     };
 
     const skip = (amount) => {
-        videoRef.current.currentTime += amount;
+        if (videoRef.current) {
+            videoRef.current.currentTime += amount;
+        }
     };
+
+    // --- Playlist Navigation Logic ---
+    const handleNext = useCallback(() => {
+        if (!openPlayer) return;
+        for (let i = currentPlayerIndex + 1; i < items.length; i++) {
+            const meta = items[i].video_metadatum || {};
+            if (meta.downloadStatus) {
+                openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, i);
+                return;
+            }
+        }
+        // Hit the end of current page, request next page if available
+        if (start + items.length < itemCount && setPage) {
+            setPage(page + 1);
+            setPendingNextPage(true);
+        }
+    }, [currentPlayerIndex, items, itemCount, openPlayer, page, playlistDirectory, setPage, start]);
+
+    const handlePrev = useCallback(() => {
+        if (!openPlayer) return;
+        for (let i = currentPlayerIndex - 1; i >= 0; i--) {
+            const meta = items[i].video_metadatum || {};
+            if (meta.downloadStatus) {
+                openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, i);
+                return;
+            }
+        }
+    }, [currentPlayerIndex, items, openPlayer, playlistDirectory]);
+
+    const handleVideoEnded = () => {
+        setIsPlaying(false);
+        if (autoPlayEnabled) {
+            handleNext();
+        }
+    };
+
+    // Auto-resume across pagination
+    useEffect(() => {
+        if (pendingNextPage && items && items.length > 0 && openPlayer) {
+            let found = false;
+            for (let i = 0; i < items.length; i++) {
+                const meta = items[i].video_metadatum || {};
+                if (meta.downloadStatus) {
+                    openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, i);
+                    found = true;
+                    break;
+                }
+            }
+            setPendingNextPage(false);
+        }
+    }, [items, pendingNextPage, openPlayer, playlistDirectory]);
 
     useEffect(() => {
         fetchSignedUrl();
@@ -232,6 +327,8 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
             if (timerRef.current) clearTimeout(timerRef.current);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
+        // Dependency on saveDirectory/fileName forces refresh on track change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saveDirectory, fileName]);
 
     const handleError = (_e) => {
@@ -274,10 +371,11 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                     ref={videoRef}
                     autoPlay
                     onError={handleError}
-                    onTimeUpdate={() => setCurrentTime(videoRef.current.currentTime)}
-                    onLoadedMetadata={() => setDuration(videoRef.current.duration)}
+                    onTimeUpdate={() => setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0)}
+                    onLoadedMetadata={() => setDuration(videoRef.current ? videoRef.current.duration : 0)}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
+                    onEnded={handleVideoEnded}
                     src={videoUrl}
                     style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     onClick={togglePlay}
@@ -288,12 +386,22 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                 <IconButton onClick={onClose} sx={{ color: "white", mr: 2 }}>
                     <ArrowBackIcon />
                 </IconButton>
-                <Typography variant="h6" sx={{ color: "white", fontWeight: "bold" }}>
+                <Typography variant="h6" sx={{ color: "white", fontWeight: "bold", flexGrow: 1 }}>
                     {truncatedTitle}
                 </Typography>
+                <Tooltip title={autoPlayEnabled ? "Auto-Play is ON" : "Auto-Play is OFF"}>
+                    <IconButton onClick={() => setAutoPlayEnabled(!autoPlayEnabled)} sx={{ color: autoPlayEnabled ? "#4caf50" : "rgba(255,255,255,0.5)" }}>
+                        {autoPlayEnabled ? <AutorenewIcon /> : <SyncDisabledIcon />}
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Playlist">
+                    <IconButton onClick={() => setDrawerOpen((prev) => !prev)} sx={{ color: drawerOpen ? "#1976d2" : "white", ml: 1 }}>
+                        <QueueMusicIcon />
+                    </IconButton>
+                </Tooltip>
             </TopBar>
 
-            {!loading && !isPlaying && showControls && (
+            {!loading && !isPlaying && showControls && !drawerOpen && (
                 <IconButton
                     onClick={togglePlay}
                     sx={{
@@ -313,7 +421,7 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                 <Slider
                     size="small"
                     min={0}
-                    max={duration}
+                    max={duration || 100}
                     value={currentTime}
                     onChange={handleSeek}
                     sx={{
@@ -333,6 +441,11 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                     }}
                 />
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+                    {openPlayer && (
+                        <IconButton size="small" onClick={handlePrev} sx={{ color: "white" }} title="Previous Video">
+                            <SkipPreviousIcon />
+                        </IconButton>
+                    )}
                     <IconButton size="small" onClick={() => skip(-10)} sx={{ color: "white" }}>
                         <Replay10Icon />
                     </IconButton>
@@ -342,6 +455,11 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                     <IconButton size="small" onClick={() => skip(10)} sx={{ color: "white" }}>
                         <Forward10Icon />
                     </IconButton>
+                    {openPlayer && (
+                        <IconButton size="small" onClick={handleNext} sx={{ color: "white" }} title="Next Video">
+                            <SkipNextIcon />
+                        </IconButton>
+                    )}
                     <Typography variant="caption" sx={{ color: "white", ml: 2, minWidth: 100 }}>
                         {formatTime(currentTime)} / {formatTime(duration)}
                     </Typography>
@@ -376,6 +494,80 @@ export default function VideoPlayer({ saveDirectory, fileName, title, backEnd, t
                     </IconButton>
                 </Stack>
             </ControlBar>
+
+            {/* Playlist Drawer inside the Player */}
+            <Drawer
+                anchor="right"
+                open={drawerOpen}
+                variant="persistent"
+                sx={{
+                    "& .MuiDrawer-paper": {
+                        width: { xs: "100%", sm: 350 },
+                        bgcolor: "rgba(0, 0, 0, 0.85)",
+                        backdropFilter: "blur(8px)",
+                        color: "white",
+                        boxSizing: "border-box",
+                        borderLeft: "1px solid rgba(255,255,255,0.1)",
+                        position: "absolute", // Makes it sit inside the dialog/fullscreen container
+                    },
+                }}
+            >
+                <Box sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Typography variant="h6">Current Playlist Map</Typography>
+                    <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: "white" }}>
+                        <ArrowBackIcon sx={{ transform: "rotate(180deg)" }} />
+                    </IconButton>
+                </Box>
+                <List sx={{ overflowY: 'auto' }}>
+                    {items && items.map((element, index) => {
+                        const meta = element.video_metadatum || {};
+                        const thumb = meta.thumbNailFile || "";
+                        const fallbackThumbURL = baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png");
+                        const thumbImg = thumbUrls[thumb] ? thumbUrls[thumb] : meta.onlineThumbnail ? meta.onlineThumbnail : fallbackThumbURL;
+                        const isCurrent = index === currentPlayerIndex;
+                        const isAvailable = meta.downloadStatus;
+
+                        return (
+                            <ListItemButton
+                                key={index}
+                                disabled={!isAvailable}
+                                selected={isCurrent}
+                                onClick={() => {
+                                    if (openPlayer && isAvailable) {
+                                        openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, index);
+                                    }
+                                }}
+                                sx={{
+                                    "&.Mui-selected": {
+                                        bgcolor: "rgba(25, 118, 210, 0.3)",
+                                        "&:hover": {
+                                            bgcolor: "rgba(25, 118, 210, 0.5)",
+                                        }
+                                    },
+                                    opacity: isAvailable ? 1 : 0.4
+                                }}
+                            >
+                                <ListItemAvatar>
+                                    <Avatar variant="rounded" src={thumbImg} sx={{ width: 60, height: 45, mr: 1 }} />
+                                </ListItemAvatar>
+                                <ListItemText
+                                    primary={meta.title || "Unknown Title"}
+                                    primaryTypographyProps={{
+                                        variant: "body2",
+                                        noWrap: true,
+                                        fontWeight: isCurrent ? "bold" : "normal"
+                                    }}
+                                    secondary={!isAvailable && "Not Downloaded"}
+                                    secondaryTypographyProps={{
+                                        variant: "caption",
+                                        color: "rgba(255,255,255,0.5)"
+                                    }}
+                                />
+                            </ListItemButton>
+                        );
+                    })}
+                </List>
+            </Drawer>
         </Box>
     );
 }
@@ -387,4 +579,13 @@ VideoPlayer.propTypes = {
     backEnd: PropTypes.string.isRequired,
     token: PropTypes.string.isRequired,
     onClose: PropTypes.func.isRequired,
+    items: PropTypes.array,
+    itemCount: PropTypes.number,
+    page: PropTypes.number,
+    start: PropTypes.number,
+    currentPlayerIndex: PropTypes.number,
+    setPage: PropTypes.func,
+    openPlayer: PropTypes.func,
+    playlistDirectory: PropTypes.string,
+    thumbUrls: PropTypes.object
 };
