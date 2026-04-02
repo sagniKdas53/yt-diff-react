@@ -176,6 +176,13 @@ export default function VideoPlayer({
     const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
         try {
             setLoading(true);
+            setErrorMsg(null);
+            if (!isRecovery) {
+                setVideoUrl(null);
+                setCurrentTime(0);
+                setDuration(0);
+                setIsPlaying(false);
+            }
             const response = await fetch(backEnd + "/getfile", {
                 method: "post",
                 headers: {
