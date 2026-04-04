@@ -65,48 +65,48 @@ const TopBar = styled(Box, {
     zIndex: 2,
 }));
 const AutoPlaySwitch = styled(Switch)(() => ({
-  width: 42,
-  height: 24,
-  padding: 0,
-  display: 'flex',
-  '& .MuiSwitch-switchBase': {
-    padding: 2,
-    '&.Mui-checked': {
-      transform: 'translateX(18px)',
-      color: '#fff',
-      '& + .MuiSwitch-track': {
-        opacity: 1,
-        backgroundColor: '#fff',
-      },
-      '& .MuiSwitch-thumb': {
-        backgroundColor: '#000',
-        '&:before': {
-          backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24"><path fill="white" d="M8 5v14l11-7z"/></svg>')`,
+    width: 42,
+    height: 24,
+    padding: 0,
+    display: 'flex',
+    '& .MuiSwitch-switchBase': {
+        padding: 2,
+        '&.Mui-checked': {
+            transform: 'translateX(18px)',
+            color: '#fff',
+            '& + .MuiSwitch-track': {
+                opacity: 1,
+                backgroundColor: '#fff',
+            },
+            '& .MuiSwitch-thumb': {
+                backgroundColor: '#000',
+                '&:before': {
+                    backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24"><path fill="white" d="M8 5v14l11-7z"/></svg>')`,
+                },
+            },
         },
-      },
     },
-  },
-  '& .MuiSwitch-thumb': {
-    width: 20,
-    height: 20,
-    backgroundColor: '#fff',
-    '&:before': {
-      content: "''",
-      position: 'absolute',
-      width: '100%',
-      height: '100%',
-      left: 0,
-      top: 0,
-      backgroundRepeat: 'no-repeat',
-      backgroundPosition: 'center',
-      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24"><path fill="%23000" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>')`,
+    '& .MuiSwitch-thumb': {
+        width: 20,
+        height: 20,
+        backgroundColor: '#fff',
+        '&:before': {
+            content: "''",
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            left: 0,
+            top: 0,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 24 24"><path fill="%23000" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>')`,
+        },
     },
-  },
-  '& .MuiSwitch-track': {
-    borderRadius: 24 / 2,
-    opacity: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
+    '& .MuiSwitch-track': {
+        borderRadius: 24 / 2,
+        opacity: 1,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
 }));
 
 export default function VideoPlayer({
@@ -179,10 +179,12 @@ export default function VideoPlayer({
             setLoading(true);
             setErrorMsg(null);
             if (!isRecovery) {
-                setVideoUrl(null);
                 setCurrentTime(0);
                 setDuration(0);
                 setIsPlaying(false);
+                if (videoRef.current) {
+                    videoRef.current.pause();
+                }
             }
             const response = await fetch(backEnd + "/getfile", {
                 method: "post",
@@ -224,6 +226,7 @@ export default function VideoPlayer({
         } catch (error) {
             console.error("fetchSignedUrl error:", error);
             setErrorMsg(error.message);
+            setVideoUrl(null);
         } finally {
             setLoading(false);
         }
@@ -367,7 +370,7 @@ export default function VideoPlayer({
                 return;
             }
         }
-        
+
         // If we reach the beginning of the page, request the previous page if available
         if (page > 0 && setPage) {
             setPage(page - 1);
@@ -423,7 +426,7 @@ export default function VideoPlayer({
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
         // Dependency on saveDirectory/fileName forces refresh on track change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saveDirectory, fileName]);
 
     useEffect(() => {
@@ -617,7 +620,7 @@ export default function VideoPlayer({
                 }}
             >
                 <Box sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <Typography variant="h6">Current Playlist Map</Typography>
+                    <Typography variant="h6">Current Playlist</Typography>
                     <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: "white" }}>
                         <ArrowBackIcon sx={{ transform: "rotate(180deg)" }} />
                     </IconButton>
