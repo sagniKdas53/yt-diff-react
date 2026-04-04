@@ -571,6 +571,7 @@ export default function PlayList({
                         <MenuItem value={"N/A"}>N/A</MenuItem>
                         <MenuItem value={"Start"}>Start</MenuItem>
                         <MenuItem value={"End"}>End</MenuItem>
+                        <MenuItem value={"Full"}>Full</MenuItem>
                       </Select>
                     </FormControl>
                   </TableCell>
