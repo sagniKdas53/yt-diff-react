@@ -203,7 +203,7 @@ export default function Navigation({
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
-                                label="Start (Inclusive)"
+                                label="Start (Exclusive)"
                                 type="number"
                                 size="small"
                                 placeholder="0"
@@ -213,10 +213,10 @@ export default function Navigation({
                                     if (val === "" || parseInt(val) >= 0) setReindexStart(val);
                                 }}
                                 inputProps={{ min: 0 }}
-                                helperText="0-indexed start offset"
+                                helperText="Last ID before the batch"
                             />
                             <TextField
-                                label="Stop (Exclusive)"
+                                label="Stop (Inclusive)"
                                 type="number"
                                 size="small"
                                 placeholder="10"
@@ -226,7 +226,7 @@ export default function Navigation({
                                     if (val === "" || parseInt(val) >= 0) setReindexStop(val);
                                 }}
                                 inputProps={{ min: 0 }}
-                                helperText="Omit for no limit"
+                                helperText="Last ID in the batch"
                             />
                         </Box>
                         <TextField
