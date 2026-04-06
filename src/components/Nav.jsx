@@ -7,6 +7,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SyncIcon from "@mui/icons-material/Sync";
 import AppBar from "@mui/material/AppBar";
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
@@ -23,6 +24,11 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 import PropTypes from "prop-types";
 import { useState } from 'react';
 
@@ -34,10 +40,18 @@ export default function Navigation({
     token,
     setToken,
     setConnectionId,
-    notifications,
-    onDismissNotification
-}) {
+                            notifications,
+                            onDismissNotification,
+                            backEnd,
+                            setSnack
+                        }) {
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+
+    const [reindexOpen, setReindexOpen] = useState(false);
+    const [reindexStart, setReindexStart] = useState("");
+    const [reindexStop, setReindexStop] = useState("");
+    const [reindexSiteFilter, setReindexSiteFilter] = useState("");
+    const [reindexChunkSize, setReindexChunkSize] = useState(8);
 
     const themeSwitcherHandler = (themeMode) => {
         localStorage.setItem("ytdiff_theme", themeMode);
@@ -57,6 +71,36 @@ export default function Navigation({
         setLogoutConfirmOpen(false);
     };
 
+    const handleBatchReindex = async () => {
+        setReindexOpen(false);
+        try {
+            const body = {};
+            if (reindexStart !== "") body.start = parseInt(reindexStart);
+            if (reindexStop !== "") body.stop = parseInt(reindexStop);
+            if (reindexSiteFilter) body.siteFilter = reindexSiteFilter;
+            body.chunkSize = reindexChunkSize;
+
+            const response = await fetch(backEnd + "/reindexall", {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setSnack(data.message || "Batch re-index started", "success");
+            } else {
+                setSnack(data.message || "Failed to start re-index", "error");
+            }
+        } catch (error) {
+            setSnack("Network error: " + error.message, "error");
+        }
+    };
+
     return (
         <>
             <AppBar position="static">
@@ -64,6 +108,15 @@ export default function Navigation({
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         yt-diff
                     </Typography>
+                    <Button color="inherit" onClick={() => setReindexOpen(true)}>
+                        <SyncIcon />
+                        <Typography
+                            variant="button"
+                            display={{ xs: "none", sm: "none", md: "block" }}
+                        >
+                            Re-Index
+                        </Typography>
+                    </Button>
                     <Button color="inherit" onClick={() => setPlayListUrl("None")}>
                         <ListAltIcon />
                         <Typography
@@ -130,6 +183,61 @@ export default function Navigation({
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Dialog open={reindexOpen} onClose={() => setReindexOpen(false)}>
+                <DialogTitle>Batch Re-index Playlists</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <TextField
+                                label="Start Index"
+                                type="number"
+                                size="small"
+                                placeholder="0"
+                                value={reindexStart}
+                                onChange={(e) => setReindexStart(e.target.value)}
+                            />
+                            <TextField
+                                label="Stop Index"
+                                type="number"
+                                size="small"
+                                placeholder="10"
+                                value={reindexStop}
+                                onChange={(e) => setReindexStop(e.target.value)}
+                            />
+                        </Box>
+                        <TextField
+                            label="Site Filter (Optional)"
+                            type="text"
+                            size="small"
+                            placeholder="e.g. youtube.com"
+                            value={reindexSiteFilter}
+                            onChange={(e) => setReindexSiteFilter(e.target.value)}
+                        />
+                        <FormControl size="small">
+                            <InputLabel id="reindex-chunk-size-label">Chunk Size</InputLabel>
+                            <Select
+                                labelId="reindex-chunk-size-label"
+                                value={reindexChunkSize}
+                                label="Chunk Size"
+                                onChange={(e) => setReindexChunkSize(e.target.value)}
+                            >
+                                <MenuItem value={1}>1</MenuItem>
+                                <MenuItem value={8}>8</MenuItem>
+                                <MenuItem value={16}>16</MenuItem>
+                                <MenuItem value={32}>32</MenuItem>
+                                <MenuItem value={64}>64</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setReindexOpen(false)}>Cancel</Button>
+                    <Button onClick={handleBatchReindex} variant="contained" color="primary">
+                        Submit
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
@@ -147,7 +255,9 @@ Navigation.propTypes = {
             message: PropTypes.string.isRequired
         })
     ).isRequired,
-    onDismissNotification: PropTypes.func.isRequired
+    onDismissNotification: PropTypes.func.isRequired,
+    backEnd: PropTypes.string,
+    setSnack: PropTypes.func
 };
 
 function NotificationDrawer({

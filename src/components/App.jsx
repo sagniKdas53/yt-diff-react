@@ -596,6 +596,8 @@ export default function App() {
                             setConnectionId={setConnectionId}
                             notifications={notifications}
                             onDismissNotification={dismissNotification}
+                            backEnd={backEnd}
+                            setSnack={setSnack}
                         />
                         <Box sx={{ width: "100%", height: progressBarHeight + "px" }}>
                             <LinearProgress
