@@ -72,13 +72,26 @@ export default function Navigation({
     };
 
     const handleBatchReindex = async () => {
-        setReindexOpen(false);
         try {
             const body = {};
-            if (reindexStart !== "") body.start = parseInt(reindexStart);
-            if (reindexStop !== "") body.stop = parseInt(reindexStop);
+            if (reindexStart !== "") {
+                const s = parseInt(reindexStart);
+                if (s < 0) return setSnack("Start index cannot be negative", "error");
+                body.start = s;
+            }
+            if (reindexStop !== "") {
+                const e = parseInt(reindexStop);
+                if (e < 0) return setSnack("Stop index cannot be negative", "error");
+                body.stop = e;
+            }
+
+            if ('start' in body && 'stop' in body && body.start >= body.stop) {
+                return setSnack("Stop index must be greater than Start index", "error");
+            }
             if (reindexSiteFilter) body.siteFilter = reindexSiteFilter;
             body.chunkSize = reindexChunkSize;
+
+            setReindexOpen(false);
 
             const response = await fetch(backEnd + "/reindexall", {
                 method: "POST",
@@ -190,20 +203,30 @@ export default function Navigation({
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
-                                label="Start Index"
+                                label="Start (Inclusive)"
                                 type="number"
                                 size="small"
                                 placeholder="0"
                                 value={reindexStart}
-                                onChange={(e) => setReindexStart(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "" || parseInt(val) >= 0) setReindexStart(val);
+                                }}
+                                inputProps={{ min: 0 }}
+                                helperText="0-indexed start offset"
                             />
                             <TextField
-                                label="Stop Index"
+                                label="Stop (Exclusive)"
                                 type="number"
                                 size="small"
                                 placeholder="10"
                                 value={reindexStop}
-                                onChange={(e) => setReindexStop(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "" || parseInt(val) >= 0) setReindexStop(val);
+                                }}
+                                inputProps={{ min: 0 }}
+                                helperText="Omit for no limit"
                             />
                         </Box>
                         <TextField
