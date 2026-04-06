@@ -584,13 +584,13 @@ export default function VideoPlayer({
                             <SkipPreviousIcon />
                         </IconButton>
                     )}
-                    <IconButton size="small" onClick={() => skip(-10)} sx={{ color: "white" }}>
+                    <IconButton size="small" onClick={() => skip(-10)} sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}>
                         <Replay10Icon />
                     </IconButton>
                     <IconButton onClick={togglePlay} sx={{ color: "white" }}>
                         {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
                     </IconButton>
-                    <IconButton size="small" onClick={() => skip(10)} sx={{ color: "white" }}>
+                    <IconButton size="small" onClick={() => skip(10)} sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}>
                         <Forward10Icon />
                     </IconButton>
                     {openPlayer && (
@@ -598,7 +598,7 @@ export default function VideoPlayer({
                             <SkipNextIcon />
                         </IconButton>
                     )}
-                    <Typography variant="caption" sx={{ color: "white", ml: 2, minWidth: 100 }}>
+                    <Typography variant="caption" sx={{ color: "white", ml: 2, minWidth: { xs: 60, sm: 100 }, display: { xs: "none", sm: "block" } }}>
                         {formatTime(currentTime)} / {formatTime(duration)}
                     </Typography>
 
@@ -620,11 +620,11 @@ export default function VideoPlayer({
                     </Stack>
 
                     {pipSupported && (
-                        <IconButton size="small" onClick={togglePiP} title="Picture in Picture" sx={{ color: "white" }}>
+                        <IconButton size="small" onClick={togglePiP} title="Picture in Picture" sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}>
                             <PictureInPictureAltIcon />
                         </IconButton>
                     )}
-                    <IconButton size="small" onClick={handleOpenInNewTab} title="Open in New Tab" sx={{ color: "white" }}>
+                    <IconButton size="small" onClick={handleOpenInNewTab} title="Open in New Tab" sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}>
                         <OpenInNewIcon />
                     </IconButton>
                     <IconButton size="small" onClick={toggleFullscreen} sx={{ color: "white" }}>
