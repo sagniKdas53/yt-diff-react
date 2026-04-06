@@ -499,11 +499,26 @@ export default function VideoPlayer({
                     onEnded={handleVideoEnded}
                     src={videoUrl}
                     style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                    onClick={togglePlay}
                 />
             )}
 
-            <TopBar show={showControls}>
+            {/* Click-to-pause overlay — excludes top bar and bottom controls */}
+            {videoUrl && (
+                <Box
+                    onClick={togglePlay}
+                    sx={{
+                        position: "absolute",
+                        top: 64,
+                        left: 0,
+                        right: 0,
+                        bottom: 90,
+                        zIndex: 1,
+                        cursor: showControls ? "pointer" : "none",
+                    }}
+                />
+            )}
+
+            <TopBar show={showControls} onClick={(e) => e.stopPropagation()}>
                 <IconButton onClick={onClose} sx={{ color: "white", mr: 2 }}>
                     <ArrowBackIcon />
                 </IconButton>
@@ -540,7 +555,7 @@ export default function VideoPlayer({
                 </IconButton>
             )}
 
-            <ControlBar show={showControls}>
+            <ControlBar show={showControls} onClick={(e) => e.stopPropagation()}>
                 <Slider
                     size="small"
                     min={0}
