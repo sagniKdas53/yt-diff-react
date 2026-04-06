@@ -161,6 +161,8 @@ export default function VideoPlayer({
     const controlsTimeoutRef = useRef(null);
     const itemsAtTimeOfNext = useRef(null);
     const itemsAtTimeOfPrev = useRef(null);
+    const isPlayingRef = useRef(isPlaying);
+    const drawerOpenRef = useRef(drawerOpen);
 
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
 
@@ -265,13 +267,27 @@ export default function VideoPlayer({
         }, refreshTime);
     }, [backEnd, token]);
 
+    // Keep refs in sync so setTimeout callbacks always read latest values
+    isPlayingRef.current = isPlaying;
+    drawerOpenRef.current = drawerOpen;
+
     const handleMouseMove = () => {
         setShowControls(true);
         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         controlsTimeoutRef.current = setTimeout(() => {
-            if (isPlaying && !drawerOpen) setShowControls(false);
+            if (isPlayingRef.current && !drawerOpenRef.current) setShowControls(false);
         }, 3000);
     };
+
+    // Auto-hide controls when playback begins (e.g. after autoplay navigates to next video)
+    useEffect(() => {
+        if (isPlaying && !drawerOpen) {
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+            controlsTimeoutRef.current = setTimeout(() => {
+                if (isPlayingRef.current && !drawerOpenRef.current) setShowControls(false);
+            }, 3000);
+        }
+    }, [isPlaying, drawerOpen]);
 
     const togglePlay = () => {
         if (!videoRef.current) return;
