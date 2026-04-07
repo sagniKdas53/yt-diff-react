@@ -200,7 +200,7 @@ export default function Navigation({
 
             <Dialog open={reindexOpen} onClose={() => setReindexOpen(false)}>
                 <DialogTitle>Batch Re-index Playlists</DialogTitle>
-                <DialogContent>
+                <DialogContent sx={{ m: 0, paddingBlockEnd: 0 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                             <TextField
