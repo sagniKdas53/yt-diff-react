@@ -40,16 +40,16 @@ export default function Navigation({
     token,
     setToken,
     setConnectionId,
-                            notifications,
-                            onDismissNotification,
-                            backEnd,
-                            setSnack
-                        }) {
+    notifications,
+    onDismissNotification,
+    backEnd,
+    setSnack
+}) {
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
     const [reindexOpen, setReindexOpen] = useState(false);
-    const [reindexStart, setReindexStart] = useState("");
-    const [reindexStop, setReindexStop] = useState("");
+    const [reindexStart, setReindexStart] = useState(0);
+    const [reindexStop, setReindexStop] = useState(10);
     const [reindexSiteFilter, setReindexSiteFilter] = useState("");
     const [reindexChunkSize, setReindexChunkSize] = useState(8);
 
@@ -214,7 +214,6 @@ export default function Navigation({
                                     if (val === "" || parseInt(val) >= 0) setReindexStart(val);
                                 }}
                                 inputProps={{ min: 0 }}
-                                helperText="Last ID before the batch"
                             />
                             <TextField
                                 label="Stop (Inclusive)"
@@ -227,7 +226,6 @@ export default function Navigation({
                                     if (val === "" || parseInt(val) >= 0) setReindexStop(val);
                                 }}
                                 inputProps={{ min: 0 }}
-                                helperText="Last ID in the batch"
                             />
                         </Box>
                         <TextField
@@ -256,7 +254,7 @@ export default function Navigation({
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setReindexOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setReindexOpen(false)} variant="contained" color="primary">Cancel</Button>
                     <Button onClick={handleBatchReindex} variant="contained" color="primary">
                         Submit
                     </Button>
