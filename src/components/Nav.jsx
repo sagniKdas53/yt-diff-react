@@ -118,10 +118,10 @@ export default function Navigation({
         <>
             <AppBar position="static">
                 <Toolbar variant="dense">
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1, whiteSpace: "nowrap" }}>
                         yt-diff
                     </Typography>
-                    <Button color="inherit" onClick={() => setReindexOpen(true)}>
+                    <Button color="inherit" onClick={() => setReindexOpen(true)} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
                         <SyncIcon />
                         <Typography
                             variant="button"
@@ -130,7 +130,7 @@ export default function Navigation({
                             Re-Index
                         </Typography>
                     </Button>
-                    <Button color="inherit" onClick={() => setPlayListUrl("None")}>
+                    <Button color="inherit" onClick={() => setPlayListUrl("None")} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
                         <ListAltIcon />
                         <Typography
                             variant="button"
@@ -139,7 +139,7 @@ export default function Navigation({
                             Unlisted
                         </Typography>
                     </Button>
-                    <Button onClick={() => themeSwitcherHandler(!theme)} color="inherit">
+                    <Button onClick={() => themeSwitcherHandler(!theme)} color="inherit" sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
                         {theme ? <DarkModeIcon /> : <LightModeIcon />}
                         <Typography
                             variant="button"
@@ -164,6 +164,7 @@ export default function Navigation({
                             }
                         }}
                         color="inherit"
+                        sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}
                     >
                         {token ? <LogoutIcon /> : <LoginIcon />}
                         <Typography
@@ -293,7 +294,7 @@ function NotificationDrawer({
 
     return (
         <>
-            <Button onClick={() => setOpen(true)} color="inherit">
+            <Button onClick={() => setOpen(true)} color="inherit" sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
                 <Badge color={badgeColor} badgeContent={notifications.length}
                     variant="dot" anchorOrigin={{
                         vertical: 'top',
