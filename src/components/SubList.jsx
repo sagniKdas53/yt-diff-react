@@ -6,7 +6,6 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import DownloadIcon from "@mui/icons-material/Download";
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import CloseIcon from "@mui/icons-material/Close";
 import Box from "@mui/material/Box";
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -856,6 +855,7 @@ SubList.propTypes = {
     token: PropTypes.string.isRequired,
     setToken: PropTypes.func.isRequired,
     setSnack: PropTypes.func.isRequired,
+    addNotification: PropTypes.func.isRequired,
 };
 
 function SubListFab({ selectedItems, clear, download }) {

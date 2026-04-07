@@ -450,9 +450,9 @@ export default function VideoPlayer({
             videoRef.current.volume = volume;
             videoRef.current.muted = isMuted;
         }
-    }, [videoUrl]);
+    }, [videoUrl, volume, isMuted]);
 
-    const handleError = (_e) => {
+    const handleError = () => {
         const vid = videoRef.current;
         if (!vid) return;
         if (vid.error && (vid.error.code === 2 || vid.error.code === 3 || vid.error.code === 4)) {

@@ -819,4 +819,5 @@ PlayList.propTypes = {
   setToken: PropTypes.func.isRequired,
   playListIndex: PropTypes.number.isRequired,
   setPlayListIndex: PropTypes.func.isRequired,
+  addNotification: PropTypes.func.isRequired,
 };
