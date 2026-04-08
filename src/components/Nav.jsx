@@ -121,24 +121,28 @@ export default function Navigation({
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1, whiteSpace: "nowrap" }}>
                         yt-diff
                     </Typography>
-                    <Button color="inherit" onClick={() => setReindexOpen(true)} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
-                        <SyncIcon />
-                        <Typography
-                            variant="button"
-                            display={{ xs: "none", sm: "none", md: "block" }}
-                        >
-                            Re-Index
-                        </Typography>
-                    </Button>
-                    <Button color="inherit" onClick={() => setPlayListUrl("None")} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
-                        <ListAltIcon />
-                        <Typography
-                            variant="button"
-                            display={{ xs: "none", sm: "none", md: "block" }}
-                        >
-                            Unlisted
-                        </Typography>
-                    </Button>
+                    {token && (
+                        <>
+                            <Button color="inherit" onClick={() => setReindexOpen(true)} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
+                                <SyncIcon />
+                                <Typography
+                                    variant="button"
+                                    display={{ xs: "none", sm: "none", md: "block" }}
+                                >
+                                    Re-Index
+                                </Typography>
+                            </Button>
+                            <Button color="inherit" onClick={() => setPlayListUrl("None")} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
+                                <ListAltIcon />
+                                <Typography
+                                    variant="button"
+                                    display={{ xs: "none", sm: "none", md: "block" }}
+                                >
+                                    Unlisted
+                                </Typography>
+                            </Button>
+                        </>
+                    )}
                     <Button onClick={() => themeSwitcherHandler(!theme)} color="inherit" sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
                         {theme ? <DarkModeIcon /> : <LightModeIcon />}
                         <Typography
