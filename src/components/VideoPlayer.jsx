@@ -16,20 +16,20 @@ import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import PauseIcon from "@mui/icons-material/Pause";
-import SkipNextIcon from "@mui/icons-material/SkipNext";
-import SkipPreviousIcon from "@mui/icons-material/SkipPrevious";
-import QueueMusicIcon from "@mui/icons-material/QueueMusic";
-import Replay10Icon from "@mui/icons-material/Replay10";
-import Forward10Icon from "@mui/icons-material/Forward10";
-import VolumeUpIcon from "@mui/icons-material/VolumeUp";
-import VolumeOffIcon from "@mui/icons-material/VolumeOff";
-import FullscreenIcon from "@mui/icons-material/Fullscreen";
-import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
-import PictureInPictureAltIcon from "@mui/icons-material/PictureInPictureAlt";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { PlayArrow as PlayArrowIcon } from "@mui/icons-material";
+import { Pause as PauseIcon } from "@mui/icons-material";
+import { SkipNext as SkipNextIcon } from "@mui/icons-material";
+import { SkipPrevious as SkipPreviousIcon } from "@mui/icons-material";
+import { QueueMusic as QueueMusicIcon } from "@mui/icons-material";
+import { Replay10 as Replay10Icon } from "@mui/icons-material";
+import { Forward10 as Forward10Icon } from "@mui/icons-material";
+import { VolumeUp as VolumeUpIcon } from "@mui/icons-material";
+import { VolumeOff as VolumeOffIcon } from "@mui/icons-material";
+import { Fullscreen as FullscreenIcon } from "@mui/icons-material";
+import { FullscreenExit as FullscreenExitIcon } from "@mui/icons-material";
+import { PictureInPictureAlt as PictureInPictureAltIcon } from "@mui/icons-material";
+import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
+import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
 

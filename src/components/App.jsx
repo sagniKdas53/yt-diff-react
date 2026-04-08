@@ -1,4 +1,4 @@
-import CloseIcon from "@mui/icons-material/Close.js";
+import { Close as CloseIcon } from "@mui/icons-material";
 import MuiAlert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";

@@ -18,4 +18,9 @@ export default defineConfig({
       deleteOriginalAssets: false
     }),
   ],
+  resolve: {
+    alias: {
+      '@mui/icons-material': '@mui/icons-material/esm',
+    }
+  }
 })

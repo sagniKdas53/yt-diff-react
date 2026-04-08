@@ -1,9 +1,9 @@
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from '@mui/icons-material/Delete';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ClearIcon from "@mui/icons-material/Clear";
+import { Add as AddIcon } from "@mui/icons-material";
+import { Delete as DeleteIcon } from "@mui/icons-material";
+import { DeleteForever as DeleteForeverIcon } from "@mui/icons-material";
+import { DeleteOutline as DeleteOutlineIcon } from "@mui/icons-material";
+import { MoreVert as MoreVertIcon } from "@mui/icons-material";
+import { Clear as ClearIcon } from "@mui/icons-material";
 import { Typography } from "@mui/material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
