@@ -32,6 +32,7 @@ import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 const ControlBar = styled(Box, {
     shouldForwardProp: (prop) => prop !== "show",
@@ -127,6 +128,7 @@ export default function VideoPlayer({
     thumbUrls = {}
 }) {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
     const [videoUrl, setVideoUrl] = useState(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
@@ -150,6 +152,7 @@ export default function VideoPlayer({
     });
     const [pendingNextPage, setPendingNextPage] = useState(false);
     const [pendingPrevPage, setPendingPrevPage] = useState(false);
+    const [showMobileVolume, setShowMobileVolume] = useState(false);
 
     const pipSupported = "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
 
@@ -163,6 +166,8 @@ export default function VideoPlayer({
     const itemsAtTimeOfPrev = useRef(null);
     const isPlayingRef = useRef(isPlaying);
     const drawerOpenRef = useRef(drawerOpen);
+    const volumeTapRef = useRef(null);
+    const mobileVolumeTimeoutRef = useRef(null);
 
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
 
@@ -323,6 +328,35 @@ export default function VideoPlayer({
         setIsMuted(value === 0);
         localStorage.setItem("ytdiff_player_volume", value);
         localStorage.setItem("ytdiff_player_muted", value === 0);
+        // Reset auto-hide timer when user interacts with mobile slider
+        if (isMobile && showMobileVolume) {
+            if (mobileVolumeTimeoutRef.current) clearTimeout(mobileVolumeTimeoutRef.current);
+            mobileVolumeTimeoutRef.current = setTimeout(() => setShowMobileVolume(false), 3000);
+        }
+    };
+
+    const handleVolumeButtonClick = () => {
+        if (!isMobile) {
+            toggleMute();
+            return;
+        }
+        const now = Date.now();
+        if (volumeTapRef.current && now - volumeTapRef.current < 300) {
+            // Double tap → toggle mute
+            volumeTapRef.current = null;
+            toggleMute();
+        } else {
+            // Single tap → toggle volume overlay
+            volumeTapRef.current = now;
+            setShowMobileVolume((prev) => {
+                const next = !prev;
+                if (mobileVolumeTimeoutRef.current) clearTimeout(mobileVolumeTimeoutRef.current);
+                if (next) {
+                    mobileVolumeTimeoutRef.current = setTimeout(() => setShowMobileVolume(false), 3000);
+                }
+                return next;
+            });
+        }
     };
 
     const toggleFullscreen = () => {
@@ -440,6 +474,7 @@ export default function VideoPlayer({
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+            if (mobileVolumeTimeoutRef.current) clearTimeout(mobileVolumeTimeoutRef.current);
         };
         // Dependency on saveDirectory/fileName forces refresh on track change
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -604,10 +639,60 @@ export default function VideoPlayer({
 
                     <Box sx={{ flexGrow: 1 }} />
 
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 2 }}>
-                        <IconButton size="small" onClick={toggleMute} sx={{ color: "white" }}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 2, position: "relative" }}>
+                        {/* Mobile volume overlay — appears above the volume button */}
+                        {isMobile && showMobileVolume && (
+                            <Box
+                                onClick={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                sx={{
+                                    position: "absolute",
+                                    bottom: "100%",
+                                    left: "50%",
+                                    transform: "translateX(-50%)",
+                                    mb: 1,
+                                    bgcolor: "rgba(0,0,0,0.75)",
+                                    backdropFilter: "blur(6px)",
+                                    borderRadius: 3,
+                                    px: 1.5,
+                                    py: 2,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    height: 120,
+                                    zIndex: 10,
+                                }}
+                            >
+                                <Slider
+                                    orientation="vertical"
+                                    size="small"
+                                    value={isMuted ? 0 : volume}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={handleVolumeChange}
+                                    sx={{
+                                        color: "white",
+                                        height: "100%",
+                                        "& .MuiSlider-thumb": {
+                                            width: 12,
+                                            height: 12,
+                                            transition: "0.3s ease-in-out",
+                                            "&:before": { boxShadow: "0 2px 12px 0 rgba(0,0,0,0.4)" },
+                                            "&:hover, &.Mui-focusVisible": {
+                                                boxShadow: "0px 0px 0px 8px rgba(255,255,255,0.16)",
+                                            },
+                                        },
+                                        "& .MuiSlider-rail": { opacity: 0.28 },
+                                        "& .MuiSlider-track": { border: "none" },
+                                    }}
+                                />
+                            </Box>
+                        )}
+                        <IconButton size="small" onClick={handleVolumeButtonClick} sx={{ color: "white" }}>
                             {isMuted || volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />}
                         </IconButton>
+                        {/* Desktop horizontal slider — hidden on mobile */}
                         <Slider
                             size="small"
                             value={isMuted ? 0 : volume}
