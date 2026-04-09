@@ -153,6 +153,7 @@ export default function VideoPlayer({
     const [pendingNextPage, setPendingNextPage] = useState(false);
     const [pendingPrevPage, setPendingPrevPage] = useState(false);
     const [showMobileVolume, setShowMobileVolume] = useState(false);
+    const [bufferedTime, setBufferedTime] = useState(0);
 
     const pipSupported = "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
 
@@ -188,6 +189,7 @@ export default function VideoPlayer({
             if (!isRecovery) {
                 setCurrentTime(0);
                 setDuration(0);
+                setBufferedTime(0);
                 setIsPlaying(false);
                 if (videoRef.current) {
                     videoRef.current.pause();
@@ -499,6 +501,29 @@ export default function VideoPlayer({
 
     const truncatedTitle = title && title.length > 60 ? title.substring(0, 57) + "..." : title;
 
+    const handleProgress = () => {
+        if (videoRef.current && videoRef.current.buffered.length > 0) {
+            const vid = videoRef.current;
+            const time = vid.currentTime;
+            let activeBufferEnd = 0;
+
+            // Loop through buffered ranges to find the one we are currently playing in
+            for (let i = 0; i < vid.buffered.length; i++) {
+                if (time >= vid.buffered.start(i) && time <= vid.buffered.end(i)) {
+                    activeBufferEnd = vid.buffered.end(i);
+                    break;
+                }
+            }
+
+            // If the user seeks outside a buffered range, fallback to the latest buffered chunk
+            if (activeBufferEnd === 0 && vid.buffered.length > 0) {
+                activeBufferEnd = vid.buffered.end(vid.buffered.length - 1);
+            }
+
+            setBufferedTime(activeBufferEnd);
+        }
+    };
+
     return (
         <Box
             ref={containerRef}
@@ -527,7 +552,11 @@ export default function VideoPlayer({
                     ref={videoRef}
                     autoPlay
                     onError={handleError}
-                    onTimeUpdate={() => setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0)}
+                    onProgress={handleProgress}
+                    onTimeUpdate={() => {
+                        setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0);
+                        handleProgress();
+                    }}
                     onLoadedMetadata={() => setDuration(videoRef.current ? videoRef.current.duration : 0)}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
@@ -591,28 +620,61 @@ export default function VideoPlayer({
             )}
 
             <ControlBar show={showControls} onClick={(e) => e.stopPropagation()}>
-                <Slider
-                    size="small"
-                    min={0}
-                    max={duration || 100}
-                    value={currentTime}
-                    onChange={handleSeek}
-                    sx={{
-                        color: "#1976d2",
-                        height: 4,
-                        padding: "13px 0",
-                        "& .MuiSlider-thumb": {
-                            width: 12,
-                            height: 12,
-                            transition: "0.3s ease-in-out",
-                            "&:before": { boxShadow: "0 2px 12px 0 rgba(0,0,0,0.4)" },
-                            "&:hover, &.Mui-focusVisible": {
-                                boxShadow: `0px 0px 0px 8px rgba(25, 118, 210, 0.16)`,
+                <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+                    {/* Base Background Rail */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            height: 4,
+                            bgcolor: 'rgba(255, 255, 255, 0.2)',
+                            borderRadius: 2,
+                            pointerEvents: 'none',
+                        }}
+                    />
+
+                    {/* Dynamic Buffered Area Bar */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            left: 0,
+                            height: 4,
+                            width: `${duration > 0 ? (bufferedTime / duration) * 100 : 0}%`,
+                            bgcolor: 'rgba(255, 255, 255, 0.5)',
+                            borderRadius: 2,
+                            pointerEvents: 'none',
+                            transition: 'width 0.2s linear',
+                        }}
+                    />
+
+                    {/* Existing Slider */}
+                    <Slider
+                        size="small"
+                        min={0}
+                        max={duration || 100}
+                        value={currentTime}
+                        onChange={handleSeek}
+                        sx={{
+                            color: "#1976d2",
+                            height: 4,
+                            padding: "13px 0",
+                            position: 'relative',
+                            zIndex: 1,
+                            "& .MuiSlider-thumb": {
+                                width: 12,
+                                height: 12,
+                                transition: "0.3s ease-in-out",
+                                "&:before": { boxShadow: "0 2px 12px 0 rgba(0,0,0,0.4)" },
+                                "&:hover, &.Mui-focusVisible": {
+                                    boxShadow: `0px 0px 0px 8px rgba(25, 118, 210, 0.16)`,
+                                },
                             },
-                        },
-                        "& .MuiSlider-rail": { opacity: 0.28 },
-                    }}
-                />
+                            // Hide the default rail so our custom background and buffer bars show through
+                            "& .MuiSlider-rail": { opacity: 0 },
+                        }}
+                    />
+                </Box>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
                     {openPlayer && (
                         <IconButton size="small" onClick={handlePrev} sx={{ color: "white" }} title="Previous Video">
