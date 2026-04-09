@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -169,6 +169,7 @@ export default function VideoPlayer({
     const drawerOpenRef = useRef(drawerOpen);
     const volumeTapRef = useRef(null);
     const mobileVolumeTimeoutRef = useRef(null);
+    const abortControllerRef = useRef(null);
 
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
 
@@ -183,6 +184,11 @@ export default function VideoPlayer({
     };
 
     const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+
         try {
             setLoading(true);
             setErrorMsg(null);
@@ -203,6 +209,7 @@ export default function VideoPlayer({
                     Authorization: `Bearer ${token}`,
                 },
                 mode: "cors",
+                signal: abortControllerRef.current.signal,
                 body: JSON.stringify({ saveDirectory, fileName }),
             });
 
@@ -233,6 +240,7 @@ export default function VideoPlayer({
                 throw new Error("Failed to get download URL");
             }
         } catch (error) {
+            if (error.name === "AbortError") return;
             console.error("fetchSignedUrl error:", error);
             setErrorMsg(error.message);
             setVideoUrl(null);
@@ -477,10 +485,27 @@ export default function VideoPlayer({
             if (timerRef.current) clearTimeout(timerRef.current);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
             if (mobileVolumeTimeoutRef.current) clearTimeout(mobileVolumeTimeoutRef.current);
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+
+            // Clean up the video element
+            if (videoRef.current) {
+                videoRef.current.pause();
+                videoRef.current.removeAttribute("src");
+                videoRef.current.load();
+            }
         };
         // Dependency on saveDirectory/fileName forces refresh on track change
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [saveDirectory, fileName]);
+
+    useEffect(() => {
+        if (videoUrl && videoRef.current) {
+            videoRef.current.play().catch((e) => {
+                console.warn("Autoplay blocked by browser. User interaction required.", e);
+                setIsPlaying(false);
+            });
+        }
+    }, [videoUrl]);
 
     useEffect(() => {
         if (videoRef.current) {
@@ -550,7 +575,6 @@ export default function VideoPlayer({
             {videoUrl && (
                 <video
                     ref={videoRef}
-                    autoPlay
                     onError={handleError}
                     onProgress={handleProgress}
                     onTimeUpdate={() => {
@@ -804,53 +828,55 @@ export default function VideoPlayer({
                     </IconButton>
                 </Box>
                 <List sx={{ overflowY: 'auto' }}>
-                    {items && items.map((element, index) => {
-                        const meta = element.video_metadatum || {};
-                        const thumb = meta.thumbNailFile || "";
+                    {useMemo(() => {
                         const fallbackThumbURL = baseUrl + backEnd + (theme.palette.mode === 'light' ? "/404-light.png" : "/404.png");
-                        const thumbImg = thumbUrls[thumb] ? thumbUrls[thumb] : meta.onlineThumbnail ? meta.onlineThumbnail : fallbackThumbURL;
-                        const isCurrent = index === currentPlayerIndex;
-                        const isAvailable = meta.downloadStatus;
+                        return items && items.map((element, index) => {
+                            const meta = element.video_metadatum || {};
+                            const thumb = meta.thumbNailFile || "";
+                            const thumbImg = thumbUrls[thumb] ? thumbUrls[thumb] : meta.onlineThumbnail ? meta.onlineThumbnail : fallbackThumbURL;
+                            const isCurrent = index === currentPlayerIndex;
+                            const isAvailable = meta.downloadStatus;
 
-                        return (
-                            <ListItemButton
-                                key={index}
-                                disabled={!isAvailable}
-                                selected={isCurrent}
-                                onClick={() => {
-                                    if (openPlayer && isAvailable) {
-                                        openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, index);
-                                    }
-                                }}
-                                sx={{
-                                    "&.Mui-selected": {
-                                        bgcolor: "rgba(25, 118, 210, 0.3)",
-                                        "&:hover": {
-                                            bgcolor: "rgba(25, 118, 210, 0.5)",
+                            return (
+                                <ListItemButton
+                                    key={index}
+                                    disabled={!isAvailable}
+                                    selected={isCurrent}
+                                    onClick={() => {
+                                        if (openPlayer && isAvailable) {
+                                            openPlayer(meta.saveDirectory ?? playlistDirectory, meta.fileName, meta.title, index);
                                         }
-                                    },
-                                    opacity: isAvailable ? 1 : 0.4
-                                }}
-                            >
-                                <ListItemAvatar>
-                                    <Avatar variant="rounded" src={thumbImg} sx={{ width: 60, height: 45, mr: 1 }} />
-                                </ListItemAvatar>
-                                <ListItemText
-                                    primary={meta.title || "Unknown Title"}
-                                    primaryTypographyProps={{
-                                        variant: "body2",
-                                        noWrap: true,
-                                        fontWeight: isCurrent ? "bold" : "normal"
                                     }}
-                                    secondary={!isAvailable && "Not Downloaded"}
-                                    secondaryTypographyProps={{
-                                        variant: "caption",
-                                        color: "rgba(255,255,255,0.5)"
+                                    sx={{
+                                        "&.Mui-selected": {
+                                            bgcolor: "rgba(25, 118, 210, 0.3)",
+                                            "&:hover": {
+                                                bgcolor: "rgba(25, 118, 210, 0.5)",
+                                            }
+                                        },
+                                        opacity: isAvailable ? 1 : 0.4
                                     }}
-                                />
-                            </ListItemButton>
-                        );
-                    })}
+                                >
+                                    <ListItemAvatar>
+                                        <Avatar variant="rounded" src={thumbImg} sx={{ width: 60, height: 45, mr: 1 }} />
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                        primary={meta.title || "Unknown Title"}
+                                        primaryTypographyProps={{
+                                            variant: "body2",
+                                            noWrap: true,
+                                            fontWeight: isCurrent ? "bold" : "normal"
+                                        }}
+                                        secondary={!isAvailable && "Not Downloaded"}
+                                        secondaryTypographyProps={{
+                                            variant: "caption",
+                                            color: "rgba(255,255,255,0.5)"
+                                        }}
+                                    />
+                                </ListItemButton>
+                            );
+                        });
+                    }, [items, currentPlayerIndex, thumbUrls, baseUrl, backEnd, theme.palette.mode, openPlayer, playlistDirectory])}
                 </List>
             </Drawer>
         </Box>
