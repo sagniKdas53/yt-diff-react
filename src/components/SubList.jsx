@@ -259,7 +259,7 @@ export default function SubList({
         });
         if (response.ok) {
             setSnack("Video deleted successfully.", "success");
-            addNotification(`Deleted ${(title ? title : videoUrl)}`);
+            addNotification(`Deleted ${(title ? title : videoUrl)}`, "info");
             //console.log(`Deleted: ${videoUrl}`);
             setReFetch("delete-sublist-item" + playListUrl + videoUrl + Date.now().toString());
             setSubListIndex(start); // Reset to start index after deletion

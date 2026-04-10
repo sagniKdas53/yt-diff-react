@@ -220,7 +220,7 @@ export default function PlayList({
       const json_data = JSON.parse(data);
       //console.log("deletePlaylist response: ", json_data);
       setSnack("Playlist deleted successfully.", "success");
-      addNotification(`Deleted ${(title ? title : playListUrlToDelete)}. Details: ${json_data.message}`);
+      addNotification(`Deleted ${(title ? title : playListUrlToDelete)}. Details: ${json_data.message}`, "info");
       // Do the refetch conditionally
       // Delete-playlist is not getting re-fetched
       setReFetch(`${playListUrlToDelete}-del-${new Date().getTime()}`);

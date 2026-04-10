@@ -8,6 +8,10 @@ import { ListAlt as ListAltIcon } from "@mui/icons-material";
 import { Login as LoginIcon } from "@mui/icons-material";
 import { Logout as LogoutIcon } from "@mui/icons-material";
 import { Sync as SyncIcon } from "@mui/icons-material";
+import { Error as ErrorIcon } from "@mui/icons-material";
+import { Info as InfoIcon } from "@mui/icons-material";
+import { CheckCircle as SuccessIcon } from "@mui/icons-material";
+import { Warning as WarningIcon } from "@mui/icons-material";
 import AppBar from "@mui/material/AppBar";
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
@@ -22,7 +26,10 @@ import IconButton from '@mui/material/IconButton';
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import ListItemIcon from "@mui/material/ListItemIcon";
 import Toolbar from "@mui/material/Toolbar";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
 import FormControl from "@mui/material/FormControl";
@@ -278,7 +285,8 @@ Navigation.propTypes = {
     notifications: PropTypes.arrayOf(
         PropTypes.shape({
             id: PropTypes.string.isRequired,
-            message: PropTypes.string.isRequired
+            message: PropTypes.string.isRequired,
+            type: PropTypes.string
         })
     ).isRequired,
     onDismissNotification: PropTypes.func.isRequired,
@@ -293,6 +301,32 @@ function NotificationDrawer({
     onDismissNotification
 }) {
     const [open, setOpen] = useState(false);
+    const [filter, setFilter] = useState("all");
+
+    const handleFilterChange = (event, newFilter) => {
+        if (newFilter !== null) {
+            setFilter(newFilter);
+        }
+    };
+
+    const filteredNotifications = notifications.filter((note) => {
+        if (filter === "all") return true;
+        return note.type === filter;
+    });
+
+    const getIcon = (type) => {
+        switch (type) {
+            case "error":
+                return <ErrorIcon color="error" />;
+            case "success":
+                return <SuccessIcon color="success" />;
+            case "warning":
+                return <WarningIcon color="warning" />;
+            case "info":
+            default:
+                return <InfoIcon color="info" />;
+        }
+    };
 
     return (
         <>
@@ -312,41 +346,78 @@ function NotificationDrawer({
                 </Typography>
             </Button>
             <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
-                <div style={{ width: 300, padding: 16 }}>
-                    <Typography variant="h6" gutterBottom>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ m: 0, p: 0 }}>
-                            <Box component="span">Notifications</Box>
-                            <IconButton
-                                aria-label="clear all"
-                                onClick={() => notifications.forEach(note => onDismissNotification(note.id))}
-                                sx={{ p: 0 }}
-                                size="large"
-                            >
-                                <ClearAllIcon fontSize="large" />
-                            </IconButton>
-                        </Box>
-                    </Typography>
-                    <Divider />
-                    <List>
-                        {notifications.map((note) => (
-                            <ListItem
-                                key={note.id}
-                                divider
-                                secondaryAction={
-                                    <Button
-                                        onClick={() => onDismissNotification(note.id)}
-                                        size="small"
-                                        sx={{ minWidth: 0 }}
+                <Box sx={{ width: 320, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Box sx={{ p: 2, position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1, borderBottom: 1, borderColor: 'divider' }}>
+                        <Typography variant="h6" gutterBottom>
+                            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ m: 0, p: 0 }}>
+                                <Box component="span">Notifications</Box>
+                                <IconButton
+                                    aria-label="clear all"
+                                    onClick={() => notifications.forEach(note => onDismissNotification(note.id))}
+                                    sx={{ p: 0 }}
+                                    size="large"
+                                >
+                                    <ClearAllIcon fontSize="large" />
+                                </IconButton>
+                            </Box>
+                        </Typography>
+                        <ToggleButtonGroup
+                            value={filter}
+                            exclusive
+                            onChange={handleFilterChange}
+                            aria-label="notification filter"
+                            size="small"
+                            fullWidth
+                            sx={{ mt: 1 }}
+                        >
+                            <ToggleButton value="all" aria-label="all">All</ToggleButton>
+                            <ToggleButton value="info" aria-label="info">Info</ToggleButton>
+                            <ToggleButton value="success" aria-label="success">Success</ToggleButton>
+                            <ToggleButton value="error" aria-label="error">Error</ToggleButton>
+                        </ToggleButtonGroup>
+                    </Box>
+                    <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+                        <List sx={{ p: 0 }}>
+                            {filteredNotifications.length === 0 ? (
+                                <ListItem>
+                                    <ListItemText
+                                        primary={filter === "all" ? "No notifications" : `No ${filter} notifications`}
+                                        secondary="All clear!"
+                                        sx={{ textAlign: 'center', mt: 4, opacity: 0.6 }}
+                                    />
+                                </ListItem>
+                            ) : (
+                                filteredNotifications.map((note) => (
+                                    <ListItem
+                                        key={note.id}
+                                        divider
+                                        secondaryAction={
+                                            <IconButton
+                                                onClick={() => onDismissNotification(note.id)}
+                                                size="small"
+                                                edge="end"
+                                                aria-label="delete"
+                                            >
+                                                <HighlightOffIcon />
+                                            </IconButton>
+                                        }
                                     >
-                                        <HighlightOffIcon />
-                                    </Button>
-                                }
-                            >
-                                <ListItemText primary={note.message} />
-                            </ListItem>
-                        ))}
-                    </List>
-                </div>
+                                        <ListItemIcon sx={{ minWidth: 40 }}>
+                                            {getIcon(note.type)}
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={note.message}
+                                            primaryTypographyProps={{
+                                                variant: 'body2',
+                                                sx: { wordBreak: 'break-word' }
+                                            }}
+                                        />
+                                    </ListItem>
+                                ))
+                            )}
+                        </List>
+                    </Box>
+                </Box>
             </Drawer>
         </>
     );
@@ -358,7 +429,8 @@ NotificationDrawer.propTypes = {
     notifications: PropTypes.arrayOf(
         PropTypes.shape({
             id: PropTypes.string.isRequired,
-            message: PropTypes.string.isRequired
+            message: PropTypes.string.isRequired,
+            type: PropTypes.string
         })
     ).isRequired,
     onDismissNotification: PropTypes.func.isRequired

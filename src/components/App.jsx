@@ -187,10 +187,11 @@ export default function App() {
         setSnackVisibility(true);
     }, []);
 
-    const addNotification = useCallback((message) => {
+    const addNotification = useCallback((message, type = "info") => {
         const newNotification = {
             id: Date.now() + "-" + notificationRef.current.toString(),
             message,
+            type,
         };
         notificationRef.current += 1;
         setNotifications((prev) => [...prev, newNotification]);
@@ -312,14 +313,14 @@ export default function App() {
                 descriptionFile: data.descriptionFile || null,
             };
             setSnackRef.current && setSnackRef.current(`${data.title}`, "success");
-            addNotificationRef.current && addNotificationRef.current(`Downloaded: ${data.title}`);
+            addNotificationRef.current && addNotificationRef.current(`Downloaded: ${data.title}`, "success");
         };
 
         const onDownloadFailed = (data) => {
             //console.log("[Socket] download-failed", data);
             removeActiveDownload(data.url);
             setSnackRef.current && setSnackRef.current(`${data.title}`, "error");
-            addNotificationRef.current && addNotificationRef.current(`Download Failed: ${data.title}`);
+            addNotificationRef.current && addNotificationRef.current(`Download Failed: ${data.title}`, "error");
         };
 
         const onDownloadingPercentUpdate = (data) => {
@@ -371,13 +372,13 @@ export default function App() {
                 setPlayListIndex(data.seekPlaylistListTo);
             }
 
-            addNotificationRef.current && addNotificationRef.current(`Successfully imported playlist: ${data.playlistTitle}`);
+            addNotificationRef.current && addNotificationRef.current(`Successfully imported playlist: ${data.playlistTitle}`, "success");
         };
 
         const onPlaylistSkipped = (data) => {
             decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
-            addNotificationRef.current && addNotificationRef.current(`${data.message}`);
+            addNotificationRef.current && addNotificationRef.current(`${data.message}`, "info");
         };
 
         const onListingPlaylistChunkComplete = (data) => {
@@ -418,19 +419,19 @@ export default function App() {
                 setSnackRef.current && setSnackRef.current("Duplicate video encountered and navigated to", "info");
             }
 
-            addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`);
+            addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`, "success");
         };
 
         const onListingError = (data) => {
             decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.url}`, "error");
-            addNotificationRef.current && addNotificationRef.current(`Failed Listing: ${data.url}`);
+            addNotificationRef.current && addNotificationRef.current(`Failed Listing: ${data.url}`, "error");
         };
 
         const onListingVideoSkippedBecauseDownloaded = (data) => {
             decrementListings();
             setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
-            addNotificationRef.current && addNotificationRef.current(`${data.message}`);
+            addNotificationRef.current && addNotificationRef.current(`${data.message}`, "info");
         };
 
         // Register listeners
