@@ -413,6 +413,11 @@ export default function App() {
                 setPlayListUrl("None");
                 setSubListIndex(data.seekSubListTo);
             }
+
+            if (data.alreadyExisted) {
+                setSnackRef.current && setSnackRef.current("Duplicate video encountered and navigated to", "info");
+            }
+
             addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`);
         };
 
