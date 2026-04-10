@@ -417,6 +417,7 @@ export default function App() {
 
             if (data.alreadyExisted) {
                 setSnackRef.current && setSnackRef.current("Duplicate video encountered and navigated to", "info");
+                addNotificationRef.current && addNotificationRef.current(`Duplicate video encountered and navigated to ${data.title}`, "info");
             }
 
             addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`, "success");
