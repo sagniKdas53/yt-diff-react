@@ -239,6 +239,7 @@ export default function PlayList({
     }
     if (!response.ok) {
       setSnack("Failed to delete playlist.", "error");
+      addNotification(`Failed to delete playlist: ${title ? title : playListUrlToDelete}`, "error");
     }
   }
 

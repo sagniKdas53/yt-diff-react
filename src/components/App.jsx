@@ -418,9 +418,9 @@ export default function App() {
             if (data.alreadyExisted) {
                 setSnackRef.current && setSnackRef.current("Duplicate video encountered and navigated to", "info");
                 addNotificationRef.current && addNotificationRef.current(`Duplicate video encountered and navigated to ${data.title}`, "info");
+            } else {
+                addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`, "success");
             }
-
-            addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`, "success");
         };
 
         const onListingError = (data) => {
@@ -605,6 +605,7 @@ export default function App() {
                             onDismissNotification={dismissNotification}
                             backEnd={backEnd}
                             setSnack={setSnack}
+                            addNotification={addNotification}
                         />
                         <Box sx={{ width: "100%", height: progressBarHeight + "px" }}>
                             <LinearProgress

@@ -50,7 +50,8 @@ export default function Navigation({
     notifications,
     onDismissNotification,
     backEnd,
-    setSnack
+    setSnack,
+    addNotification
 }) {
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
@@ -113,11 +114,14 @@ export default function Navigation({
             const data = await response.json();
             if (response.ok) {
                 setSnack(data.message || "Batch re-index started", "success");
+                addNotification(data.message || "Batch re-index started", "success");
             } else {
                 setSnack(data.message || "Failed to start re-index", "error");
+                addNotification(data.message || "Failed to start re-index", "error");
             }
         } catch (error) {
             setSnack("Network error: " + error.message, "error");
+            addNotification("Network error: " + error.message, "error");
         }
     };
 
@@ -291,7 +295,8 @@ Navigation.propTypes = {
     ).isRequired,
     onDismissNotification: PropTypes.func.isRequired,
     backEnd: PropTypes.string,
-    setSnack: PropTypes.func
+    setSnack: PropTypes.func,
+    addNotification: PropTypes.func
 };
 
 function NotificationDrawer({

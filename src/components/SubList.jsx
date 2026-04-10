@@ -165,9 +165,11 @@ export default function SubList({
             }
             if (response.status === 401) {
                 setSnack("Session expired. Please log in again.", "error");
+                addNotification("Session expired. Please log in again.", "error");
                 setToken(null);
             } else if (response.status === 429) {
                 setSnack("Too many downloads requested. Please wait.", "error");
+                addNotification("Too many downloads requested. Please wait.", "error");
             }
         })
     }
@@ -197,10 +199,12 @@ export default function SubList({
             if (!response.ok) {
                 if (response.status === 401) {
                     setSnack("Session expired. Please log in again.", "error");
+                    addNotification("Session expired. Please log in again.", "error");
                     setToken(null);
                 } else {
                     const text = await response.json().catch(() => response.statusText);
                     setSnack(`Failed to download file: ${text.message}`, "error");
+                    addNotification(`Failed to download file: ${text.message}`, "error");
                 }
                 return;
             }
@@ -219,9 +223,11 @@ export default function SubList({
                 setSnack(`Download started: ${fileName}`, "success");
             } else {
                 setSnack(`Failed to get download URL`, "error");
+                addNotification(`Failed to get download URL for ${fileName}`, "error");
             }
         } catch (error) {
             setSnack(`Error downloading file: ${error.message}`, "error");
+            addNotification(`Error downloading file ${fileName}: ${error.message}`, "error");
         }
     }
 
@@ -266,6 +272,7 @@ export default function SubList({
         }
         if (!response.ok) {
             setSnack(`Failed to delete: ${title ? title : videoUrl}`, "error");
+            addNotification(`Failed to delete: ${title ? title : videoUrl}`, "error");
         }
     }
 
