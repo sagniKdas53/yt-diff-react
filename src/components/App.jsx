@@ -9,6 +9,8 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Grid from "@mui/material/Unstable_Grid2";
+import Drawer from "@mui/material/Drawer";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger";
 
@@ -144,6 +146,7 @@ export default function App() {
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
     const [activeDownloads, setActiveDownloads] = useState({});
+    const [playlistDrawerOpen, setPlaylistDrawerOpen] = useState(false);
 
     const notificationRef = useRef(0);
     const downloadedItem = useRef({ url: null, title: null, fileName: null, saveDirectory: null });
@@ -179,6 +182,9 @@ export default function App() {
     }, []);
 
     const toggleProgressCallBack = useCallback((next) => toggleProgress(next), []);
+    const togglePlaylistDrawer = useCallback((open) => {
+        setPlaylistDrawerOpen(prev => open !== undefined ? open : !prev);
+    }, []);
 
     // stable callbacks
     const setSnack = useCallback((msg, type) => {
@@ -536,32 +542,37 @@ export default function App() {
     );
 
     // renders main app when token is available
+    const currentTheme = useMemo(() => themeObj(theme), [theme]);
+    const isMobile = useMediaQuery(currentTheme.breakpoints.down("md"));
+
     const renderMain = () => (
         <Grid container spacing={0}>
-            <Grid xl={4} lg={4} md={6} sm={12} xs={12}
-                sx={{ height: fullHeight }}>
-                <Suspense fallback={<Loader />}>
-                    <PlayList
-                        playListUrl={playListUrl}
-                        setPlayListUrl={setPlayListUrl}
-                        backEnd={backEnd}
-                        playListIndex={playListIndex}
-                        setPlayListIndex={setPlayListIndex}
-                        disableButtons={false}
-                        setSnack={setSnack}
-                        reFetch={reFetchPlaylist}
-                        setReFetch={setReFetchPlaylist}
-                        setSubListIndex={setSubListIndex}
-                        tableContainerHeight={`${tableContainerHeight}px`}
-                        rowsPerPageSubList={rowsPerPageSubList}
-                        setRowsPerPageSubList={setRowsPerPageSubList}
-                        token={token}
-                        setToken={setToken}
-                        addNotification={addNotification}
-                    />
-                </Suspense>
-            </Grid>
-            <Grid xl={8} lg={8} md={6} sm={12} xs={12}
+            {!isMobile && (
+                <Grid xl={4} lg={4} md={6} sm={12} xs={12}
+                    sx={{ height: fullHeight }}>
+                    <Suspense fallback={<Loader />}>
+                        <PlayList
+                            playListUrl={playListUrl}
+                            setPlayListUrl={setPlayListUrl}
+                            backEnd={backEnd}
+                            playListIndex={playListIndex}
+                            setPlayListIndex={setPlayListIndex}
+                            disableButtons={false}
+                            setSnack={setSnack}
+                            reFetch={reFetchPlaylist}
+                            setReFetch={setReFetchPlaylist}
+                            setSubListIndex={setSubListIndex}
+                            tableContainerHeight={`${tableContainerHeight}px`}
+                            rowsPerPageSubList={rowsPerPageSubList}
+                            setRowsPerPageSubList={setRowsPerPageSubList}
+                            token={token}
+                            setToken={setToken}
+                            addNotification={addNotification}
+                        />
+                    </Suspense>
+                </Grid>
+            )}
+            <Grid xl={isMobile ? 12 : 8} lg={isMobile ? 12 : 8} md={isMobile ? 12 : 6} sm={12} xs={12}
                 sx={{ height: fullHeight }}>
                 <Suspense fallback={<Loader />}>
                     <SubList
@@ -580,6 +591,7 @@ export default function App() {
                         setToken={setToken}
                         setSnack={setSnack}
                         addNotification={addNotification}
+                        onClearSelection={() => isMobile && togglePlaylistDrawer(true)}
                     />
                 </Suspense>
             </Grid>
@@ -588,7 +600,7 @@ export default function App() {
 
     // main app
     return (
-        <ThemeProvider theme={themeObj(theme)}>
+        <ThemeProvider theme={currentTheme}>
             <Box sx={{ margin: 0, padding: 0, bgcolor: "background.default", height: "100%", position: "relative" }}>
                 {/* nav bar */}
                 <Suspense fallback={<Loader />}>
@@ -606,6 +618,7 @@ export default function App() {
                             backEnd={backEnd}
                             setSnack={setSnack}
                             addNotification={addNotification}
+                            onTogglePlaylistDrawer={togglePlaylistDrawer}
                         />
                         <Box sx={{ width: "100%", height: progressBarHeight + "px" }}>
                             <LinearProgress
@@ -621,6 +634,37 @@ export default function App() {
                 <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
                     {token === null ? renderAuth() : renderMain()}
                 </Paper>
+                {/* Playlist Drawer for mobile */}
+                <Drawer
+                    anchor="left"
+                    open={isMobile && playlistDrawerOpen}
+                    onClose={() => togglePlaylistDrawer(false)}
+                    PaperProps={{
+                        sx: { width: { xs: "100%", sm: 350 }, maxWidth: "100%" }
+                    }}
+                >
+                    <Suspense fallback={<Loader />}>
+                        <PlayList
+                            playListUrl={playListUrl}
+                            setPlayListUrl={setPlayListUrl}
+                            backEnd={backEnd}
+                            playListIndex={playListIndex}
+                            setPlayListIndex={setPlayListIndex}
+                            disableButtons={false}
+                            setSnack={setSnack}
+                            reFetch={reFetchPlaylist}
+                            setReFetch={setReFetchPlaylist}
+                            setSubListIndex={setSubListIndex}
+                            tableContainerHeight="100vh"
+                            rowsPerPageSubList={rowsPerPageSubList}
+                            setRowsPerPageSubList={setRowsPerPageSubList}
+                            token={token}
+                            setToken={setToken}
+                            addNotification={addNotification}
+                            onLoadSuccess={() => togglePlaylistDrawer(false)}
+                        />
+                    </Suspense>
+                </Drawer>
                 {/* snack bar */}
                 <Stack spacing={2} sx={{ maxWidth: 600 }}>
                     <Snackbar

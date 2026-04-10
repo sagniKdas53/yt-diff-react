@@ -12,6 +12,7 @@ import { Error as ErrorIcon } from "@mui/icons-material";
 import { Info as InfoIcon } from "@mui/icons-material";
 import { CheckCircle as SuccessIcon } from "@mui/icons-material";
 import { Warning as WarningIcon } from "@mui/icons-material";
+import { PlaylistPlay as PlaylistPlayIcon } from "@mui/icons-material";
 import AppBar from "@mui/material/AppBar";
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
@@ -51,7 +52,8 @@ export default function Navigation({
     onDismissNotification,
     backEnd,
     setSnack,
-    addNotification
+    addNotification,
+    onTogglePlaylistDrawer
 }) {
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
@@ -132,6 +134,20 @@ export default function Navigation({
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1, whiteSpace: "nowrap" }}>
                         yt-diff
                     </Typography>
+                    {token && (
+                        <Button
+                            color="inherit"
+                            onClick={() => onTogglePlaylistDrawer()}
+                            sx={{
+                                display: { xs: "flex", md: "none" },
+                                minWidth: "auto",
+                                p: 0.5,
+                                mr: 1
+                            }}
+                        >
+                            <PlaylistPlayIcon />
+                        </Button>
+                    )}
                     {token && (
                         <>
                             <Button color="inherit" onClick={() => setReindexOpen(true)} sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}>
@@ -296,7 +312,8 @@ Navigation.propTypes = {
     onDismissNotification: PropTypes.func.isRequired,
     backEnd: PropTypes.string,
     setSnack: PropTypes.func,
-    addNotification: PropTypes.func
+    addNotification: PropTypes.func,
+    onTogglePlaylistDrawer: PropTypes.func
 };
 
 function NotificationDrawer({

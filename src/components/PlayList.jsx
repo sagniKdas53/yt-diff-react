@@ -55,7 +55,8 @@ export default function PlayList({
   setToken,
   playListIndex,
   setPlayListIndex,
-  addNotification
+  addNotification,
+  onLoadSuccess
 }) {
   const [query, updateQuery] = useState("");
   // 1 == ID [Default], 3 == lastUpdatedByScheduler
@@ -314,6 +315,7 @@ export default function PlayList({
   const handleLoad = (url) => {
     setPlayListUrl(url);
     setSubListIndex(0);
+    if (onLoadSuccess) onLoadSuccess();
   };
 
   const debouncedQuery = useMemo(

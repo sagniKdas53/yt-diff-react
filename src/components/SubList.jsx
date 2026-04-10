@@ -56,7 +56,8 @@ export default function SubList({
     token,
     setToken,
     setSnack,
-    addNotification
+    addNotification,
+    onClearSelection
 }) {
     // Query and sort state
     const [query, updateQuery] = useState("");
@@ -127,6 +128,7 @@ export default function SubList({
         setPlaylistDirectory("init");
         handleChangePage(null, 0);
         setSubListIndex(0);
+        if (onClearSelection) onClearSelection();
     };
 
     const openPlayer = (saveDir, fileName, title, index) => {
@@ -863,6 +865,7 @@ SubList.propTypes = {
     setToken: PropTypes.func.isRequired,
     setSnack: PropTypes.func.isRequired,
     addNotification: PropTypes.func.isRequired,
+    onClearSelection: PropTypes.func,
 };
 
 function SubListFab({ selectedItems, clear, download }) {
