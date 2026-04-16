@@ -58,10 +58,10 @@ export default function PlayList({
   addNotification
 }) {
   const [query, updateQuery] = useState("");
-  // 1 == ID [Default], 3 == lastUpdatedByScheduler
-  const [sort, updateSort] = useState(1);
-  // 1 == ASC [Default], 2 == DESC
-  const [order, updateOrder] = useState(1);
+  // "1" == ID [Default], "3" == lastUpdatedByScheduler
+  const [sort, updateSort] = useState("1");
+  // "1" == ASC [Default], "2" == DESC
+  const [order, updateOrder] = useState("1");
   // These are the controls
   const [localQuery, setLocalQuery] = useState("");
   const [start, setStart] = useState(0);
@@ -225,7 +225,7 @@ export default function PlayList({
       // Delete-playlist is not getting re-fetched
       setReFetch(`${playListUrlToDelete}-del-${new Date().getTime()}`);
       let startIndex = start;
-      if (order === 2) {
+      if (order === "2") {
         // DESC order
         //console.log("Total items before deletion: ", totalItems, " startIndex: ", startIndex);
         startIndex = Math.min(totalItems - 1, startIndex);
@@ -410,12 +410,13 @@ export default function PlayList({
   };
 
   const createSortHandler = (id) => {
-    if (id === sort) {
-      if (order === 1) updateOrder(2);
-      else if (order === 2) updateOrder(1);
+    const stringId = String(id);
+    if (stringId === sort) {
+      if (order === "1") updateOrder("2");
+      else if (order === "2") updateOrder("1");
     } else {
-      if (sort === 1) updateSort(3);
-      else if (sort === 3) updateSort(1);
+      if (sort === "1") updateSort("3");
+      else if (sort === "3") updateSort("1");
     }
   };
 
@@ -432,9 +433,9 @@ export default function PlayList({
                 style={{ paddingInlineEnd: "0px" }}
               >
                 <TableSortLabel
-                  active={1 === sort}
-                  direction={order === 1 ? "asc" : "desc"}
-                  onClick={() => createSortHandler(1)}
+                  active={"1" === sort}
+                  direction={order === "1" ? "asc" : "desc"}
+                  onClick={() => createSortHandler("1")}
                 >
                   ID
                 </TableSortLabel>
@@ -470,9 +471,9 @@ export default function PlayList({
                 style={{ paddingInlineEnd: "0px" }}
               >
                 <TableSortLabel
-                  active={3 === sort}
-                  direction={order === 1 ? "asc" : "desc"}
-                  onClick={() => createSortHandler(3)}
+                  active={"3" === sort}
+                  direction={order === "1" ? "asc" : "desc"}
+                  onClick={() => createSortHandler("3")}
                 >
                   Watch
                 </TableSortLabel>
