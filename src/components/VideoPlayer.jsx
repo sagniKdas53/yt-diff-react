@@ -481,6 +481,7 @@ export default function VideoPlayer({
 
     useEffect(() => {
         fetchSignedUrl();
+        const videoElement = videoRef.current;
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -488,10 +489,10 @@ export default function VideoPlayer({
             if (abortControllerRef.current) abortControllerRef.current.abort();
 
             // Clean up the video element
-            if (videoRef.current) {
-                videoRef.current.pause();
-                videoRef.current.removeAttribute("src");
-                videoRef.current.load();
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.removeAttribute("src");
+                videoElement.load();
             }
         };
         // Dependency on saveDirectory/fileName forces refresh on track change
