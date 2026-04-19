@@ -162,6 +162,7 @@ export default function VideoPlayer({
     const fileIdRef = useRef(null);
     const expiryRef = useRef(null);
     const timerRef = useRef(null);
+    const recoveryTimerRef = useRef(null);
     const controlsTimeoutRef = useRef(null);
     const itemsAtTimeOfNext = useRef(null);
     const itemsAtTimeOfPrev = useRef(null);
@@ -170,8 +171,24 @@ export default function VideoPlayer({
     const volumeTapRef = useRef(null);
     const mobileVolumeTimeoutRef = useRef(null);
     const abortControllerRef = useRef(null);
+    const isMountedRef = useRef(false);
+    const playerSessionRef = useRef(0);
 
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
+
+    const clearRefreshTimer = useCallback(() => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    const clearRecoveryTimer = useCallback(() => {
+        if (recoveryTimerRef.current) {
+            clearTimeout(recoveryTimerRef.current);
+            recoveryTimerRef.current = null;
+        }
+    }, []);
 
     const formatTime = (seconds) => {
         const h = Math.floor(seconds / 3600);
@@ -184,10 +201,13 @@ export default function VideoPlayer({
     };
 
     const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
+        const sessionId = playerSessionRef.current;
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-        abortControllerRef.current = new AbortController();
+        clearRecoveryTimer();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         try {
             setLoading(true);
@@ -209,7 +229,7 @@ export default function VideoPlayer({
                     Authorization: `Bearer ${token}`,
                 },
                 mode: "cors",
-                signal: abortControllerRef.current.signal,
+                signal: controller.signal,
                 body: JSON.stringify({ saveDirectory, fileName }),
             });
 
@@ -219,6 +239,9 @@ export default function VideoPlayer({
             }
 
             const data = await response.json();
+            if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
+                return;
+            }
             if (data.status === "success" && data.signedUrlId) {
                 fileIdRef.current = data.signedUrlId;
                 expiryRef.current = data.expiry;
@@ -226,11 +249,16 @@ export default function VideoPlayer({
                 const newUrl = baseUrl + backEnd + "/getfile?fileId=" + data.signedUrlId + "&inline=true";
                 setVideoUrl(newUrl);
                 setErrorMsg(null);
-                scheduleRefresh();
+                scheduleRefresh(data.signedUrlId, sessionId, data.expiry);
 
                 if (isRecovery && videoRef.current) {
-                    setTimeout(() => {
-                        if (videoRef.current) {
+                    recoveryTimerRef.current = setTimeout(() => {
+                        if (
+                            isMountedRef.current
+                            && playerSessionRef.current === sessionId
+                            && fileIdRef.current === data.signedUrlId
+                            && videoRef.current
+                        ) {
                             videoRef.current.currentTime = resumeTime;
                             videoRef.current.play().catch((e) => console.error("Auto-resume failed", e));
                         }
@@ -242,22 +270,37 @@ export default function VideoPlayer({
         } catch (error) {
             if (error.name === "AbortError") return;
             console.error("fetchSignedUrl error:", error);
+            if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
+                return;
+            }
             setErrorMsg(error.message);
             setVideoUrl(null);
         } finally {
-            setLoading(false);
+            if (isMountedRef.current && playerSessionRef.current === sessionId) {
+                setLoading(false);
+            }
+            if (abortControllerRef.current === controller) {
+                abortControllerRef.current = null;
+            }
         }
     };
 
-    const scheduleRefresh = useCallback(() => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        if (!expiryRef.current || !fileIdRef.current) return;
+    const scheduleRefresh = useCallback((scheduledFileId = fileIdRef.current, scheduledSessionId = playerSessionRef.current, scheduledExpiry = expiryRef.current) => {
+        clearRefreshTimer();
+        if (!scheduledExpiry || !scheduledFileId) return;
 
-        const timeUntilExpiry = expiryRef.current - Date.now();
+        const timeUntilExpiry = scheduledExpiry - Date.now();
         // refresh the file 5 mins before expiry (300000 ms)
         const refreshTime = Math.max(0, timeUntilExpiry - 300000);
 
         timerRef.current = setTimeout(async () => {
+            if (
+                !isMountedRef.current
+                || playerSessionRef.current !== scheduledSessionId
+                || fileIdRef.current !== scheduledFileId
+            ) {
+                return;
+            }
             try {
                 const res = await fetch(backEnd + "/refreshfile", {
                     method: "POST",
@@ -267,21 +310,28 @@ export default function VideoPlayer({
                         Authorization: `Bearer ${token}`,
                     },
                     mode: "cors",
-                    body: JSON.stringify({ fileId: fileIdRef.current }),
+                    body: JSON.stringify({ fileId: scheduledFileId }),
                 });
 
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.status === "success") {
+                    if (
+                        data.status === "success"
+                        && isMountedRef.current
+                        && playerSessionRef.current === scheduledSessionId
+                        && fileIdRef.current === scheduledFileId
+                    ) {
                         expiryRef.current = data.expiry;
-                        scheduleRefresh();
+                        scheduleRefresh(scheduledFileId, scheduledSessionId, data.expiry);
                     }
                 }
             } catch (err) {
-                console.error("Auto-refresh failed", err);
+                if (isMountedRef.current && playerSessionRef.current === scheduledSessionId) {
+                    console.error("Auto-refresh failed", err);
+                }
             }
         }, refreshTime);
-    }, [backEnd, token]);
+    }, [backEnd, clearRefreshTimer, token]);
 
     // Keep refs in sync so setTimeout callbacks always read latest values
     isPlayingRef.current = isPlaying;
@@ -481,13 +531,30 @@ export default function VideoPlayer({
     }, [items, pendingNextPage, pendingPrevPage, openPlayer, playlistDirectory]);
 
     useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        playerSessionRef.current += 1;
+        clearRefreshTimer();
+        clearRecoveryTimer();
+        fileIdRef.current = null;
+        expiryRef.current = null;
         fetchSignedUrl();
         const videoElement = videoRef.current;
         return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
+            playerSessionRef.current += 1;
+            clearRefreshTimer();
+            clearRecoveryTimer();
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
             if (mobileVolumeTimeoutRef.current) clearTimeout(mobileVolumeTimeoutRef.current);
             if (abortControllerRef.current) abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+            fileIdRef.current = null;
+            expiryRef.current = null;
 
             // Clean up the video element
             if (videoElement) {
@@ -498,7 +565,7 @@ export default function VideoPlayer({
         };
         // Dependency on saveDirectory/fileName forces refresh on track change
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [saveDirectory, fileName]);
+    }, [clearRecoveryTimer, clearRefreshTimer, saveDirectory, fileName]);
 
     useEffect(() => {
         if (videoUrl && videoRef.current) {
