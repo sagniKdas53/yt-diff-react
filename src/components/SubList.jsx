@@ -241,7 +241,7 @@ export default function SubList({
      * @param {boolean} deleteVideosInDB Whether to delete the video itself from the database.
      * @returns {Promise<void>} A promise that resolves when the deletion is complete.
      */
-    const deleteVideo = async (playListUrl, videoUrl, title, cleanUp, deleteVideoMappings, deleteVideosInDB) => {
+    const deleteVideo = async (playListUrl, mappingId, videoUrl, title, cleanUp, deleteVideoMappings, deleteVideosInDB) => {
         setSnack(`Deleting: ${videoUrl}`, "info");
         const response = await fetch(backEnd + "/delsub", {
             method: "post",
@@ -254,7 +254,10 @@ export default function SubList({
             body: JSON.stringify(
                 {
                     "playListUrl": playListUrl,
-                    "videoUrls": [
+                    "mappingIds": mappingId ? [
+                        mappingId
+                    ] : [],
+                    "videoUrls": mappingId ? [] : [
                         videoUrl
                     ],
                     "cleanUp": cleanUp,
@@ -319,6 +322,7 @@ export default function SubList({
                 }
                 setItems([{
                     "positionInPlaylist": 1,
+                    "id": "error-row",
                     "playlistUrl": loadedPlayList,
                     "video_metadatum": {
                         "title": `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
@@ -676,6 +680,7 @@ export default function SubList({
                                                             onClick={() => {
                                                                 setConfirmPayload({
                                                                     playListUrl: loadedPlayList,
+                                                                    mappingId: element.id,
                                                                     videoUrl: meta.videoUrl,
                                                                     title: meta.title,
                                                                     cleanUp: true,
@@ -696,6 +701,7 @@ export default function SubList({
                                                             onClick={() => {
                                                                 setConfirmPayload({
                                                                     playListUrl: loadedPlayList,
+                                                                    mappingId: element.id,
                                                                     videoUrl: meta.videoUrl,
                                                                     title: meta.title,
                                                                     cleanUp: false,
@@ -716,6 +722,7 @@ export default function SubList({
                                                         onClick={() => {
                                                             setConfirmPayload({
                                                                 playListUrl: loadedPlayList,
+                                                                mappingId: element.id,
                                                                 videoUrl: meta.videoUrl,
                                                                 title: meta.title,
                                                                 cleanUp: true,
@@ -798,11 +805,12 @@ export default function SubList({
                     <Button
                         onClick={() => {
                             if (confirmPayload) {
-                                deleteVideo(
-                                    confirmPayload.playListUrl,
-                                    confirmPayload.videoUrl,
-                                    confirmPayload.title,
-                                    confirmPayload.cleanUp,
+                                    deleteVideo(
+                                        confirmPayload.playListUrl,
+                                        confirmPayload.mappingId,
+                                        confirmPayload.videoUrl,
+                                        confirmPayload.title,
+                                        confirmPayload.cleanUp,
                                     confirmPayload.deleteVideoMappings,
                                     confirmPayload.deleteVideosInDB
                                 );
