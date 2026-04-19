@@ -416,24 +416,27 @@ export default function App() {
             }
 
             const existingPlaylists = Array.isArray(data.existingPlaylists) ? data.existingPlaylists : [];
-            const firstExistingPlaylist = existingPlaylists[0];
+            const firstExistingPlaylist = data.sourcePlaylist || existingPlaylists[0];
             const playlistNote = firstExistingPlaylist
                 ? ` Already exists in playlist: ${firstExistingPlaylist.title}.`
                 : "";
-            const locationNote = data.downloadLocation
-                ? ` Files: ${data.downloadLocation}.`
-                : "";
+            const itemLabel = data.itemLabel || data.title || "video";
 
             if (data.alreadyExisted) {
                 const duplicateMessage = data.duplicateScope === "none"
-                    ? `Duplicates are not allowed in None. Navigated to position ${data.seekSubListTo}.${locationNote}`
-                    : `Duplicate video encountered and navigated to ${data.title}.${locationNote}`;
-                setSnackRef.current && setSnackRef.current(duplicateMessage, "info");
-                addNotificationRef.current && addNotificationRef.current(duplicateMessage, "info");
+                    ? `${itemLabel} is already in None at position ${data.seekSubListTo}.`
+                    : `Duplicate video encountered and navigated to ${data.title}.`;
+                setSnackRef.current && setSnackRef.current(duplicateMessage, "error");
+                addNotificationRef.current && addNotificationRef.current(duplicateMessage, "error");
             } else if (data.addedFromDownloaded) {
-                const loadedMessage = `Added ${data.title} to None.${playlistNote}${locationNote}`;
-                setSnackRef.current && setSnackRef.current(loadedMessage, "info");
-                addNotificationRef.current && addNotificationRef.current(loadedMessage, "info");
+                const sourcePosition = typeof firstExistingPlaylist?.positionInPlaylist === "number"
+                    ? firstExistingPlaylist.positionInPlaylist + 1
+                    : null;
+                const loadedMessage = sourcePosition !== null && firstExistingPlaylist?.title
+                    ? `Added ${data.title} to None. Already downloaded in ${firstExistingPlaylist.title} at position ${sourcePosition}.`
+                    : `Added ${data.title} to None.${playlistNote}`;
+                setSnackRef.current && setSnackRef.current(loadedMessage, "success");
+                addNotificationRef.current && addNotificationRef.current(loadedMessage, "success");
             } else {
                 setSnackRef.current && setSnackRef.current(`${data.title}`, "success");
                 addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`, "success");
