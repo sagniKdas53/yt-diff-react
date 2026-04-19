@@ -254,6 +254,7 @@ export default function VideoPlayer({
         if (!expiryRef.current || !fileIdRef.current) return;
 
         const timeUntilExpiry = expiryRef.current - Date.now();
+        // refresh the file 5 mins before expiry (300000 ms)
         const refreshTime = Math.max(0, timeUntilExpiry - 300000);
 
         timerRef.current = setTimeout(async () => {
