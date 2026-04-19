@@ -36,7 +36,7 @@ import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
@@ -82,6 +82,73 @@ export default function SubList({
     const [currentPlayerVideoTitle, setCurrentPlayerVideoTitle] = useState("");
     const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
     const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
+    const thumbMetaRef = useRef({});
+    const thumbRefreshTimerRef = useRef(null);
+
+    const clearThumbnailRefreshTimer = useCallback(() => {
+        if (thumbRefreshTimerRef.current) {
+            clearTimeout(thumbRefreshTimerRef.current);
+            thumbRefreshTimerRef.current = null;
+        }
+    }, []);
+
+    const scheduleThumbnailRefresh = useCallback(() => {
+        clearThumbnailRefreshTimer();
+
+        const activeEntries = Object.values(thumbMetaRef.current).filter((entry) => entry?.fileId && entry?.expiry);
+        if (activeEntries.length === 0) return;
+
+        const nextExpiry = Math.min(...activeEntries.map((entry) => entry.expiry));
+        const timeUntilExpiry = nextExpiry - Date.now();
+        const refreshTime = Math.max(0, timeUntilExpiry - 300000);
+
+        thumbRefreshTimerRef.current = setTimeout(async () => {
+            const entries = Object.entries(thumbMetaRef.current).filter(([, entry]) => entry?.fileId && entry?.expiry);
+            const dueEntries = entries.filter(([, entry]) => (entry.expiry - Date.now()) <= 300000);
+            if (dueEntries.length === 0) {
+                scheduleThumbnailRefresh();
+                return;
+            }
+
+            try {
+                const response = await fetch(backEnd + "/refreshfiles", {
+                    method: "post",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    mode: "cors",
+                    body: JSON.stringify({ fileIds: dueEntries.map(([, entry]) => entry.fileId) }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "success" && data.files) {
+                        dueEntries.forEach(([fileName, entry]) => {
+                            const refreshed = data.files[entry.fileId];
+                            if (refreshed?.expiry) {
+                                thumbMetaRef.current[fileName] = {
+                                    ...thumbMetaRef.current[fileName],
+                                    expiry: refreshed.expiry,
+                                };
+                            } else {
+                                delete thumbMetaRef.current[fileName];
+                                setThumbUrls((prev) => ({ ...prev, [fileName]: null }));
+                            }
+                        });
+                    }
+                } else if (response.status === 401) {
+                    setSnack("Session expired. Please log in again.", "error");
+                    setToken(null);
+                }
+            } catch (_error) {
+                // Let the next bulk fetch recover if this refresh fails.
+            }
+
+            scheduleThumbnailRefresh();
+        }, refreshTime);
+    }, [backEnd, clearThumbnailRefreshTimer, setSnack, setToken, token]);
     // const functions and normal functions
     const handleChangePage = useCallback(
         (_event, newPage) => {
@@ -399,14 +466,20 @@ export default function SubList({
                     if (data.status === "success" && data.files) {
                         const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
                         const updates = {};
-                        Object.entries(data.files).forEach(([fileName, signedUrlId]) => {
-                            if (signedUrlId) {
-                                updates[fileName] = baseUrl + backEnd + "/getfile?fileId=" + signedUrlId;
+                        Object.entries(data.files).forEach(([fileName, fileData]) => {
+                            if (fileData?.signedUrlId) {
+                                updates[fileName] = baseUrl + backEnd + "/getfile?fileId=" + fileData.signedUrlId;
+                                thumbMetaRef.current[fileName] = {
+                                    fileId: fileData.signedUrlId,
+                                    expiry: fileData.expiry,
+                                };
                             } else {
                                 updates[fileName] = null;
+                                delete thumbMetaRef.current[fileName];
                             }
                         });
                         setThumbUrls(prev => ({ ...prev, ...updates }));
+                        scheduleThumbnailRefresh();
                     }
                 } else if (response.status === 401) {
                     setSnack("Session expired. Please log in again.", "error");
@@ -454,8 +527,16 @@ export default function SubList({
         updateSelected({});
         setSelectAll(false);
         updateSort(false);
+        clearThumbnailRefreshTimer();
+        thumbMetaRef.current = {};
         setThumbUrls({});
-    }, [loadedPlayList]);
+    }, [clearThumbnailRefreshTimer, loadedPlayList]);
+
+    useEffect(() => {
+        return () => {
+            clearThumbnailRefreshTimer();
+        };
+    }, [clearThumbnailRefreshTimer]);
 
     useEffect(() => {
         setSelectAll(false);
