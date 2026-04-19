@@ -415,10 +415,27 @@ export default function App() {
                 setSubListIndex(data.seekSubListTo);
             }
 
+            const existingPlaylists = Array.isArray(data.existingPlaylists) ? data.existingPlaylists : [];
+            const firstExistingPlaylist = existingPlaylists[0];
+            const playlistNote = firstExistingPlaylist
+                ? ` Already exists in playlist: ${firstExistingPlaylist.title}.`
+                : "";
+            const locationNote = data.downloadLocation
+                ? ` Files: ${data.downloadLocation}.`
+                : "";
+
             if (data.alreadyExisted) {
-                setSnackRef.current && setSnackRef.current("Duplicate video encountered and navigated to", "info");
-                addNotificationRef.current && addNotificationRef.current(`Duplicate video encountered and navigated to ${data.title}`, "info");
+                const duplicateMessage = data.duplicateScope === "none"
+                    ? `Duplicates are not allowed in None. Navigated to position ${data.seekSubListTo}.${locationNote}`
+                    : `Duplicate video encountered and navigated to ${data.title}.${locationNote}`;
+                setSnackRef.current && setSnackRef.current(duplicateMessage, "info");
+                addNotificationRef.current && addNotificationRef.current(duplicateMessage, "info");
+            } else if (data.addedFromDownloaded) {
+                const loadedMessage = `Added ${data.title} to None.${playlistNote}${locationNote}`;
+                setSnackRef.current && setSnackRef.current(loadedMessage, "info");
+                addNotificationRef.current && addNotificationRef.current(loadedMessage, "info");
             } else {
+                setSnackRef.current && setSnackRef.current(`${data.title}`, "success");
                 addNotificationRef.current && addNotificationRef.current(`Successfully loaded video: ${data.title}`, "success");
             }
         };
@@ -431,8 +448,10 @@ export default function App() {
 
         const onListingVideoSkippedBecauseDownloaded = (data) => {
             decrementListings();
-            setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
-            addNotificationRef.current && addNotificationRef.current(`${data.message}`, "info");
+            const locationNote = data.downloadLocation ? ` Files: ${data.downloadLocation}.` : "";
+            const message = `${data.message}${locationNote}`;
+            setSnackRef.current && setSnackRef.current(message, "info");
+            addNotificationRef.current && addNotificationRef.current(message, "info");
         };
 
         // Register listeners
