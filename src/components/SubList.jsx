@@ -6,6 +6,7 @@ import { DeleteSweep as DeleteSweepIcon } from "@mui/icons-material";
 import { Download as DownloadIcon } from "@mui/icons-material";
 import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import { PlayArrow as PlayArrowIcon } from "@mui/icons-material";
+import { PlaylistRemove as PlaylistRemoveIcon } from "@mui/icons-material";
 import Box from "@mui/material/Box";
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -40,7 +41,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
-import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 export default function SubList({
     setPlayListUrl,
     loadedPlayList,
@@ -820,8 +820,9 @@ export default function SubList({
                                                         </IconButton>
                                                     </Tooltip>
                                                 )}
-                                                <Tooltip title="Download file" disabled={meta.downloadStatus === false}>
-                                                    <IconButton onClick={() => getFileAndDownload(meta.saveDirectory ?? playlistDirectory, meta.fileName)} size="large">
+                                                <Tooltip title="Download file">
+                                                    {/* Maybe I should wire it up to call /download for the item instead of returning null when download icon is clicked for an undownloaded item */}
+                                                    <IconButton onClick={() => meta.downloadStatus ? getFileAndDownload(meta.saveDirectory ?? playlistDirectory, meta.fileName) : null} size="large">
                                                         <FileDownloadIcon color={meta.downloadStatus ? "success" : "disabled"} sx={{ pt: 0.3 }} />
                                                     </IconButton>
                                                 </Tooltip>
