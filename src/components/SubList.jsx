@@ -40,7 +40,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
-
+import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove';
 export default function SubList({
     setPlayListUrl,
     loadedPlayList,
@@ -755,7 +755,28 @@ export default function SubList({
                                                 id={meta.videoUrl}
                                             />
                                             <ButtonGroup size="small">
+                                                {/* Remove from playlist (keep files too on disk) — always available */}
+                                                <Tooltip title="Remove video from playlist">
+                                                    <IconButton
+                                                        onClick={() => {
+                                                            setConfirmPayload({
+                                                                playListUrl: loadedPlayList,
+                                                                mappingId: element.id,
+                                                                videoUrl: meta.videoUrl,
+                                                                title: meta.title,
+                                                                cleanUp: false,
+                                                                deleteVideoMappings: true,
+                                                                deleteVideosInDB: false,
+                                                            });
+                                                            setConfirmOpen(true);
+                                                        }}
+                                                        size="large"
+                                                    >
+                                                        <PlaylistRemoveIcon color="warning" />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 {meta.downloadStatus ? (
+                                                    // Only delete the downloaded files
                                                     <Tooltip title="Delete the downloaded files">
                                                         <IconButton
                                                             onClick={() => {
@@ -764,20 +785,21 @@ export default function SubList({
                                                                     mappingId: element.id,
                                                                     videoUrl: meta.videoUrl,
                                                                     title: meta.title,
-                                                                    cleanUp: true,
-                                                                    deleteVideoMappings: false,
-                                                                    deleteVideosInDB: false,
+                                                                    cleanUp: true, // only delete downloaded files
+                                                                    deleteVideoMappings: false, // leave everthing else intact 
+                                                                    deleteVideosInDB: false, // leave everthing else intact
                                                                 });
                                                                 setConfirmOpen(true);
                                                             }}
                                                             size="large"
                                                         >
                                                             {/* This deletes only the downloaded files, the video mappings and the video are not deleted */}
-                                                            <DeleteForeverIcon color="success" />
+                                                            <DeleteSweepIcon color="success" />
                                                         </IconButton>
                                                     </Tooltip>
                                                 ) : (
-                                                    <Tooltip title="Delete the video from playlist">
+                                                    // This deletes the video from the DB, the video mappings and the files
+                                                    <Tooltip title="Delete video from DB">
                                                         <IconButton
                                                             onClick={() => {
                                                                 setConfirmPayload({
@@ -785,50 +807,24 @@ export default function SubList({
                                                                     mappingId: element.id,
                                                                     videoUrl: meta.videoUrl,
                                                                     title: meta.title,
-                                                                    cleanUp: false,
+                                                                    cleanUp: true,
                                                                     deleteVideoMappings: true,
-                                                                    deleteVideosInDB: false,
+                                                                    deleteVideosInDB: true,
                                                                 });
                                                                 setConfirmOpen(true);
                                                             }}
                                                             size="large"
                                                         >
-                                                            {/* This deletes only the video mappings. The downloaded files and the video itself are kept */}
-                                                            <DeleteOutlineIcon color="warning" />
+                                                            {/* This deletes everything */}
+                                                            <DeleteForeverIcon color="error" />
                                                         </IconButton>
                                                     </Tooltip>
                                                 )}
-                                                <Tooltip title="Delete everything">
-                                                    <IconButton
-                                                        onClick={() => {
-                                                            setConfirmPayload({
-                                                                playListUrl: loadedPlayList,
-                                                                mappingId: element.id,
-                                                                videoUrl: meta.videoUrl,
-                                                                title: meta.title,
-                                                                cleanUp: true,
-                                                                deleteVideoMappings: true,
-                                                                deleteVideosInDB: true,
-                                                            });
-                                                            setConfirmOpen(true);
-                                                        }}
-                                                        size="large"
-                                                    >
-                                                        {/* This deletes everything */}
-                                                        <DeleteSweepIcon color="error" />
+                                                <Tooltip title="Download file" disabled={meta.downloadStatus === false}>
+                                                    <IconButton onClick={() => getFileAndDownload(meta.saveDirectory ?? playlistDirectory, meta.fileName)} size="large">
+                                                        <FileDownloadIcon color={meta.downloadStatus ? "success" : "disabled"} sx={{ pt: 0.3 }} />
                                                     </IconButton>
                                                 </Tooltip>
-                                                {meta.downloadStatus ? (
-                                                    <Tooltip title="Download file">
-                                                        <IconButton onClick={() => getFileAndDownload(meta.saveDirectory ?? playlistDirectory, meta.fileName)} size="large">
-                                                            <FileDownloadIcon color="success" sx={{ pt: 0.3 }} />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                ) : (
-                                                    <IconButton disabled>
-                                                        <CancelIcon color="error" />
-                                                    </IconButton>
-                                                )}
                                             </ButtonGroup>
                                         </CardActions>
                                     </Card>
@@ -851,7 +847,7 @@ export default function SubList({
                         download={downloadFunc}
                     />
                 </Box>
-            </Box>
+            </Box >
             <TablePagination
                 rowsPerPageOptions={[1, 8, 16, 32, 64]}
                 component="div"
@@ -874,7 +870,7 @@ export default function SubList({
                     <Typography variant="body2">
                         {confirmPayload ? (
                             <>
-                                Are you sure you want to <strong>{confirmPayload.cleanUp && confirmPayload.deleteVideoMappings && confirmPayload.deleteVideosInDB ? 'Delete everything' : confirmPayload.cleanUp && !confirmPayload.deleteVideoMappings ? 'Delete downloaded files' : !confirmPayload.cleanUp && confirmPayload.deleteVideoMappings ? 'Delete video mapping' : 'Delete'}</strong> for video <strong>{confirmPayload.title}</strong>?
+                                Are you sure you want to <strong>{confirmPayload.cleanUp && confirmPayload.deleteVideoMappings && confirmPayload.deleteVideosInDB ? 'Delete from DB and file system' : confirmPayload.cleanUp && !confirmPayload.deleteVideoMappings ? 'Delete downloaded files' : !confirmPayload.cleanUp && confirmPayload.deleteVideoMappings ? 'Delete video from playlist' : 'Delete'}</strong> for video <strong>{confirmPayload.title}</strong>?
                             </>
                         ) : (
                             "Are you sure you want to perform this delete operation?"
@@ -886,12 +882,12 @@ export default function SubList({
                     <Button
                         onClick={() => {
                             if (confirmPayload) {
-                                    deleteVideo(
-                                        confirmPayload.playListUrl,
-                                        confirmPayload.mappingId,
-                                        confirmPayload.videoUrl,
-                                        confirmPayload.title,
-                                        confirmPayload.cleanUp,
+                                deleteVideo(
+                                    confirmPayload.playListUrl,
+                                    confirmPayload.mappingId,
+                                    confirmPayload.videoUrl,
+                                    confirmPayload.title,
+                                    confirmPayload.cleanUp,
                                     confirmPayload.deleteVideoMappings,
                                     confirmPayload.deleteVideosInDB
                                 );
