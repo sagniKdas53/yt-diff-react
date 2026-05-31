@@ -152,6 +152,10 @@ export default function App() {
     const [activePlaylistTitle, setActivePlaylistTitle] = useState("");
     const mobileAddDialogRef = useRef(null); // ref to trigger PlayList's add dialog from SubList
 
+    // Detect mobile — create the theme once and use it throughout
+    const appliedTheme = useMemo(() => themeObj(theme), [theme]);
+    const isMobile = useMediaQuery(appliedTheme.breakpoints.down("md"));
+
     const notificationRef = useRef(0);
     const downloadedItem = useRef({ url: null, title: null, fileName: null, saveDirectory: null });
 
@@ -581,9 +585,6 @@ export default function App() {
         </Grid>
     );
 
-    // Detect mobile — create the theme once and use it throughout
-    const appliedTheme = useMemo(() => themeObj(theme), [theme]);
-    const isMobile = useMediaQuery(appliedTheme.breakpoints.down("md"));
 
     // Mobile navigation handlers
     const handleMobileLoadPlaylist = useCallback((url, title) => {
