@@ -866,14 +866,16 @@ export default function SubList({
                             <AddIcon />
                         </Fab>
                     )}
-                    {/* Above Add: Download / Clear */}
-                    <SubListFab
-                        selectedItems={selectedItems}
-                        clear={clearList}
-                        download={downloadFunc}
-                    />
+                    {/* Above Add: Download / Clear (desktop only — mobile uses merged back/close on left) */}
+                    {!isMobile && (
+                        <SubListFab
+                            selectedItems={selectedItems}
+                            clear={clearList}
+                            download={downloadFunc}
+                        />
+                    )}
                 </Box>
-                {/* Back FAB — bottom left, mobile only (separate to avoid accidental taps) */}
+                {/* Mobile: merged back/close FAB — bottom left */}
                 {isMobile && (
                     <Box
                         sx={{
@@ -883,13 +885,12 @@ export default function SubList({
                             left: "24px",
                         }}
                     >
-                        <Fab
-                            color="primary"
-                            aria-label="back to playlists"
-                            onClick={onBack}
-                        >
-                            <ArrowBackIcon />
-                        </Fab>
+                        <SubListFab
+                            selectedItems={selectedItems}
+                            clear={clearList}
+                            download={downloadFunc}
+                            mobileBackMode
+                        />
                     </Box>
                 )}
             </Box >
@@ -1000,21 +1001,21 @@ SubList.propTypes = {
     activePlaylistTitle: PropTypes.string,
 };
 
-function SubListFab({ selectedItems, clear, download }) {
+function SubListFab({ selectedItems, clear, download, mobileBackMode }) {
     const isNoItemsSelected =
         Object.keys(selectedItems).length === 0 ||
         Object.values(selectedItems).every((val) => !val);
 
-    //const color = isNoItemsSelected ? "secondary" : "primary";
-
     const handleClick = isNoItemsSelected ? clear : download;
 
-    const icon = isNoItemsSelected ? <ClearIcon /> : <DownloadIcon />;
+    const icon = isNoItemsSelected
+        ? (mobileBackMode ? <ArrowBackIcon /> : <ClearIcon />)
+        : <DownloadIcon />;
 
     return (
         <Fab
             color="primary"
-            aria-label="action"
+            aria-label={isNoItemsSelected ? (mobileBackMode ? "back to playlists" : "clear list") : "download selected"}
             onClick={handleClick}
         >
             {icon}
@@ -1026,4 +1027,5 @@ SubListFab.propTypes = {
     selectedItems: PropTypes.object.isRequired,
     download: PropTypes.func.isRequired,
     clear: PropTypes.func.isRequired,
+    mobileBackMode: PropTypes.bool,
 };
