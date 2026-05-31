@@ -843,7 +843,7 @@ export default function SubList({
                         })}
                     </Grid>
                 </Box>
-                {/* FAB stack — bottom right */}
+                {/* FAB stack — bottom right: Add (bottom) + Download/Clear (above) */}
                 <Box
                     sx={{
                         zIndex: 50,
@@ -856,13 +856,7 @@ export default function SubList({
                         alignItems: "center",
                     }}
                 >
-                    {/* Primary action: Download / Clear */}
-                    <SubListFab
-                        selectedItems={selectedItems}
-                        clear={clearList}
-                        download={downloadFunc}
-                    />
-                    {/* Mobile-only: Add video/playlist */}
+                    {/* Bottom-most: Add video/playlist (mobile only) */}
                     {isMobile && (
                         <Fab
                             color="primary"
@@ -873,8 +867,23 @@ export default function SubList({
                             <AddIcon />
                         </Fab>
                     )}
-                    {/* Mobile-only: Back to playlists */}
-                    {isMobile && (
+                    {/* Above Add: Download / Clear */}
+                    <SubListFab
+                        selectedItems={selectedItems}
+                        clear={clearList}
+                        download={downloadFunc}
+                    />
+                </Box>
+                {/* Back FAB — bottom left, mobile only (separate to avoid accidental taps) */}
+                {isMobile && (
+                    <Box
+                        sx={{
+                            zIndex: 50,
+                            position: "absolute",
+                            bottom: "24px",
+                            left: "24px",
+                        }}
+                    >
                         <Fab
                             color="primary"
                             aria-label="back to playlists"
@@ -883,8 +892,8 @@ export default function SubList({
                         >
                             <ArrowBackIcon />
                         </Fab>
-                    )}
-                </Box>
+                    </Box>
+                )}
             </Box >
             <TablePagination
                 rowsPerPageOptions={[1, 8, 16, 32, 64]}
