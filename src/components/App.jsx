@@ -229,6 +229,20 @@ export default function App() {
     useEffect(() => { setSnackRef.current = setSnack; }, [setSnack]);
 
     const activeDownloadsRef = useRef(activeDownloads);
+
+    // Mobile ref — so socket handlers can check mobile state without stale closures
+    const isMobileRef = useRef(false);
+    useEffect(() => { isMobileRef.current = isMobile; }, [isMobile]);
+
+    // Helper for socket handlers to trigger mobile slide-in
+    const triggerMobileSlideIfNeeded = (title) => {
+        if (isMobileRef.current) {
+            setActivePlaylistTitle(title || "");
+            setSlideDirection("in");
+            setMobileView("videos");
+        }
+    };
+
     // Wrapper: updates both state and ref synchronously so hasActiveDownloads() is never stale
     const updateActiveDownloads = (updater) => {
         setActiveDownloads(prev => {
@@ -371,6 +385,7 @@ export default function App() {
                 // Load the playlist if none is loaded
                 setPlayListUrl(data.url);
                 setPlayListIndex(data.seekPlaylistListTo);
+                triggerMobileSlideIfNeeded(data.playlistTitle);
             } else if (current === data.url) {
                 // If viewing the completed playlist, refresh the sublist
                 setReFetchSubList(tag);
@@ -403,6 +418,7 @@ export default function App() {
                 //setIndeterminate(false);
                 setPlayListUrl(data.url);
                 setPlayListIndex(data.seekPlaylistListTo);
+                triggerMobileSlideIfNeeded(data.playlistTitle || "");
             }
             // If the current url is the same as the data url, it means we are viewing the playlist being processed
             else if (current === data.url) {
@@ -420,6 +436,7 @@ export default function App() {
             if (current === "init" || current === "None") {
                 setPlayListUrl("None");
                 setSubListIndex(data.seekSubListTo);
+                triggerMobileSlideIfNeeded("Unlisted");
             }
 
             const existingPlaylists = Array.isArray(data.existingPlaylists) ? data.existingPlaylists : [];
