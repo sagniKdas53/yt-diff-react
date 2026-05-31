@@ -61,7 +61,6 @@ export default function SubList({
     isMobile,
     onBack,
     onOpenAddDialog,
-    activePlaylistTitle,
 }) {
     // Query and sort state
     const [query, updateQuery] = useState("");
@@ -998,7 +997,6 @@ SubList.propTypes = {
     isMobile: PropTypes.bool,
     onBack: PropTypes.func,
     onOpenAddDialog: PropTypes.func,
-    activePlaylistTitle: PropTypes.string,
 };
 
 function SubListFab({ selectedItems, clear, download, mobileBackMode }) {
