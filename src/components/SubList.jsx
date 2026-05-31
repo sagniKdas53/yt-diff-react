@@ -843,41 +843,48 @@ export default function SubList({
                         })}
                     </Grid>
                 </Box>
-                {/* Download/Clear FAB — bottom right */}
+                {/* FAB stack — bottom right */}
                 <Box
                     sx={{
                         zIndex: 50,
                         position: "absolute",
                         bottom: "24px",
                         right: "24px",
+                        display: "flex",
+                        flexDirection: "column-reverse",
+                        gap: 1.5,
+                        alignItems: "center",
                     }}
                 >
+                    {/* Primary action: Download / Clear */}
                     <SubListFab
                         selectedItems={selectedItems}
                         clear={clearList}
                         download={downloadFunc}
                     />
-                </Box>
-                {/* Back FAB — bottom left, mobile only */}
-                {isMobile && (
-                    <Box
-                        sx={{
-                            zIndex: 50,
-                            position: "absolute",
-                            bottom: "24px",
-                            left: "24px",
-                        }}
-                    >
+                    {/* Mobile-only: Add video/playlist */}
+                    {isMobile && (
                         <Fab
-                            color="secondary"
+                            color="primary"
+                            aria-label="add video or playlist"
+                            onClick={onOpenAddDialog}
+                            size="medium"
+                        >
+                            <AddIcon />
+                        </Fab>
+                    )}
+                    {/* Mobile-only: Back to playlists */}
+                    {isMobile && (
+                        <Fab
+                            color="primary"
                             aria-label="back to playlists"
                             onClick={onBack}
                             size="medium"
                         >
                             <ArrowBackIcon />
                         </Fab>
-                    </Box>
-                )}
+                    )}
+                </Box>
             </Box >
             <TablePagination
                 rowsPerPageOptions={[1, 8, 16, 32, 64]}
@@ -1002,6 +1009,7 @@ function SubListFab({ selectedItems, clear, download }) {
             color="primary"
             aria-label="action"
             onClick={handleClick}
+            size="medium"
         >
             {icon}
         </Fab>

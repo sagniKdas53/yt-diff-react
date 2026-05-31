@@ -588,6 +588,15 @@ export default function App() {
         }
     }, []);
 
+    // Wrapper for Nav's setPlayListUrl — triggers mobile slide on Unlisted
+    const handleNavSetPlayListUrl = useCallback((url) => {
+        if (isMobile) {
+            handleMobileLoadPlaylist(url, url === "None" ? "Unlisted" : "");
+        } else {
+            setPlayListUrl(url);
+        }
+    }, [isMobile, handleMobileLoadPlaylist, setPlayListUrl]);
+
     // Shared PlayList component props
     const playListProps = {
         playListUrl,
@@ -705,7 +714,7 @@ export default function App() {
                             themeSwitcher={themeSwitcher}
                             theme={theme}
                             connectionId={connectionId}
-                            setPlayListUrl={setPlayListUrl}
+                            setPlayListUrl={handleNavSetPlayListUrl}
                             token={token}
                             setToken={setToken}
                             setConnectionId={setConnectionId}
