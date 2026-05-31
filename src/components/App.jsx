@@ -8,6 +8,7 @@ import Paper from "@mui/material/Paper";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import Grid from "@mui/material/Unstable_Grid2";
 import { forwardRef, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger";
@@ -144,6 +145,12 @@ export default function App() {
     const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
     const [notifications, setNotifications] = useState([]);
     const [activeDownloads, setActiveDownloads] = useState({});
+
+    // Mobile slide navigation state
+    const [mobileView, setMobileView] = useState("playlists"); // "playlists" | "videos"
+    const [slideDirection, setSlideDirection] = useState("none"); // "in" | "out" | "none"
+    const [activePlaylistTitle, setActivePlaylistTitle] = useState("");
+    const mobileAddDialogRef = useRef(null); // ref to trigger PlayList's add dialog from SubList
 
     const notificationRef = useRef(0);
     const downloadedItem = useRef({ url: null, title: null, fileName: null, saveDirectory: null });
@@ -557,60 +564,139 @@ export default function App() {
         </Grid>
     );
 
-    // renders main app when token is available
-    const renderMain = () => (
-        <Grid container spacing={0}>
-            <Grid xl={4} lg={4} md={6} sm={12} xs={12}
-                sx={{ height: fullHeight }}>
+    // Mobile navigation handlers
+    const handleMobileLoadPlaylist = useCallback((url, title) => {
+        setPlayListUrl(url);
+        setSubListIndex(0);
+        setActivePlaylistTitle(title || "");
+        setSlideDirection("in");
+        setMobileView("videos");
+    }, [setPlayListUrl, setSubListIndex]);
+
+    const handleMobileBack = useCallback(() => {
+        setSlideDirection("out");
+        // After the slide-out animation finishes, switch view
+        setTimeout(() => {
+            setMobileView("playlists");
+            setSlideDirection("none");
+        }, 220);
+    }, []);
+
+    const handleMobileOpenAddDialog = useCallback(() => {
+        if (mobileAddDialogRef.current) {
+            mobileAddDialogRef.current();
+        }
+    }, []);
+
+    // Shared PlayList component props
+    const playListProps = {
+        playListUrl,
+        setPlayListUrl,
+        backEnd,
+        playListIndex,
+        setPlayListIndex,
+        disableButtons: false,
+        setSnack,
+        reFetch: reFetchPlaylist,
+        setReFetch: setReFetchPlaylist,
+        setSubListIndex,
+        tableContainerHeight: `${tableContainerHeight}px`,
+        rowsPerPageSubList,
+        setRowsPerPageSubList,
+        token,
+        setToken,
+        addNotification,
+    };
+
+    // Shared SubList component props
+    const subListProps = {
+        loadedPlayList: playListUrl,
+        setPlayListUrl,
+        backEnd,
+        subListIndex,
+        setSubListIndex,
+        downloadedItem: downloadedItem.current,
+        reFetch: reFetchSubList,
+        setReFetch: setReFetchSubList,
+        tableContainerHeight: `${tableContainerHeight}px`,
+        rowsPerPage: rowsPerPageSubList,
+        setRowsPerPage: setRowsPerPageSubList,
+        token,
+        setToken,
+        setSnack,
+        addNotification,
+    };
+
+    // renders mobile main with slide navigation
+    const renderMobileMain = () => (
+        <Box
+            className="mobile-slide-container"
+            sx={{ height: fullHeight }}
+        >
+            {/* Panel 1: Playlists — always rendered, sits behind */}
+            <Box
+                className="mobile-panel mobile-panel-playlist"
+                sx={{ display: 'flex', flexDirection: 'column' }}
+            >
                 <Suspense fallback={<Loader />}>
                     <PlayList
-                        playListUrl={playListUrl}
-                        setPlayListUrl={setPlayListUrl}
-                        backEnd={backEnd}
-                        playListIndex={playListIndex}
-                        setPlayListIndex={setPlayListIndex}
-                        disableButtons={false}
-                        setSnack={setSnack}
-                        reFetch={reFetchPlaylist}
-                        setReFetch={setReFetchPlaylist}
-                        setSubListIndex={setSubListIndex}
-                        tableContainerHeight={`${tableContainerHeight}px`}
-                        rowsPerPageSubList={rowsPerPageSubList}
-                        setRowsPerPageSubList={setRowsPerPageSubList}
-                        token={token}
-                        setToken={setToken}
-                        addNotification={addNotification}
+                        {...playListProps}
+                        isMobile={true}
+                        onMobileLoad={handleMobileLoadPlaylist}
+                        mobileAddDialogRef={mobileAddDialogRef}
                     />
                 </Suspense>
-            </Grid>
-            <Grid xl={8} lg={8} md={6} sm={12} xs={12}
-                sx={{ height: fullHeight }}>
-                <Suspense fallback={<Loader />}>
-                    <SubList
-                        loadedPlayList={playListUrl}
-                        setPlayListUrl={setPlayListUrl}
-                        backEnd={backEnd}
-                        subListIndex={subListIndex}
-                        setSubListIndex={setSubListIndex}
-                        downloadedItem={downloadedItem.current}
-                        reFetch={reFetchSubList}
-                        setReFetch={setReFetchSubList}
-                        tableContainerHeight={`${tableContainerHeight}px`}
-                        rowsPerPage={rowsPerPageSubList}
-                        setRowsPerPage={setRowsPerPageSubList}
-                        token={token}
-                        setToken={setToken}
-                        setSnack={setSnack}
-                        addNotification={addNotification}
-                    />
-                </Suspense>
-            </Grid>
-        </Grid>
+            </Box>
+
+            {/* Panel 2: Videos — slides in/out */}
+            {mobileView === "videos" && (
+                <Box
+                    className={`mobile-panel mobile-panel-videos ${slideDirection === "in" ? "slide-in" : ""} ${slideDirection === "out" ? "slide-out" : ""}`}
+                    sx={{ display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}
+                >
+                    <Suspense fallback={<Loader />}>
+                        <SubList
+                            {...subListProps}
+                            isMobile={true}
+                            onBack={handleMobileBack}
+                            onOpenAddDialog={handleMobileOpenAddDialog}
+                            activePlaylistTitle={activePlaylistTitle}
+                        />
+                    </Suspense>
+                </Box>
+            )}
+        </Box>
     );
+
+    // renders main app when token is available
+    const renderMain = () => {
+        if (isMobile) return renderMobileMain();
+        return (
+            <Grid container spacing={0}>
+                <Grid xl={4} lg={4} md={6} sm={12} xs={12}
+                    sx={{ height: fullHeight }}>
+                    <Suspense fallback={<Loader />}>
+                        <PlayList {...playListProps} />
+                    </Suspense>
+                </Grid>
+                <Grid xl={8} lg={8} md={6} sm={12} xs={12}
+                    sx={{ height: fullHeight }}>
+                    <Suspense fallback={<Loader />}>
+                        <SubList {...subListProps} />
+                    </Suspense>
+                </Grid>
+            </Grid>
+        );
+    };
+
+    // Detect mobile — must be called inside ThemeProvider for useMediaQuery to work
+    // So we create the theme once and use it throughout
+    const appliedTheme = useMemo(() => themeObj(theme), [theme]);
+    const isMobile = useMediaQuery(appliedTheme.breakpoints.down("md"));
 
     // main app
     return (
-        <ThemeProvider theme={themeObj(theme)}>
+        <ThemeProvider theme={appliedTheme}>
             <Box sx={{ margin: 0, padding: 0, bgcolor: "background.default", height: "100%", position: "relative" }}>
                 {/* nav bar */}
                 <Suspense fallback={<Loader />}>

@@ -55,7 +55,11 @@ export default function PlayList({
   setToken,
   playListIndex,
   setPlayListIndex,
-  addNotification
+  addNotification,
+  // Mobile props (optional — only passed on mobile)
+  isMobile,
+  onMobileLoad,
+  mobileAddDialogRef,
 }) {
   const [query, updateQuery] = useState("");
   // "1" == ID [Default], "3" == lastUpdatedByScheduler
@@ -108,6 +112,18 @@ export default function PlayList({
   const handleClickOpen = () => {
     setOpen(true);
   };
+
+  // Wire the mobileAddDialogRef so SubList can trigger this dialog
+  useEffect(() => {
+    if (mobileAddDialogRef) {
+      mobileAddDialogRef.current = handleClickOpen;
+    }
+    return () => {
+      if (mobileAddDialogRef) {
+        mobileAddDialogRef.current = null;
+      }
+    };
+  }, [mobileAddDialogRef]);
 
   const handleClose = () => {
     setOpen(false);
@@ -311,9 +327,13 @@ export default function PlayList({
     setPage(0);
   };
 
-  const handleLoad = (url) => {
-    setPlayListUrl(url);
-    setSubListIndex(0);
+  const handleLoad = (url, title) => {
+    if (isMobile && onMobileLoad) {
+      onMobileLoad(url, title);
+    } else {
+      setPlayListUrl(url);
+      setSubListIndex(0);
+    }
   };
 
   const debouncedQuery = useMemo(
@@ -586,7 +606,7 @@ export default function PlayList({
                       size="small"
                       variant="contained"
                       color={playListUrl === element.playlistUrl ? "success" : "secondary"}
-                      onClick={() => handleLoad(element.playlistUrl)}
+                      onClick={() => handleLoad(element.playlistUrl, element.title)}
                     >
                       <Typography variant="button">
                         {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
@@ -822,4 +842,8 @@ PlayList.propTypes = {
   playListIndex: PropTypes.number.isRequired,
   setPlayListIndex: PropTypes.func.isRequired,
   addNotification: PropTypes.func.isRequired,
+  // Mobile props
+  isMobile: PropTypes.bool,
+  onMobileLoad: PropTypes.func,
+  mobileAddDialogRef: PropTypes.object,
 };

@@ -1,3 +1,5 @@
+import { Add as AddIcon } from "@mui/icons-material";
+import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { Clear as ClearIcon } from "@mui/icons-material";
 import { DeleteForever as DeleteForeverIcon } from "@mui/icons-material";
 import { DeleteSweep as DeleteSweepIcon } from "@mui/icons-material";
@@ -54,7 +56,12 @@ export default function SubList({
     token,
     setToken,
     setSnack,
-    addNotification
+    addNotification,
+    // Mobile props (optional — only passed on mobile)
+    isMobile,
+    onBack,
+    onOpenAddDialog,
+    activePlaylistTitle,
 }) {
     // Query and sort state
     const [query, updateQuery] = useState("");
@@ -192,6 +199,10 @@ export default function SubList({
         setPlaylistDirectory("init");
         handleChangePage(null, 0);
         setSubListIndex(0);
+        // On mobile, navigate back to playlists after clearing
+        if (isMobile && onBack) {
+            onBack();
+        }
     };
 
     const openPlayer = (saveDir, fileName, title, index) => {
@@ -594,73 +605,167 @@ export default function SubList({
     return (
         <>
             <Box sx={{ height: tableContainerHeight, position: 'relative', display: 'flex', flexDirection: 'column' }}>
-                {/* Header area stays on top */}
-                <Table stickyHeader size="small" aria-label="a dense table">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell
-                                padding="checkbox"
-                                key="check-head"
-                                align="center"
-                                style={{ minWidth: 10 }}
+                {/* Mobile: Back bar with search — replaces table header */}
+                {isMobile ? (
+                    <>
+                        <Box className="mobile-back-bar" sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                            <Button
+                                className="back-btn"
+                                onClick={onBack}
+                                startIcon={<ArrowBackIcon />}
+                                color="secondary"
+                                size="small"
                             >
-                                <Checkbox
-                                    color="primary"
-                                    indeterminate={
-                                        selectAll
-                                            ? false
-                                            : Object.values(selectedItems).filter((value) => value)
-                                                .length > 0
-                                    }
-                                    checked={selectAll}
-                                    onChange={bulkAction}
-                                    inputProps={{
-                                        "aria-label": "select all items",
-                                    }}
-                                />
-                            </TableCell>
-                            <TableCell
-                                key="title-head"
-                                align="center"
-                                style={{ minWidth: 10 }}
-                                sx={{ width: "85%" }}
+                                Playlists
+                            </Button>
+                            <Typography className="back-title" variant="subtitle2" component="span" color="text.primary">
+                                {activePlaylistTitle || "Videos"}
+                            </Typography>
+                            <Typography className="back-count" variant="caption" color="text.secondary">
+                                {itemCount} videos
+                            </Typography>
+                        </Box>
+                        {/* Mobile action strip: Clear, Download, Add */}
+                        <Box className="mobile-action-strip" sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                            <Button
+                                variant="outlined"
+                                color="warning"
+                                size="small"
+                                startIcon={<ClearIcon />}
+                                onClick={clearList}
                             >
-                                <TextField
-                                    id="title-input"
-                                    label="Title"
-                                    variant="outlined"
-                                    size="small"
-                                    value={localQuery}
-                                    onChange={handleQueryChange}
-                                    sx={{ width: "100%" }}
-                                    InputProps={{
-                                        endAdornment: localQuery ? (
-                                            <InputAdornment position="end">
-                                                <IconButton size="small" onClick={clearQuery} edge="end">
-                                                    <ClearIcon fontSize="small" />
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ) : null,
-                                    }}
-                                />
-                            </TableCell>
-                            <TableCell
-                                key="saved-head"
-                                align="center"
-                                style={{ minWidth: 10 }}
+                                Clear
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                color="success"
+                                size="small"
+                                startIcon={<DownloadIcon />}
+                                onClick={downloadFunc}
                             >
-                                <TableSortLabel
-                                    active
-                                    direction={sort ? "desc" : "asc"}
-                                    onClick={handleSort}
-                                    sx={{ paddingInlineStart: 2 }}
+                                Download
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                color="secondary"
+                                size="small"
+                                startIcon={<AddIcon />}
+                                onClick={onOpenAddDialog}
+                            >
+                                Add
+                            </Button>
+                        </Box>
+                        {/* Mobile search + sort row */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                            <Checkbox
+                                color="primary"
+                                indeterminate={
+                                    selectAll
+                                        ? false
+                                        : Object.values(selectedItems).filter((value) => value).length > 0
+                                }
+                                checked={selectAll}
+                                onChange={bulkAction}
+                                inputProps={{ "aria-label": "select all items" }}
+                                size="small"
+                            />
+                            <TextField
+                                id="mobile-title-search"
+                                label="Search"
+                                variant="outlined"
+                                size="small"
+                                value={localQuery}
+                                onChange={handleQueryChange}
+                                sx={{ flex: 1 }}
+                                InputProps={{
+                                    endAdornment: localQuery ? (
+                                        <InputAdornment position="end">
+                                            <IconButton size="small" onClick={clearQuery} edge="end">
+                                                <ClearIcon fontSize="small" />
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ) : null,
+                                }}
+                            />
+                            <TableSortLabel
+                                active
+                                direction={sort ? "desc" : "asc"}
+                                onClick={handleSort}
+                                sx={{ flexShrink: 0, fontSize: 12 }}
+                            >
+                                Saved
+                            </TableSortLabel>
+                        </Box>
+                    </>
+                ) : (
+                    /* Desktop: Original table header */
+                    <Table stickyHeader size="small" aria-label="a dense table">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell
+                                    padding="checkbox"
+                                    key="check-head"
+                                    align="center"
+                                    style={{ minWidth: 10 }}
                                 >
-                                    Saved
-                                </TableSortLabel>
-                            </TableCell>
-                        </TableRow>
-                    </TableHead>
-                </Table>
+                                    <Checkbox
+                                        color="primary"
+                                        indeterminate={
+                                            selectAll
+                                                ? false
+                                                : Object.values(selectedItems).filter((value) => value)
+                                                    .length > 0
+                                        }
+                                        checked={selectAll}
+                                        onChange={bulkAction}
+                                        inputProps={{
+                                            "aria-label": "select all items",
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell
+                                    key="title-head"
+                                    align="center"
+                                    style={{ minWidth: 10 }}
+                                    sx={{ width: "85%" }}
+                                >
+                                    <TextField
+                                        id="title-input"
+                                        label="Title"
+                                        variant="outlined"
+                                        size="small"
+                                        value={localQuery}
+                                        onChange={handleQueryChange}
+                                        sx={{ width: "100%" }}
+                                        InputProps={{
+                                            endAdornment: localQuery ? (
+                                                <InputAdornment position="end">
+                                                    <IconButton size="small" onClick={clearQuery} edge="end">
+                                                        <ClearIcon fontSize="small" />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ) : null,
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell
+                                    key="saved-head"
+                                    align="center"
+                                    style={{ minWidth: 10 }}
+                                >
+                                    <TableSortLabel
+                                        active
+                                        direction={sort ? "desc" : "asc"}
+                                        onClick={handleSort}
+                                        sx={{ paddingInlineStart: 2 }}
+                                    >
+                                        Saved
+                                    </TableSortLabel>
+                                </TableCell>
+                            </TableRow>
+                        </TableHead>
+                    </Table>
+                )}
 
 
 
@@ -832,20 +937,23 @@ export default function SubList({
                         })}
                     </Grid>
                 </Box>
-                <Box
-                    sx={{
-                        zIndex: 50,
-                        position: "absolute",
-                        bottom: "24px",
-                        right: "24px",
-                    }}
-                >
-                    <SubListFab
-                        selectedItems={selectedItems}
-                        clear={clearList}
-                        download={downloadFunc}
-                    />
-                </Box>
+                {/* FAB — desktop only (mobile uses action strip) */}
+                {!isMobile && (
+                    <Box
+                        sx={{
+                            zIndex: 50,
+                            position: "absolute",
+                            bottom: "24px",
+                            right: "24px",
+                        }}
+                    >
+                        <SubListFab
+                            selectedItems={selectedItems}
+                            clear={clearList}
+                            download={downloadFunc}
+                        />
+                    </Box>
+                )}
             </Box >
             <TablePagination
                 rowsPerPageOptions={[1, 8, 16, 32, 64]}
@@ -947,6 +1055,11 @@ SubList.propTypes = {
     setToken: PropTypes.func.isRequired,
     setSnack: PropTypes.func.isRequired,
     addNotification: PropTypes.func.isRequired,
+    // Mobile props
+    isMobile: PropTypes.bool,
+    onBack: PropTypes.func,
+    onOpenAddDialog: PropTypes.func,
+    activePlaylistTitle: PropTypes.string,
 };
 
 function SubListFab({ selectedItems, clear, download }) {
