@@ -623,7 +623,7 @@ export default function PlayList({
         sx={{
           zIndex: 50,
           position: "absolute",
-          bottom: "24px",
+          bottom: "76px",
           right: "24px",
         }}
       >
@@ -631,7 +631,6 @@ export default function PlayList({
           color="primary"
           aria-label="action"
           onClick={handleClickOpen}
-          size="medium"
         >
           <AddIcon />
         </Fab>

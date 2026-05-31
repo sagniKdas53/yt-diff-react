@@ -862,7 +862,6 @@ export default function SubList({
                             color="primary"
                             aria-label="add video or playlist"
                             onClick={onOpenAddDialog}
-                            size="medium"
                         >
                             <AddIcon />
                         </Fab>
@@ -888,7 +887,6 @@ export default function SubList({
                             color="primary"
                             aria-label="back to playlists"
                             onClick={onBack}
-                            size="medium"
                         >
                             <ArrowBackIcon />
                         </Fab>
@@ -1018,7 +1016,6 @@ function SubListFab({ selectedItems, clear, download }) {
             color="primary"
             aria-label="action"
             onClick={handleClick}
-            size="medium"
         >
             {icon}
         </Fab>
