@@ -564,6 +564,10 @@ export default function App() {
         </Grid>
     );
 
+    // Detect mobile — create the theme once and use it throughout
+    const appliedTheme = useMemo(() => themeObj(theme), [theme]);
+    const isMobile = useMediaQuery(appliedTheme.breakpoints.down("md"));
+
     // Mobile navigation handlers
     const handleMobileLoadPlaylist = useCallback((url, title) => {
         setPlayListUrl(url);
@@ -697,11 +701,6 @@ export default function App() {
             </Grid>
         );
     };
-
-    // Detect mobile — must be called inside ThemeProvider for useMediaQuery to work
-    // So we create the theme once and use it throughout
-    const appliedTheme = useMemo(() => themeObj(theme), [theme]);
-    const isMobile = useMediaQuery(appliedTheme.breakpoints.down("md"));
 
     // main app
     return (
