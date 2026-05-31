@@ -38,7 +38,6 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
-// import { useRef } from "react";
 
 export default function PlayList({
   setPlayListUrl,
@@ -618,6 +617,8 @@ export default function PlayList({
             })}
           </TableBody>
         </Table>
+        {/* Spacer so last rows can scroll above the FAB zone */}
+        <Box sx={{ height: '80px' }} />
       </TableContainer>
       <Box
         sx={{

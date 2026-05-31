@@ -676,7 +676,7 @@ export default function SubList({
 
 
                 {/* Scrollable cards area */}
-                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto' }} aria-label="sub-list cards">
+                <Box sx={{ p: 1, overflow: 'auto', flex: '1 1 auto', pb: '88px' }} aria-label="sub-list cards">
                     <Grid container spacing={2} alignItems="stretch">
                         {items.map((element, index) => {
                             const meta = element.video_metadatum || {};
