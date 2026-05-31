@@ -11,15 +11,15 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import Divider from '@mui/material/Divider';
+import Divider from "@mui/material/Divider";
 import Fab from "@mui/material/Fab";
 import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
-import ListItemIcon from '@mui/material/ListItemIcon';
-import Menu from '@mui/material/Menu';
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { useTheme } from "@mui/material/styles";
@@ -91,7 +91,21 @@ export default function PlayList({
     setOpenMenuIndex(index);
   };
 
-  useDependencyLogger({ backEnd, start, stop, sort, query, reFetch, urlList, items, totalItems, page }, "PlayList");
+  useDependencyLogger(
+    {
+      backEnd,
+      start,
+      stop,
+      sort,
+      query,
+      reFetch,
+      urlList,
+      items,
+      totalItems,
+      page,
+    },
+    "PlayList",
+  );
 
   const handleCloseAnchor = () => {
     setAnchorEl(null);
@@ -102,7 +116,7 @@ export default function PlayList({
     // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
     ["Delete playlist", false, true, false, "playlist", "warning"],
     ["Unlink videos", true, false, false, "videos", "secondary"],
-    ["Delete everything", true, true, true, "everything", "error"]
+    ["Delete everything", true, true, true, "everything", "error"],
   ];
   const updateUrls = (event) => {
     setUrlList(event.target.value);
@@ -139,7 +153,9 @@ export default function PlayList({
 
   const submitUrlList = async () => {
     setOpen(false);
-    const valid = Array.from(new Set(urlList.trim().split("\n").filter(validate)));
+    const valid = Array.from(
+      new Set(urlList.trim().split("\n").filter(validate)),
+    );
     try {
       // This response is sent for only the first item ie: 0th item
       await postUrlList(valid);
@@ -167,25 +183,22 @@ export default function PlayList({
 
   const postUrlList = async (urlList) => {
     //console.log("Posting urlList: " + urlList);
-    const response = await fetch(backEnd +
-      "/list",
-      {
-        method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        mode: "cors",
-        body: JSON.stringify({
-          urlList: urlList,
-          // This is to make sure that we can get the requested amount + 1 so that we can paginate properly
-          chunkSize: rowsPerPageSubList + 1,
-          monitoringType: watch,
-          sleep: true
-        }),
-      }
-    );
+    const response = await fetch(backEnd + "/list", {
+      method: "post",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      mode: "cors",
+      body: JSON.stringify({
+        urlList: urlList,
+        // This is to make sure that we can get the requested amount + 1 so that we can paginate properly
+        chunkSize: rowsPerPageSubList + 1,
+        monitoringType: watch,
+        sleep: true,
+      }),
+    });
     if (response.ok) {
       const data = await response.text();
       const json_data = JSON.parse(data);
@@ -196,7 +209,10 @@ export default function PlayList({
         setSnack("Session expired. Please log in again.", "error");
         setToken(null);
       } else if (response.status === 429) {
-        setSnack("Too many requests. Please wait before queuing more.", "error");
+        setSnack(
+          "Too many requests. Please wait before queuing more.",
+          "error",
+        );
       }
       return {};
     }
@@ -211,31 +227,38 @@ export default function PlayList({
    * @param {boolean} cleanUp Whether to clean up the downloaded files.
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
-  const deletePlaylist = async (playListUrlToDelete, title, deleteAllVideosInPlaylist, deletePlaylist, cleanUp) => {
+  const deletePlaylist = async (
+    playListUrlToDelete,
+    title,
+    deleteAllVideosInPlaylist,
+    deletePlaylist,
+    cleanUp,
+  ) => {
     setSnack("Deleting playlist...", "info");
     const response = await fetch(backEnd + "/delplay", {
       method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       mode: "cors",
-      body: JSON.stringify(
-        {
-          "playListUrl": playListUrlToDelete,
-          "deleteAllVideosInPlaylist": deleteAllVideosInPlaylist,
-          "deletePlaylist": deletePlaylist,
-          "cleanUp": cleanUp
-        }
-      ),
+      body: JSON.stringify({
+        playListUrl: playListUrlToDelete,
+        deleteAllVideosInPlaylist: deleteAllVideosInPlaylist,
+        deletePlaylist: deletePlaylist,
+        cleanUp: cleanUp,
+      }),
     });
     if (response.ok) {
       const data = await response.text();
       const json_data = JSON.parse(data);
       //console.log("deletePlaylist response: ", json_data);
       setSnack("Playlist deleted successfully.", "success");
-      addNotification(`Deleted ${(title ? title : playListUrlToDelete)}. Details: ${json_data.message}`, "info");
+      addNotification(
+        `Deleted ${title ? title : playListUrlToDelete}. Details: ${json_data.message}`,
+        "info",
+      );
       // Do the refetch conditionally
       // Delete-playlist is not getting re-fetched
       setReFetch(`${playListUrlToDelete}-del-${new Date().getTime()}`);
@@ -254,9 +277,12 @@ export default function PlayList({
     }
     if (!response.ok) {
       setSnack("Failed to delete playlist.", "error");
-      addNotification(`Failed to delete playlist: ${title ? title : playListUrlToDelete}`, "error");
+      addNotification(
+        `Failed to delete playlist: ${title ? title : playListUrlToDelete}`,
+        "error",
+      );
     }
-  }
+  };
 
   // memoize the fetch result using useMemo
   const memoizedFetch = useMemo(async () => {
@@ -266,7 +292,7 @@ export default function PlayList({
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       mode: "cors",
       body: JSON.stringify({
@@ -274,7 +300,7 @@ export default function PlayList({
         stop: stop,
         sort: sort,
         order: order,
-        query: query
+        query: query,
       }),
     });
     if (response.ok) {
@@ -288,15 +314,18 @@ export default function PlayList({
       }
 
       return {
-        "count": 1, "rows": [{
-          "playlistUrl": "",
-          "title": `Error in fetching playlists: ${response.status} ${response.statusText}`,
-          "sortOrder": 0,
-          "monitoringType": "N/A",
-          "saveDirectory": "",
-          "createdAt": new Date().toISOString(),
-          "updatedAt": new Date().toISOString()
-        }]
+        count: 1,
+        rows: [
+          {
+            playlistUrl: "",
+            title: `Error in fetching playlists: ${response.status} ${response.statusText}`,
+            sortOrder: 0,
+            monitoringType: "N/A",
+            saveDirectory: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -317,7 +346,7 @@ export default function PlayList({
       setStart(validPage * rowsPerPage);
       setStop((validPage + 1) * rowsPerPage);
     },
-    [rowsPerPage, setStart, setStop, setPage]
+    [rowsPerPage, setStart, setStop, setPage],
   );
 
   const handleChangeRowsPerPage = (event) => {
@@ -337,7 +366,7 @@ export default function PlayList({
 
   const debouncedQuery = useMemo(
     () => debounce((value) => updateQuery(value.trim()), 1000),
-    []
+    [],
   );
 
   const handleQueryChange = (event) => {
@@ -357,7 +386,8 @@ export default function PlayList({
     } else {
       //console.log("playListIndex: ", playListIndex, "totalItems: ", totalItems);
       // Calculate the current page based on the response index
-      const currentIndex = playListIndex < totalItems ? playListIndex : totalItems - 1;
+      const currentIndex =
+        playListIndex < totalItems ? playListIndex : totalItems - 1;
       const calculatedPage = Math.floor(currentIndex / rowsPerPage);
       //console.log("currentIndex: ", currentIndex, "calculatedPage: ", calculatedPage);
       handleChangePage(null, calculatedPage);
@@ -371,12 +401,12 @@ export default function PlayList({
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       mode: "cors",
       body: JSON.stringify({
         url: url,
-        watch: event.target.value
+        watch: event.target.value,
       }),
     });
     if (response.ok) {
@@ -384,7 +414,9 @@ export default function PlayList({
       const json_data = JSON.parse(data);
       if (json_data["status"] === "success") {
         const updatedItems = [...items];
-        const itemIndex = updatedItems.findIndex((item) => item.playlistUrl === url);
+        const itemIndex = updatedItems.findIndex(
+          (item) => item.playlistUrl === url,
+        );
         const updatedItem = {
           ...updatedItems[itemIndex],
           monitoringType: event.target.value,
@@ -440,7 +472,15 @@ export default function PlayList({
   };
 
   return (
-    <Box sx={{ width: "100%", overflow: "hidden", position: "relative", m: 0, p: 0 }}>
+    <Box
+      sx={{
+        width: "100%",
+        overflow: "hidden",
+        position: "relative",
+        m: 0,
+        p: 0,
+      }}
+    >
       <TableContainer sx={{ height: tableContainerHeight, overflowX: "auto" }}>
         <Table stickyHeader size="small" aria-label="a dense table">
           <TableHead>
@@ -463,7 +503,11 @@ export default function PlayList({
                 key="play-head-title"
                 align="left"
                 sx={{ width: { xs: "50%", sm: "60%", md: "75%" } }}
-                style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+                style={{
+                  paddingInline: "0px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
               >
                 <TextField
                   id="title-input"
@@ -476,7 +520,11 @@ export default function PlayList({
                   InputProps={{
                     endAdornment: localQuery ? (
                       <InputAdornment position="end">
-                        <IconButton size="small" onClick={clearQuery} edge="end">
+                        <IconButton
+                          size="small"
+                          onClick={clearQuery}
+                          edge="end"
+                        >
                           <ClearIcon fontSize="small" />
                         </IconButton>
                       </InputAdornment>
@@ -516,10 +564,10 @@ export default function PlayList({
                   tabIndex={-1}
                   key={index}
                   sx={{
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                    }
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+                    },
                   }}
                 >
                   <TableCell
@@ -527,23 +575,29 @@ export default function PlayList({
                     align="left"
                     style={{ paddingInlineEnd: "0px" }}
                   >
-                    <Box sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      whiteSpace: 'nowrap',
-                      justifyContent: "space-between",
-                      m: 0,
-                      p: 0
-                    }}>
-                      <Typography variant="body2" component="div" sx={{ m: 0, p: 0, fontWeight: 600 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        whiteSpace: "nowrap",
+                        justifyContent: "space-between",
+                        m: 0,
+                        p: 0,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        component="div"
+                        sx={{ m: 0, p: 0, fontWeight: 600 }}
+                      >
                         {+element.sortOrder + 1}
                       </Typography>
                       <Tooltip title="Delete options">
                         <IconButton
                           aria-label="more"
                           id={index + "-long-button"}
-                          aria-controls={isMenuOpen ? 'long-menu' : undefined}
-                          aria-expanded={isMenuOpen ? 'true' : undefined}
+                          aria-controls={isMenuOpen ? "long-menu" : undefined}
+                          aria-expanded={isMenuOpen ? "true" : undefined}
                           aria-haspopup="true"
                           onClick={(e) => handleClickAnchor(e, index)}
                           sx={{ m: 0, pb: 0.3, pt: 0, px: 0 }}
@@ -557,7 +611,11 @@ export default function PlayList({
                     key={element.sortOrder + "-title"}
                     align="left"
                     sx={{ width: "75%" }}
-                    style={{ paddingInline: "0px", overflow: "hidden", textOverflow: "ellipsis" }}
+                    style={{
+                      paddingInline: "0px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
                   >
                     <Link
                       href={element.playlistUrl}
@@ -604,8 +662,14 @@ export default function PlayList({
                     <Button
                       size="small"
                       variant="contained"
-                      color={playListUrl === element.playlistUrl ? "success" : "secondary"}
-                      onClick={() => handleLoad(element.playlistUrl, element.title)}
+                      color={
+                        playListUrl === element.playlistUrl
+                          ? "success"
+                          : "secondary"
+                      }
+                      onClick={() =>
+                        handleLoad(element.playlistUrl, element.title)
+                      }
                     >
                       <Typography variant="button">
                         {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
@@ -618,7 +682,7 @@ export default function PlayList({
           </TableBody>
         </Table>
         {/* Spacer so last rows can scroll above the FAB zone */}
-        <Box sx={{ height: '80px' }} />
+        <Box sx={{ height: "80px" }} />
       </TableContainer>
       <Box
         sx={{
@@ -628,11 +692,7 @@ export default function PlayList({
           right: "24px",
         }}
       >
-        <Fab
-          color="primary"
-          aria-label="action"
-          onClick={handleClickOpen}
-        >
+        <Fab color="primary" aria-label="action" onClick={handleClickOpen}>
           <AddIcon />
         </Fab>
       </Box>
@@ -647,17 +707,22 @@ export default function PlayList({
         onRowsPerPageChange={handleChangeRowsPerPage}
         ActionsComponent={TablePaginationActions}
       />
-      { /* Dialog for adding urls */}
-      <Dialog open={open} onClose={handleClose} fullWidth sx={{
-        zIndex: 100,
-        // this passes the width to the parent container and paper
-        "& .MuiDialog-container": {
-          "& .MuiPaper-root": {
-            width: "100%",
-            minWidth: "300px",
+      {/* Dialog for adding urls */}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        fullWidth
+        sx={{
+          zIndex: 100,
+          // this passes the width to the parent container and paper
+          "& .MuiDialog-container": {
+            "& .MuiPaper-root": {
+              width: "100%",
+              minWidth: "300px",
+            },
           },
-        },
-      }}>
+        }}
+      >
         <DialogTitle sx={{ paddingBlockEnd: 0 }}>Add</DialogTitle>
         <DialogContent sx={{ m: 0, paddingBlockEnd: 0 }}>
           <TextField
@@ -666,7 +731,11 @@ export default function PlayList({
             fullWidth
             multiline
             rows={
-              urlList.split("\n").length < 12 ? (urlList.split("\n").length < 6 ? 6 : urlList.split("\n").length) : 12
+              urlList.split("\n").length < 12
+                ? urlList.split("\n").length < 6
+                  ? 6
+                  : urlList.split("\n").length
+                : 12
             }
             value={urlList}
             variant="standard"
@@ -677,10 +746,22 @@ export default function PlayList({
           <Box sx={{ m: 0, p: 0, flexDirection: { xs: "column", sm: "row" } }}>
             <FormControl
               variant="standard"
-              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}
+              sx={{
+                m: 0,
+                minWidth: 80,
+                minHeight: 45,
+                paddingInlineStart: "24px",
+                paddingInlineEnd: { xs: "12px" },
+              }}
               size="small"
             >
-              <InputLabel id="dialog-watch-label" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}>
+              <InputLabel
+                id="dialog-watch-label"
+                sx={{
+                  paddingInlineStart: "24px",
+                  paddingInlineEnd: { xs: "12px" },
+                }}
+              >
                 Watch mode:
               </InputLabel>
               <Select
@@ -698,10 +779,22 @@ export default function PlayList({
             </FormControl>
             <FormControl
               variant="standard"
-              sx={{ m: 0, minWidth: 80, minHeight: 45, paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}
+              sx={{
+                m: 0,
+                minWidth: 80,
+                minHeight: 45,
+                paddingInlineStart: "24px",
+                paddingInlineEnd: { xs: "12px" },
+              }}
               size="small"
             >
-              <InputLabel id="dialog-watch-label-rows-per-page" sx={{ paddingInlineStart: "24px", paddingInlineEnd: { xs: "12px" } }}>
+              <InputLabel
+                id="dialog-watch-label-rows-per-page"
+                sx={{
+                  paddingInlineStart: "24px",
+                  paddingInlineEnd: { xs: "12px" },
+                }}
+              >
                 Rows per page:
               </InputLabel>
               <Select
@@ -720,16 +813,20 @@ export default function PlayList({
             </FormControl>
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Button variant="contained" onClick={clearUrlList} sx={{ float: "right" }}>
-            <Typography variant="button">
-              Clear
-            </Typography>
+          <Button
+            variant="contained"
+            onClick={clearUrlList}
+            sx={{ float: "right" }}
+          >
+            <Typography variant="button">Clear</Typography>
           </Button>
           <Box sx={{ m: 0, paddingInlineEnd: { xs: "12px", sm: "24px" } }}>
-            <Button variant="contained" onClick={submitUrlList} sx={{ float: "right" }}>
-              <Typography variant="button">
-                Submit
-              </Typography>
+            <Button
+              variant="contained"
+              onClick={submitUrlList}
+              sx={{ float: "right" }}
+            >
+              <Typography variant="button">Submit</Typography>
             </Button>
           </Box>
         </DialogActions>
@@ -745,42 +842,45 @@ export default function PlayList({
           paper: {
             style: {
               maxHeight: ITEM_HEIGHT * 4.5,
-              width: '23ch',
+              width: "23ch",
               backgroundColor: theme.palette.background.menu,
             },
           },
           list: {
-            'aria-labelledby': 'long-button',
+            "aria-labelledby": "long-button",
           },
         }}
       >
-        {openMenuIndex !== null && options.map((option) => (
-          <Box key={openMenuIndex + "-" + option[0]}>
-            {option[4] === 'everything' && <Divider variant="middle" />}
-            <MenuItem
-              onClick={() => {
-                // close menu and open confirmation dialog with selected option
-                handleCloseAnchor();
-                setConfirmIndex(openMenuIndex);
-                setConfirmOption(option);
-                setConfirmOpen(true);
-              }}
-            >
-              <ListItemIcon sx={{ color: option[5] + '.main', minWidth: '32px' }}>
-                {option[4] === 'playlist' && <DeleteIcon fontSize="small" />}
-                {option[4] === 'videos' && <DeleteOutlineIcon fontSize="small" />}
-                {option[4] === 'everything' && <DeleteForeverIcon fontSize="small" />}
-              </ListItemIcon>
-              <Typography
-                textAlign="left"
-                color={option[5]}
-                variant="button"
+        {openMenuIndex !== null &&
+          options.map((option) => (
+            <Box key={openMenuIndex + "-" + option[0]}>
+              {option[4] === "everything" && <Divider variant="middle" />}
+              <MenuItem
+                onClick={() => {
+                  // close menu and open confirmation dialog with selected option
+                  handleCloseAnchor();
+                  setConfirmIndex(openMenuIndex);
+                  setConfirmOption(option);
+                  setConfirmOpen(true);
+                }}
               >
-                {option[0]}
-              </Typography>
-            </MenuItem>
-          </Box>
-        ))}
+                <ListItemIcon
+                  sx={{ color: option[5] + ".main", minWidth: "32px" }}
+                >
+                  {option[4] === "playlist" && <DeleteIcon fontSize="small" />}
+                  {option[4] === "videos" && (
+                    <DeleteOutlineIcon fontSize="small" />
+                  )}
+                  {option[4] === "everything" && (
+                    <DeleteForeverIcon fontSize="small" />
+                  )}
+                </ListItemIcon>
+                <Typography textAlign="left" color={option[5]} variant="button">
+                  {option[0]}
+                </Typography>
+              </MenuItem>
+            </Box>
+          ))}
       </Menu>
       {/* Confirmation dialog for delete operations */}
       <Dialog
@@ -793,7 +893,9 @@ export default function PlayList({
           <Typography variant="body2">
             {confirmIndex !== null && items[confirmIndex] ? (
               <>
-                Are you sure you want to <strong>{confirmOption && confirmOption[0]}</strong> for playlist <strong>{items[confirmIndex].title}</strong>?
+                Are you sure you want to{" "}
+                <strong>{confirmOption && confirmOption[0]}</strong> for
+                playlist <strong>{items[confirmIndex].title}</strong>?
               </>
             ) : (
               "Are you sure you want to perform this delete operation?"
@@ -801,17 +903,23 @@ export default function PlayList({
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)} color="primary">Cancel</Button>
+          <Button onClick={() => setConfirmOpen(false)} color="primary">
+            Cancel
+          </Button>
           <Button
             onClick={() => {
-              if (confirmIndex !== null && items[confirmIndex] && confirmOption) {
+              if (
+                confirmIndex !== null &&
+                items[confirmIndex] &&
+                confirmOption
+              ) {
                 // call the delete API with the saved parameters
                 deletePlaylist(
                   items[confirmIndex].playlistUrl,
                   items[confirmIndex].title,
                   confirmOption[1],
                   confirmOption[2],
-                  confirmOption[3]
+                  confirmOption[3],
                 );
               }
               setConfirmOpen(false);
@@ -823,7 +931,7 @@ export default function PlayList({
           </Button>
         </DialogActions>
       </Dialog>
-    </Box >
+    </Box>
   );
 }
 
