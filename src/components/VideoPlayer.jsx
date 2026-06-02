@@ -236,6 +236,8 @@ export default function VideoPlayer({
       return 0;
     };
 
+    const parser = new DOMParser();
+
     for (const block of blocks) {
       const lines = block.trim().split("\n");
       let timingIdx = -1;
@@ -262,9 +264,9 @@ export default function VideoPlayer({
         .trim();
       // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
       // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
-      const textContent = rawText
-        .replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "")
-        .replace(/<\/?[a-zA-Z][^>]*>/g, "")
+      const noTimeTags = rawText.replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "");
+      const doc = parser.parseFromString(noTimeTags, "text/html");
+      const textContent = (doc.body.textContent || "")
         .replace(/\s{2,}/g, " ")
         .trim();
       if (textContent) {
