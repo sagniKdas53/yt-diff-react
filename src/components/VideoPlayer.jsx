@@ -256,9 +256,16 @@ export default function VideoPlayer({
 
       const start = parseTime(match[1]);
       const end = parseTime(match[2]);
-      const textContent = lines
+      const rawText = lines
         .slice(timingIdx + 1)
         .join("\n")
+        .trim();
+      // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
+      // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
+      const textContent = rawText
+        .replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "")
+        .replace(/<\/?[a-zA-Z][^>]*>/g, "")
+        .replace(/\s{2,}/g, " ")
         .trim();
       if (textContent) {
         cues.push({ start, end, text: textContent });
