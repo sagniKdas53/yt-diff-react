@@ -47,9 +47,7 @@ export default function PlayerPlaylistDrawer({
     const filtered = {};
     for (const url of Object.keys(pendingDownloadsRaw)) {
       const inActive = activeDownloads[url] !== undefined;
-      const item = items?.find(
-        (el) => el.video_metadatum?.videoUrl === url,
-      );
+      const item = items?.find((el) => el.video_metadatum?.videoUrl === url);
       const isDownloaded = item?.video_metadatum?.downloadStatus;
       if (!inActive && !isDownloaded) {
         filtered[url] = true;
@@ -283,9 +281,7 @@ export default function PlayerPlaylistDrawer({
       </Box>
 
       {/* Items list */}
-      <List sx={{ overflowY: "auto", flex: 1 }}>
-        {playlistItems}
-      </List>
+      <List sx={{ overflowY: "auto", flex: 1 }}>{playlistItems}</List>
 
       {/* Pagination controls */}
       {totalPages > 1 && (

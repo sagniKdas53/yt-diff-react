@@ -415,10 +415,7 @@ export default function VideoPlayer({
         }
 
         const subtitleText = await subtitleResponse.text();
-        if (
-          !isMountedRef.current ||
-          playerSessionRef.current !== sessionId
-        ) {
+        if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
           return;
         }
 
@@ -427,10 +424,7 @@ export default function VideoPlayer({
         // Set subtitleUrl as a flag that subtitles are available
         setSubtitleUrl(signedSubtitleUrl);
       } catch (error) {
-        if (
-          isMountedRef.current &&
-          playerSessionRef.current === sessionId
-        ) {
+        if (isMountedRef.current && playerSessionRef.current === sessionId) {
           console.warn("Subtitle loading failed", error);
           setSubtitleUrl(null);
           setSubtitleCues([]);
@@ -780,11 +774,7 @@ export default function VideoPlayer({
     expiryRef.current = null;
     setSubtitleUrl(null);
     fetchSignedUrl();
-    fetchSubtitleUrl(
-      subTitleFile,
-      saveDirectory,
-      playerSessionRef.current,
-    );
+    fetchSubtitleUrl(subTitleFile, saveDirectory, playerSessionRef.current);
     const videoElement = videoRef.current;
     return () => {
       playerSessionRef.current += 1;
@@ -836,8 +826,6 @@ export default function VideoPlayer({
       videoRef.current.muted = isMuted;
     }
   }, [videoUrl, volume, isMuted]);
-
-
 
   const handleError = () => {
     const vid = videoRef.current;
