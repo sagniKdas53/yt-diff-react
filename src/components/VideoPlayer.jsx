@@ -162,6 +162,7 @@ export default function VideoPlayer({
     const saved = localStorage.getItem("ytdiff_player_subtitles");
     return saved !== null ? saved === "true" : true; // default ON
   });
+  const [subtitleCues, setSubtitleCues] = useState([]);
 
   const pipSupported =
     "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
@@ -217,17 +218,53 @@ export default function VideoPlayer({
       .join(":");
   };
 
-  const convertSrtToVtt = (srtText) => {
-    const normalizedText = srtText.replace(/^\uFEFF/, "").replace(/\r/g, "");
-    // Replace SRT comma timestamps with VTT dot timestamps
-    // and add position:50% line:85% to place subs over the video
-    const vttBody = normalizedText
-      .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2")
-      .replace(
-        /(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})/g,
-        "$1 --> $2 line:85% position:50% align:center",
+  const parseSubtitleText = (text) => {
+    const cues = [];
+    const normalized = text.replace(/^\uFEFF/, "").replace(/\r/g, "");
+    const blocks = normalized.split(/\n\n+/);
+
+    const parseTime = (ts) => {
+      const cleaned = ts.replace(",", ".");
+      const parts = cleaned.split(":");
+      if (parts.length === 3) {
+        return (
+          parseFloat(parts[0]) * 3600 +
+          parseFloat(parts[1]) * 60 +
+          parseFloat(parts[2])
+        );
+      } else if (parts.length === 2) {
+        return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      }
+      return 0;
+    };
+
+    for (const block of blocks) {
+      const lines = block.trim().split("\n");
+      let timingIdx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes("-->")) {
+          timingIdx = i;
+          break;
+        }
+      }
+      if (timingIdx === -1) continue;
+
+      const match = lines[timingIdx].match(
+        /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
       );
-    return `WEBVTT\n\n${vttBody}`;
+      if (!match) continue;
+
+      const start = parseTime(match[1]);
+      const end = parseTime(match[2]);
+      const textContent = lines
+        .slice(timingIdx + 1)
+        .join("\n")
+        .trim();
+      if (textContent) {
+        cues.push({ start, end, text: textContent });
+      }
+    }
+    return cues;
   };
 
   const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
@@ -326,6 +363,7 @@ export default function VideoPlayer({
     async (subtitleFileName, subtitleSaveDirectory, sessionId) => {
       clearSubtitleObjectUrl();
       setSubtitleUrl(null);
+      setSubtitleCues([]);
 
       if (!subtitleFileName) return;
 
@@ -365,29 +403,23 @@ export default function VideoPlayer({
           data.signedUrlId +
           "&inline=true";
 
-        if (subtitleFileName.toLowerCase().endsWith(".srt")) {
-          const subtitleResponse = await fetch(signedSubtitleUrl);
-          if (!subtitleResponse.ok) {
-            throw new Error("Failed to load subtitle contents");
-          }
+        // Always fetch text content to parse cues for custom overlay
+        const subtitleResponse = await fetch(signedSubtitleUrl);
+        if (!subtitleResponse.ok) {
+          throw new Error("Failed to load subtitle contents");
+        }
 
-          const subtitleText = await subtitleResponse.text();
-          if (
-            !isMountedRef.current ||
-            playerSessionRef.current !== sessionId
-          ) {
-            return;
-          }
-
-          const vttBlob = new Blob([convertSrtToVtt(subtitleText)], {
-            type: "text/vtt;charset=utf-8",
-          });
-          const objectUrl = URL.createObjectURL(vttBlob);
-          subtitleObjectUrlRef.current = objectUrl;
-          setSubtitleUrl(objectUrl);
+        const subtitleText = await subtitleResponse.text();
+        if (
+          !isMountedRef.current ||
+          playerSessionRef.current !== sessionId
+        ) {
           return;
         }
 
+        const cues = parseSubtitleText(subtitleText);
+        setSubtitleCues(cues);
+        // Set subtitleUrl as a flag that subtitles are available
         setSubtitleUrl(signedSubtitleUrl);
       } catch (error) {
         if (
@@ -396,6 +428,7 @@ export default function VideoPlayer({
         ) {
           console.warn("Subtitle loading failed", error);
           setSubtitleUrl(null);
+          setSubtitleCues([]);
         }
       }
     },
@@ -725,31 +758,13 @@ export default function VideoPlayer({
     };
   }, []);
 
-  // Inject global ::cue styles for subtitle appearance
-  useEffect(() => {
-    const styleId = "ytdiff-cue-styles";
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement("style");
-      style.id = styleId;
-      style.textContent = `
-        video::cue {
-          background: rgba(0, 0, 0, 0.75);
-          color: #fff;
-          font-size: clamp(14px, 2.5vw, 22px);
-          font-family: 'Roboto', 'Arial', sans-serif;
-          line-height: 1.5;
-          border-radius: 4px;
-          padding: 4px 8px;
-          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    return () => {
-      const el = document.getElementById(styleId);
-      if (el) el.remove();
-    };
-  }, []);
+  // Compute active subtitle cues based on current playback time
+  const activeCues = useMemo(() => {
+    if (!subtitleCues.length || !subtitlesEnabled) return [];
+    return subtitleCues.filter(
+      (cue) => currentTime >= cue.start && currentTime <= cue.end,
+    );
+  }, [subtitleCues, currentTime, subtitlesEnabled]);
 
   useEffect(() => {
     playerSessionRef.current += 1;
@@ -817,15 +832,7 @@ export default function VideoPlayer({
     }
   }, [videoUrl, volume, isMuted]);
 
-  useEffect(() => {
-    const textTracks = videoRef.current?.textTracks;
-    if (!textTracks) return;
 
-    for (let i = 0; i < textTracks.length; i++) {
-      textTracks[i].mode =
-        subtitleUrl && i === 0 && subtitlesEnabled ? "showing" : "disabled";
-    }
-  }, [subtitleUrl, videoUrl, subtitlesEnabled]);
 
   const handleError = () => {
     const vid = videoRef.current;
@@ -911,17 +918,49 @@ export default function VideoPlayer({
           onEnded={handleVideoEnded}
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
+        />
+      )}
+
+      {/* Custom subtitle overlay — positioned over the video */}
+      {activeCues.length > 0 && (
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: showControls ? 100 : 40,
+            left: 0,
+            right: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0.5,
+            zIndex: 2,
+            pointerEvents: "none",
+            transition: "bottom 0.3s ease-in-out",
+            px: 2,
+          }}
         >
-          {subtitleUrl && (
-            <track
-              default
-              kind="subtitles"
-              label="English"
-              src={subtitleUrl}
-              srcLang="en"
-            />
-          )}
-        </video>
+          {activeCues.map((cue, i) => (
+            <Box
+              key={i}
+              sx={{
+                background: "rgba(0, 0, 0, 0.75)",
+                color: "#fff",
+                fontSize: "clamp(14px, 2.5vw, 22px)",
+                fontFamily: "'Roboto', 'Arial', sans-serif",
+                lineHeight: 1.5,
+                borderRadius: "4px",
+                px: 1.5,
+                py: 0.5,
+                textAlign: "center",
+                maxWidth: "80%",
+                textShadow: "0 1px 3px rgba(0, 0, 0, 0.9)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {cue.text}
+            </Box>
+          ))}
+        </Box>
       )}
 
       {/* Click-to-pause overlay — excludes top bar and bottom controls */}
