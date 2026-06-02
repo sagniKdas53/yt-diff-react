@@ -237,7 +237,9 @@ export default function SubList({
   };
 
   function downloadFunc() {
-    const data = Object.keys(selectedItems).filter((key) => Reflect.get(selectedItems, key));
+    const data = Object.keys(selectedItems).filter((key) =>
+      Reflect.get(selectedItems, key),
+    );
     //console.log(JSON.stringify({ urls: data }));
     fetch(backEnd + "/download", {
       method: "post",
@@ -527,7 +529,11 @@ export default function SubList({
             const updates = {};
             Object.entries(data.files).forEach(([fileName, fileData]) => {
               if (fileData?.signedUrlId) {
-                Reflect.set(updates, fileName, baseUrl + backEnd + "/getfile?fileId=" + fileData.signedUrlId);
+                Reflect.set(
+                  updates,
+                  fileName,
+                  baseUrl + backEnd + "/getfile?fileId=" + fileData.signedUrlId,
+                );
                 Reflect.set(thumbMetaRef.current, fileName, {
                   fileId: fileData.signedUrlId,
                   expiry: fileData.expiry,
@@ -603,8 +609,8 @@ export default function SubList({
 
   useEffect(() => {
     setSelectAll(false);
-    items.map(
-      (element) => Reflect.set(selectedItems, element.video_metadatum.videoUrl, false),
+    items.map((element) =>
+      Reflect.set(selectedItems, element.video_metadatum.videoUrl, false),
     );
     // Remove keys not present in data
     Object.keys(selectedItems).forEach((key) => {
@@ -854,7 +860,9 @@ export default function SubList({
                     <CardActions sx={{ justifyContent: "space-between" }}>
                       <Checkbox
                         color="primary"
-                        checked={Reflect.get(selectedItems, meta.videoUrl) || false}
+                        checked={
+                          Reflect.get(selectedItems, meta.videoUrl) || false
+                        }
                         onChange={handleSelection}
                         id={meta.videoUrl}
                       />

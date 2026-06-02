@@ -247,9 +247,11 @@ export default function VideoPlayer({
       }
       if (timingIdx === -1) continue;
 
-      const match = lines.at(timingIdx).match(
-        /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
-      );
+      const match = lines
+        .at(timingIdx)
+        .match(
+          /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
+        );
       if (!match) continue;
 
       const start = parseTime(match[1]);

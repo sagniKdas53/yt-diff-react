@@ -10,6 +10,7 @@ import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Grid from "@mui/material/Unstable_Grid2";
+import PropTypes from "prop-types";
 import {
   forwardRef,
   lazy,
@@ -103,9 +104,30 @@ const themeObj = (theme) =>
     },
   });
 
-const Alert = forwardRef(function Alert({ severity, sx, onClose, children }, ref) {
-  return <MuiAlert elevation={6} ref={ref} variant="filled" severity={severity} sx={sx} onClose={onClose}>{children}</MuiAlert>;
+const Alert = forwardRef(function Alert(
+  { severity, sx, onClose, children },
+  ref,
+) {
+  return (
+    <MuiAlert
+      elevation={6}
+      ref={ref}
+      variant="filled"
+      severity={severity}
+      sx={sx}
+      onClose={onClose}
+    >
+      {children}
+    </MuiAlert>
+  );
 });
+
+Alert.propTypes = {
+  severity: PropTypes.string,
+  sx: PropTypes.object,
+  onClose: PropTypes.func,
+  children: PropTypes.node,
+};
 
 // Common loader used in Suspense fallbacks
 const Loader = () => (
@@ -656,7 +678,9 @@ export default function App() {
       return acc;
     }, 0);
     const progress = validCount > 0 ? total / validCount : 0;
-    const values = keys.map((k) => Reflect.get(activeDownloads, k)).filter((v) => !isNaN(v));
+    const values = keys
+      .map((k) => Reflect.get(activeDownloads, k))
+      .filter((v) => !isNaN(v));
     const allDownloadsWaiting =
       keys.length > 0 &&
       values.length > 0 &&
