@@ -57,6 +57,7 @@ export default function SubList({
   setToken,
   setSnack,
   addNotification,
+  activeDownloads = {},
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -84,6 +85,8 @@ export default function SubList({
   const [currentPlayerSaveDir, setCurrentPlayerSaveDir] = useState("");
   const [currentPlayerFileName, setCurrentPlayerFileName] = useState("");
   const [currentPlayerVideoTitle, setCurrentPlayerVideoTitle] = useState("");
+  const [currentPlayerSubTitleFile, setCurrentPlayerSubTitleFile] =
+    useState(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
   const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
   const thumbMetaRef = useRef({});
@@ -138,15 +141,19 @@ export default function SubList({
           const data = await response.json();
           if (data.status === "success" && data.files) {
             dueEntries.forEach(([fileName, entry]) => {
-              const refreshed = data.files[entry.fileId];
+              const refreshed = Reflect.get(data.files, entry.fileId);
               if (refreshed?.expiry) {
-                thumbMetaRef.current[fileName] = {
-                  ...thumbMetaRef.current[fileName],
+                Reflect.set(thumbMetaRef.current, fileName, {
+                  ...Reflect.get(thumbMetaRef.current, fileName),
                   expiry: refreshed.expiry,
-                };
+                });
               } else {
-                delete thumbMetaRef.current[fileName];
-                setThumbUrls((prev) => ({ ...prev, [fileName]: null }));
+                Reflect.deleteProperty(thumbMetaRef.current, fileName);
+                setThumbUrls((prev) => {
+                  const next = { ...prev };
+                  Reflect.set(next, fileName, null);
+                  return next;
+                });
               }
             });
           }
@@ -191,7 +198,7 @@ export default function SubList({
   const bulkAction = () => {
     const tempState = {};
     items.forEach((element) => {
-      tempState[element.video_metadatum.videoUrl] = !selectAll;
+      Reflect.set(tempState, element.video_metadatum.videoUrl, !selectAll);
     });
     updateSelected((prevSelected) => ({ ...prevSelected, ...tempState }));
     setSelectAll(!selectAll);
@@ -212,10 +219,11 @@ export default function SubList({
     }
   };
 
-  const openPlayer = (saveDir, fileName, title, index) => {
+  const openPlayer = (saveDir, fileName, title, index, subTitleFile = null) => {
     setCurrentPlayerSaveDir(saveDir);
     setCurrentPlayerFileName(fileName);
     setCurrentPlayerVideoTitle(title);
+    setCurrentPlayerSubTitleFile(subTitleFile);
     setCurrentPlayerIndex(index);
     setPlayerOpen(true);
   };
@@ -224,11 +232,14 @@ export default function SubList({
     setPlayerOpen(false);
     setCurrentPlayerSaveDir("");
     setCurrentPlayerFileName("");
+    setCurrentPlayerSubTitleFile(null);
     setCurrentPlayerIndex(-1);
   };
 
   function downloadFunc() {
-    const data = Object.keys(selectedItems).filter((key) => selectedItems[key]);
+    const data = Object.keys(selectedItems).filter((key) =>
+      Reflect.get(selectedItems, key),
+    );
     //console.log(JSON.stringify({ urls: data }));
     fetch(backEnd + "/download", {
       method: "post",
@@ -494,7 +505,7 @@ export default function SubList({
 
       // Mark as in-progress
       const newThumbUrls = {};
-      filesToFetch.forEach((f) => (newThumbUrls[f.fileName] = null));
+      filesToFetch.forEach((f) => Reflect.set(newThumbUrls, f.fileName, null));
       setThumbUrls((prev) => ({ ...prev, ...newThumbUrls }));
 
       try {
@@ -518,15 +529,18 @@ export default function SubList({
             const updates = {};
             Object.entries(data.files).forEach(([fileName, fileData]) => {
               if (fileData?.signedUrlId) {
-                updates[fileName] =
-                  baseUrl + backEnd + "/getfile?fileId=" + fileData.signedUrlId;
-                thumbMetaRef.current[fileName] = {
+                Reflect.set(
+                  updates,
+                  fileName,
+                  baseUrl + backEnd + "/getfile?fileId=" + fileData.signedUrlId,
+                );
+                Reflect.set(thumbMetaRef.current, fileName, {
                   fileId: fileData.signedUrlId,
                   expiry: fileData.expiry,
-                };
+                });
               } else {
-                updates[fileName] = null;
-                delete thumbMetaRef.current[fileName];
+                Reflect.set(updates, fileName, null);
+                Reflect.deleteProperty(thumbMetaRef.current, fileName);
               }
             });
             setThumbUrls((prev) => ({ ...prev, ...updates }));
@@ -595,13 +609,13 @@ export default function SubList({
 
   useEffect(() => {
     setSelectAll(false);
-    items.map(
-      (element) => (selectedItems[element.video_metadatum.videoUrl] = false),
+    items.map((element) =>
+      Reflect.set(selectedItems, element.video_metadatum.videoUrl, false),
     );
     // Remove keys not present in data
     Object.keys(selectedItems).forEach((key) => {
       if (!items.find((element) => element.video_metadatum.videoUrl === key)) {
-        delete selectedItems[key];
+        Reflect.deleteProperty(selectedItems, key);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -801,6 +815,7 @@ export default function SubList({
                               meta.fileName,
                               meta.title,
                               index,
+                              meta.subTitleFile || null,
                             )
                           }
                           sx={{
@@ -845,7 +860,9 @@ export default function SubList({
                     <CardActions sx={{ justifyContent: "space-between" }}>
                       <Checkbox
                         color="primary"
-                        checked={selectedItems[meta.videoUrl] || false}
+                        checked={
+                          Reflect.get(selectedItems, meta.videoUrl) || false
+                        }
                         onChange={handleSelection}
                         id={meta.videoUrl}
                       />
@@ -1071,6 +1088,7 @@ export default function SubList({
             saveDirectory={currentPlayerSaveDir}
             fileName={currentPlayerFileName}
             title={currentPlayerVideoTitle}
+            subTitleFile={currentPlayerSubTitleFile}
             backEnd={backEnd}
             token={token}
             onClose={closePlayer}
@@ -1084,6 +1102,9 @@ export default function SubList({
             openPlayer={openPlayer}
             playlistDirectory={playlistDirectory}
             thumbUrls={thumbUrls}
+            activeDownloads={activeDownloads}
+            loadedPlayList={loadedPlayList}
+            rowsPerPage={rowsPerPage}
           />
         )}
       </Dialog>
@@ -1107,6 +1128,7 @@ SubList.propTypes = {
   setToken: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   addNotification: PropTypes.func.isRequired,
+  activeDownloads: PropTypes.object,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,

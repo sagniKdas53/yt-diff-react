@@ -6,12 +6,6 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
-import Drawer from "@mui/material/Drawer";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
-import ListItemAvatar from "@mui/material/ListItemAvatar";
-import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -30,9 +24,12 @@ import { FullscreenExit as FullscreenExitIcon } from "@mui/icons-material";
 import { PictureInPictureAlt as PictureInPictureAltIcon } from "@mui/icons-material";
 import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { ClosedCaption as ClosedCaptionIcon } from "@mui/icons-material";
+import { ClosedCaptionDisabled as ClosedCaptionDisabledIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
 const ControlBar = styled(Box, {
   shouldForwardProp: (prop) => prop !== "show",
@@ -114,6 +111,7 @@ export default function VideoPlayer({
   saveDirectory,
   fileName,
   title,
+  subTitleFile,
   backEnd,
   token,
   onClose,
@@ -126,12 +124,16 @@ export default function VideoPlayer({
   openPlayer,
   playlistDirectory,
   thumbUrls = {},
+  activeDownloads = {},
+  loadedPlayList,
+  rowsPerPage = 8,
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [videoUrl, setVideoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [subtitleUrl, setSubtitleUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -154,6 +156,11 @@ export default function VideoPlayer({
   const [pendingPrevPage, setPendingPrevPage] = useState(false);
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const [bufferedTime, setBufferedTime] = useState(0);
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(() => {
+    const saved = localStorage.getItem("ytdiff_player_subtitles");
+    return saved !== null ? saved === "true" : true; // default ON
+  });
+  const [subtitleCues, setSubtitleCues] = useState([]);
 
   const pipSupported =
     "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
@@ -165,6 +172,7 @@ export default function VideoPlayer({
   const timerRef = useRef(null);
   const recoveryTimerRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const subtitleObjectUrlRef = useRef(null);
   const itemsAtTimeOfNext = useRef(null);
   const itemsAtTimeOfPrev = useRef(null);
   const isPlayingRef = useRef(isPlaying);
@@ -191,6 +199,13 @@ export default function VideoPlayer({
     }
   }, []);
 
+  const clearSubtitleObjectUrl = useCallback(() => {
+    if (subtitleObjectUrlRef.current) {
+      URL.revokeObjectURL(subtitleObjectUrlRef.current);
+      subtitleObjectUrlRef.current = null;
+    }
+  }, []);
+
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -199,6 +214,66 @@ export default function VideoPlayer({
       .map((v) => (v < 10 ? "0" + v : v))
       .filter((v, i) => v !== "00" || i > 0)
       .join(":");
+  };
+
+  const parseSubtitleText = (text) => {
+    const cues = [];
+    const normalized = text.replace(/^\uFEFF/, "").replace(/\r/g, "");
+    const blocks = normalized.split(/\n\n+/);
+
+    const parseTime = (ts) => {
+      const cleaned = ts.replace(",", ".");
+      const parts = cleaned.split(":");
+      if (parts.length === 3) {
+        return (
+          parseFloat(parts[0]) * 3600 +
+          parseFloat(parts[1]) * 60 +
+          parseFloat(parts[2])
+        );
+      } else if (parts.length === 2) {
+        return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      }
+      return 0;
+    };
+
+    const parser = new DOMParser();
+
+    for (const block of blocks) {
+      const lines = block.trim().split("\n");
+      let timingIdx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines.at(i).includes("-->")) {
+          timingIdx = i;
+          break;
+        }
+      }
+      if (timingIdx === -1) continue;
+
+      const match = lines
+        .at(timingIdx)
+        .match(
+          /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
+        );
+      if (!match) continue;
+
+      const start = parseTime(match[1]);
+      const end = parseTime(match[2]);
+      const rawText = lines
+        .slice(timingIdx + 1)
+        .join("\n")
+        .trim();
+      // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
+      // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
+      const noTimeTags = rawText.replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "");
+      const doc = parser.parseFromString(noTimeTags, "text/html");
+      const textContent = (doc.body.textContent || "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (textContent) {
+        cues.push({ start, end, text: textContent });
+      }
+    }
+    return cues;
   };
 
   const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
@@ -292,6 +367,76 @@ export default function VideoPlayer({
       }
     }
   };
+
+  const fetchSubtitleUrl = useCallback(
+    async (subtitleFileName, subtitleSaveDirectory, sessionId) => {
+      clearSubtitleObjectUrl();
+      setSubtitleUrl(null);
+      setSubtitleCues([]);
+
+      if (!subtitleFileName) return;
+
+      try {
+        const response = await fetch(backEnd + "/getfile", {
+          method: "post",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          mode: "cors",
+          body: JSON.stringify({
+            saveDirectory: subtitleSaveDirectory,
+            fileName: subtitleFileName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to get subtitle URL");
+        }
+
+        const data = await response.json();
+        if (
+          !isMountedRef.current ||
+          playerSessionRef.current !== sessionId ||
+          data.status !== "success" ||
+          !data.signedUrlId
+        ) {
+          return;
+        }
+
+        const signedSubtitleUrl =
+          baseUrl +
+          backEnd +
+          "/getfile?fileId=" +
+          data.signedUrlId +
+          "&inline=true";
+
+        // Always fetch text content to parse cues for custom overlay
+        const subtitleResponse = await fetch(signedSubtitleUrl);
+        if (!subtitleResponse.ok) {
+          throw new Error("Failed to load subtitle contents");
+        }
+
+        const subtitleText = await subtitleResponse.text();
+        if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
+          return;
+        }
+
+        const cues = parseSubtitleText(subtitleText);
+        setSubtitleCues(cues);
+        // Set subtitleUrl as a flag that subtitles are available
+        setSubtitleUrl(signedSubtitleUrl);
+      } catch (error) {
+        if (isMountedRef.current && playerSessionRef.current === sessionId) {
+          console.warn("Subtitle loading failed", error);
+          setSubtitleUrl(null);
+          setSubtitleCues([]);
+        }
+      }
+    },
+    [backEnd, baseUrl, clearSubtitleObjectUrl, token],
+  );
 
   const scheduleRefresh = useCallback(
     (
@@ -486,13 +631,14 @@ export default function VideoPlayer({
   const handleNext = useCallback(() => {
     if (!openPlayer) return;
     for (let i = currentPlayerIndex + 1; i < items.length; i++) {
-      const meta = items[i].video_metadatum || {};
+      const meta = items.at(i).video_metadatum || {};
       if (meta.downloadStatus) {
         openPlayer(
           meta.saveDirectory ?? playlistDirectory,
           meta.fileName,
           meta.title,
           i,
+          meta.subTitleFile || null,
         );
         return;
       }
@@ -517,13 +663,14 @@ export default function VideoPlayer({
   const handlePrev = useCallback(() => {
     if (!openPlayer) return;
     for (let i = currentPlayerIndex - 1; i >= 0; i--) {
-      const meta = items[i].video_metadatum || {};
+      const meta = items.at(i).video_metadatum || {};
       if (meta.downloadStatus) {
         openPlayer(
           meta.saveDirectory ?? playlistDirectory,
           meta.fileName,
           meta.title,
           i,
+          meta.subTitleFile || null,
         );
         return;
       }
@@ -543,6 +690,12 @@ export default function VideoPlayer({
     localStorage.setItem("ytdiff_player_autoplay", newVal);
   };
 
+  const toggleSubtitles = () => {
+    const newVal = !subtitlesEnabled;
+    setSubtitlesEnabled(newVal);
+    localStorage.setItem("ytdiff_player_subtitles", newVal);
+  };
+
   const handleVideoEnded = () => {
     setIsPlaying(false);
     if (autoPlayEnabled) {
@@ -560,13 +713,14 @@ export default function VideoPlayer({
       openPlayer
     ) {
       for (let i = 0; i < items.length; i++) {
-        const meta = items[i].video_metadatum || {};
+        const meta = items.at(i).video_metadatum || {};
         if (meta.downloadStatus) {
           openPlayer(
             meta.saveDirectory ?? playlistDirectory,
             meta.fileName,
             meta.title,
             i,
+            meta.subTitleFile || null,
           );
           break;
         }
@@ -583,13 +737,14 @@ export default function VideoPlayer({
       openPlayer
     ) {
       for (let i = items.length - 1; i >= 0; i--) {
-        const meta = items[i].video_metadatum || {};
+        const meta = items.at(i).video_metadatum || {};
         if (meta.downloadStatus) {
           openPlayer(
             meta.saveDirectory ?? playlistDirectory,
             meta.fileName,
             meta.title,
             i,
+            meta.subTitleFile || null,
           );
           break;
         }
@@ -606,18 +761,30 @@ export default function VideoPlayer({
     };
   }, []);
 
+  // Compute active subtitle cues based on current playback time
+  const activeCues = useMemo(() => {
+    if (!subtitleCues.length || !subtitlesEnabled) return [];
+    return subtitleCues.filter(
+      (cue) => currentTime >= cue.start && currentTime <= cue.end,
+    );
+  }, [subtitleCues, currentTime, subtitlesEnabled]);
+
   useEffect(() => {
     playerSessionRef.current += 1;
     clearRefreshTimer();
     clearRecoveryTimer();
+    clearSubtitleObjectUrl();
     fileIdRef.current = null;
     expiryRef.current = null;
+    setSubtitleUrl(null);
     fetchSignedUrl();
+    fetchSubtitleUrl(subTitleFile, saveDirectory, playerSessionRef.current);
     const videoElement = videoRef.current;
     return () => {
       playerSessionRef.current += 1;
       clearRefreshTimer();
       clearRecoveryTimer();
+      clearSubtitleObjectUrl();
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       if (mobileVolumeTimeoutRef.current)
         clearTimeout(mobileVolumeTimeoutRef.current);
@@ -635,7 +802,15 @@ export default function VideoPlayer({
     };
     // Dependency on saveDirectory/fileName forces refresh on track change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clearRecoveryTimer, clearRefreshTimer, saveDirectory, fileName]);
+  }, [
+    clearRecoveryTimer,
+    clearRefreshTimer,
+    clearSubtitleObjectUrl,
+    fetchSubtitleUrl,
+    saveDirectory,
+    fileName,
+    subTitleFile,
+  ]);
 
   useEffect(() => {
     if (videoUrl && videoRef.current) {
@@ -740,6 +915,48 @@ export default function VideoPlayer({
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
         />
+      )}
+
+      {/* Custom subtitle overlay — positioned over the video */}
+      {activeCues.length > 0 && (
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: showControls ? 100 : 40,
+            left: 0,
+            right: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0.5,
+            zIndex: 2,
+            pointerEvents: "none",
+            transition: "bottom 0.3s ease-in-out",
+            px: 2,
+          }}
+        >
+          {activeCues.map((cue, i) => (
+            <Box
+              key={i}
+              sx={{
+                background: "rgba(0, 0, 0, 0.75)",
+                color: "#fff",
+                fontSize: "clamp(14px, 2.5vw, 22px)",
+                fontFamily: "'Roboto', 'Arial', sans-serif",
+                lineHeight: 1.5,
+                borderRadius: "4px",
+                px: 1.5,
+                py: 0.5,
+                textAlign: "center",
+                maxWidth: "80%",
+                textShadow: "0 1px 3px rgba(0, 0, 0, 0.9)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {cue.text}
+            </Box>
+          ))}
+        </Box>
       )}
 
       {/* Click-to-pause overlay — excludes top bar and bottom controls */}
@@ -1002,6 +1219,54 @@ export default function VideoPlayer({
             />
           </Stack>
 
+          <Tooltip
+            title={
+              !subtitleUrl
+                ? "No subtitles available"
+                : subtitlesEnabled
+                  ? "Subtitles ON"
+                  : "Subtitles OFF"
+            }
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={toggleSubtitles}
+                disabled={!subtitleUrl}
+                sx={{
+                  color: !subtitleUrl
+                    ? "rgba(255,255,255,0.2)"
+                    : subtitlesEnabled
+                      ? "#fff"
+                      : "rgba(255,255,255,0.4)",
+                  position: "relative",
+                  "&.Mui-disabled": {
+                    color: "rgba(255,255,255,0.2)",
+                  },
+                  "&::after":
+                    subtitleUrl && subtitlesEnabled
+                      ? {
+                          content: "''",
+                          position: "absolute",
+                          bottom: 2,
+                          left: "20%",
+                          right: "20%",
+                          height: 3,
+                          borderRadius: 1.5,
+                          bgcolor: "#fff",
+                        }
+                      : {},
+                }}
+              >
+                {subtitleUrl && subtitlesEnabled ? (
+                  <ClosedCaptionIcon />
+                ) : (
+                  <ClosedCaptionDisabledIcon />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+
           {pipSupported && (
             <IconButton
               size="small"
@@ -1034,119 +1299,25 @@ export default function VideoPlayer({
       </ControlBar>
 
       {/* Playlist Drawer inside the Player */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        variant="persistent"
-        sx={{
-          "& .MuiDrawer-paper": {
-            width: { xs: "100%", sm: 350 },
-            bgcolor: "rgba(0, 0, 0, 0.85)",
-            backdropFilter: "blur(8px)",
-            color: "white",
-            boxSizing: "border-box",
-            borderLeft: "1px solid rgba(255,255,255,0.1)",
-            position: "absolute", // Makes it sit inside the dialog/fullscreen container
-          },
-        }}
-      >
-        <Box
-          sx={{
-            p: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <Typography variant="h6">Current Playlist</Typography>
-          <IconButton
-            onClick={() => setDrawerOpen(false)}
-            sx={{ color: "white" }}
-          >
-            <ArrowBackIcon sx={{ transform: "rotate(180deg)" }} />
-          </IconButton>
-        </Box>
-        <List sx={{ overflowY: "auto" }}>
-          {useMemo(() => {
-            const fallbackThumbURL =
-              baseUrl +
-              backEnd +
-              (theme.palette.mode === "light" ? "/404-light.png" : "/404.png");
-            return (
-              items &&
-              items.map((element, index) => {
-                const meta = element.video_metadatum || {};
-                const thumb = meta.thumbNailFile || "";
-                const thumbImg = thumbUrls[thumb]
-                  ? thumbUrls[thumb]
-                  : meta.onlineThumbnail
-                    ? meta.onlineThumbnail
-                    : fallbackThumbURL;
-                const isCurrent = index === currentPlayerIndex;
-                const isAvailable = meta.downloadStatus;
-
-                return (
-                  <ListItemButton
-                    key={index}
-                    disabled={!isAvailable}
-                    selected={isCurrent}
-                    onClick={() => {
-                      if (openPlayer && isAvailable) {
-                        openPlayer(
-                          meta.saveDirectory ?? playlistDirectory,
-                          meta.fileName,
-                          meta.title,
-                          index,
-                        );
-                      }
-                    }}
-                    sx={{
-                      "&.Mui-selected": {
-                        bgcolor: "rgba(25, 118, 210, 0.3)",
-                        "&:hover": {
-                          bgcolor: "rgba(25, 118, 210, 0.5)",
-                        },
-                      },
-                      opacity: isAvailable ? 1 : 0.4,
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar
-                        variant="rounded"
-                        src={thumbImg}
-                        sx={{ width: 60, height: 45, mr: 1 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={meta.title || "Unknown Title"}
-                      primaryTypographyProps={{
-                        variant: "body2",
-                        noWrap: true,
-                        fontWeight: isCurrent ? "bold" : "normal",
-                      }}
-                      secondary={!isAvailable && "Not Downloaded"}
-                      secondaryTypographyProps={{
-                        variant: "caption",
-                        color: "rgba(255,255,255,0.5)",
-                      }}
-                    />
-                  </ListItemButton>
-                );
-              })
-            );
-          }, [
-            items,
-            currentPlayerIndex,
-            thumbUrls,
-            baseUrl,
-            backEnd,
-            theme.palette.mode,
-            openPlayer,
-            playlistDirectory,
-          ])}
-        </List>
-      </Drawer>
+      <PlayerPlaylistDrawer
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        items={items}
+        itemCount={itemCount}
+        page={page}
+        start={start}
+        currentPlayerIndex={currentPlayerIndex}
+        setPage={setPage}
+        openPlayer={openPlayer}
+        playlistDirectory={playlistDirectory}
+        thumbUrls={thumbUrls}
+        activeDownloads={activeDownloads}
+        loadedPlayList={loadedPlayList}
+        backEnd={backEnd}
+        token={token}
+        baseUrl={baseUrl}
+        rowsPerPage={rowsPerPage}
+      />
     </Box>
   );
 }
@@ -1155,6 +1326,7 @@ VideoPlayer.propTypes = {
   saveDirectory: PropTypes.string.isRequired,
   fileName: PropTypes.string.isRequired,
   title: PropTypes.string,
+  subTitleFile: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
@@ -1167,4 +1339,7 @@ VideoPlayer.propTypes = {
   openPlayer: PropTypes.func,
   playlistDirectory: PropTypes.string,
   thumbUrls: PropTypes.object,
+  activeDownloads: PropTypes.object,
+  loadedPlayList: PropTypes.string,
+  rowsPerPage: PropTypes.number,
 };
