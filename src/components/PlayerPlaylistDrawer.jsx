@@ -148,7 +148,7 @@ export default function PlayerPlaylistDrawer({
                   bgcolor: "rgba(25, 118, 210, 0.5)",
                 },
               },
-              opacity: isAvailable || isDownloading || isPending ? 1 : 0.5,
+              opacity: isAvailable || isDownloading ? 1 : isPending ? 0.7 : 0.5,
             }}
           >
             <ListItemAvatar>
@@ -166,13 +166,19 @@ export default function PlayerPlaylistDrawer({
                 fontWeight: isCurrent ? "bold" : "normal",
               }}
               secondary={
-                isDownloading || isPending ? null : !isAvailable
-                  ? "Not Downloaded"
-                  : null
+                isDownloading
+                  ? null
+                  : isPending
+                    ? "Queued"
+                    : !isAvailable
+                      ? "Not Downloaded"
+                      : null
               }
               secondaryTypographyProps={{
                 variant: "caption",
-                color: "rgba(255,255,255,0.5)",
+                color: isPending
+                  ? theme.palette.info.main
+                  : "rgba(255,255,255,0.5)",
               }}
             />
             {/* Download button for non-downloaded, non-active items */}
@@ -186,7 +192,7 @@ export default function PlayerPlaylistDrawer({
                   }}
                   sx={{
                     color: "rgba(255,255,255,0.7)",
-                    "&:hover": { color: "#66bb6a" },
+                    "&:hover": { color: theme.palette.success.main },
                     flexShrink: 0,
                   }}
                 >
@@ -194,20 +200,16 @@ export default function PlayerPlaylistDrawer({
                 </IconButton>
               </Tooltip>
             )}
-            {/* Progress bar at bottom of row for actively downloading items */}
-            {(isDownloading || isPending) && (
+            {/* Progress bar at bottom of row — only when download has actually started */}
+            {isDownloading && (
               <LinearProgress
                 variant={
-                  isDownloading &&
-                  downloadProgress >= 0 &&
-                  downloadProgress <= 100
+                  downloadProgress >= 0 && downloadProgress <= 100
                     ? "determinate"
                     : "indeterminate"
                 }
                 value={
-                  isDownloading &&
-                  downloadProgress >= 0 &&
-                  downloadProgress <= 100
+                  downloadProgress >= 0 && downloadProgress <= 100
                     ? downloadProgress
                     : undefined
                 }
@@ -219,7 +221,7 @@ export default function PlayerPlaylistDrawer({
                   height: 3,
                   bgcolor: "rgba(255,255,255,0.08)",
                   "& .MuiLinearProgress-bar": {
-                    bgcolor: "#66bb6a",
+                    bgcolor: theme.palette.success.main,
                   },
                 }}
               />
@@ -238,6 +240,8 @@ export default function PlayerPlaylistDrawer({
     activeDownloads,
     pendingDownloads,
     handleDownload,
+    theme.palette.success.main,
+    theme.palette.info.main,
   ]);
 
   return (
