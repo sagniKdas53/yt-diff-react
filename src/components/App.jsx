@@ -103,8 +103,8 @@ const themeObj = (theme) =>
     },
   });
 
-const Alert = forwardRef(function Alert(props, ref) {
-  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+const Alert = forwardRef(function Alert({ severity, sx, onClose, children }, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" severity={severity} sx={sx} onClose={onClose}>{children}</MuiAlert>;
 });
 
 // Common loader used in Suspense fallbacks
@@ -364,7 +364,7 @@ export default function App() {
     const removeActiveDownload = (url) => {
       updateActiveDownloads((prev) => {
         const next = { ...prev };
-        delete next[url];
+        Reflect.deleteProperty(next, url);
         return next;
       });
     };
@@ -648,7 +648,7 @@ export default function App() {
     );
     let validCount = 0;
     const total = keys.reduce((acc, key) => {
-      const val = activeDownloads[key];
+      const val = Reflect.get(activeDownloads, key);
       if (!isNaN(val) && val <= 100) {
         validCount++;
         return acc + val;
@@ -656,7 +656,7 @@ export default function App() {
       return acc;
     }, 0);
     const progress = validCount > 0 ? total / validCount : 0;
-    const values = keys.map((k) => activeDownloads[k]).filter((v) => !isNaN(v));
+    const values = keys.map((k) => Reflect.get(activeDownloads, k)).filter((v) => !isNaN(v));
     const allDownloadsWaiting =
       keys.length > 0 &&
       values.length > 0 &&
@@ -819,7 +819,22 @@ export default function App() {
       >
         <Suspense fallback={<Loader />}>
           <PlayList
-            {...playListProps}
+            playListUrl={playListProps.playListUrl}
+            setPlayListUrl={playListProps.setPlayListUrl}
+            backEnd={playListProps.backEnd}
+            playListIndex={playListProps.playListIndex}
+            setPlayListIndex={playListProps.setPlayListIndex}
+            disableButtons={playListProps.disableButtons}
+            setSnack={playListProps.setSnack}
+            reFetch={playListProps.reFetch}
+            setReFetch={playListProps.setReFetch}
+            setSubListIndex={playListProps.setSubListIndex}
+            tableContainerHeight={playListProps.tableContainerHeight}
+            rowsPerPageSubList={playListProps.rowsPerPageSubList}
+            setRowsPerPageSubList={playListProps.setRowsPerPageSubList}
+            token={playListProps.token}
+            setToken={playListProps.setToken}
+            addNotification={playListProps.addNotification}
             isMobile={true}
             onMobileLoad={handleMobileLoadPlaylist}
             mobileAddDialogRef={mobileAddDialogRef}
@@ -839,7 +854,22 @@ export default function App() {
         >
           <Suspense fallback={<Loader />}>
             <SubList
-              {...subListProps}
+              loadedPlayList={subListProps.loadedPlayList}
+              setPlayListUrl={subListProps.setPlayListUrl}
+              backEnd={subListProps.backEnd}
+              subListIndex={subListProps.subListIndex}
+              setSubListIndex={subListProps.setSubListIndex}
+              downloadedItem={subListProps.downloadedItem}
+              reFetch={subListProps.reFetch}
+              setReFetch={subListProps.setReFetch}
+              tableContainerHeight={subListProps.tableContainerHeight}
+              rowsPerPage={subListProps.rowsPerPage}
+              setRowsPerPage={subListProps.setRowsPerPage}
+              token={subListProps.token}
+              setToken={subListProps.setToken}
+              setSnack={subListProps.setSnack}
+              addNotification={subListProps.addNotification}
+              activeDownloads={subListProps.activeDownloads}
               isMobile={true}
               onBack={handleMobileBack}
               onOpenAddDialog={handleMobileOpenAddDialog}
@@ -858,12 +888,46 @@ export default function App() {
       <Grid container spacing={0}>
         <Grid xl={4} lg={4} md={6} sm={12} xs={12} sx={{ height: fullHeight }}>
           <Suspense fallback={<Loader />}>
-            <PlayList {...playListProps} />
+            <PlayList
+              playListUrl={playListProps.playListUrl}
+              setPlayListUrl={playListProps.setPlayListUrl}
+              backEnd={playListProps.backEnd}
+              playListIndex={playListProps.playListIndex}
+              setPlayListIndex={playListProps.setPlayListIndex}
+              disableButtons={playListProps.disableButtons}
+              setSnack={playListProps.setSnack}
+              reFetch={playListProps.reFetch}
+              setReFetch={playListProps.setReFetch}
+              setSubListIndex={playListProps.setSubListIndex}
+              tableContainerHeight={playListProps.tableContainerHeight}
+              rowsPerPageSubList={playListProps.rowsPerPageSubList}
+              setRowsPerPageSubList={playListProps.setRowsPerPageSubList}
+              token={playListProps.token}
+              setToken={playListProps.setToken}
+              addNotification={playListProps.addNotification}
+            />
           </Suspense>
         </Grid>
         <Grid xl={8} lg={8} md={6} sm={12} xs={12} sx={{ height: fullHeight }}>
           <Suspense fallback={<Loader />}>
-            <SubList {...subListProps} />
+            <SubList
+              loadedPlayList={subListProps.loadedPlayList}
+              setPlayListUrl={subListProps.setPlayListUrl}
+              backEnd={subListProps.backEnd}
+              subListIndex={subListProps.subListIndex}
+              setSubListIndex={subListProps.setSubListIndex}
+              downloadedItem={subListProps.downloadedItem}
+              reFetch={subListProps.reFetch}
+              setReFetch={subListProps.setReFetch}
+              tableContainerHeight={subListProps.tableContainerHeight}
+              rowsPerPage={subListProps.rowsPerPage}
+              setRowsPerPage={subListProps.setRowsPerPage}
+              token={subListProps.token}
+              setToken={subListProps.setToken}
+              setSnack={subListProps.setSnack}
+              addNotification={subListProps.addNotification}
+              activeDownloads={subListProps.activeDownloads}
+            />
           </Suspense>
         </Grid>
       </Grid>

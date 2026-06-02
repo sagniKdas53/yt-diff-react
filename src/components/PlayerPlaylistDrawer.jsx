@@ -46,11 +46,11 @@ export default function PlayerPlaylistDrawer({
   const pendingDownloads = useMemo(() => {
     const filtered = {};
     for (const url of Object.keys(pendingDownloadsRaw)) {
-      const inActive = activeDownloads[url] !== undefined;
+      const inActive = Reflect.get(activeDownloads, url) !== undefined;
       const item = items?.find((el) => el.video_metadatum?.videoUrl === url);
       const isDownloaded = item?.video_metadatum?.downloadStatus;
       if (!inActive && !isDownloaded) {
-        filtered[url] = true;
+        Reflect.set(filtered, url, true);
       }
     }
     return filtered;
@@ -61,8 +61,12 @@ export default function PlayerPlaylistDrawer({
   const handleDownload = useCallback(
     async (videoUrl) => {
       // Prevent double-clicks
-      if (pendingDownloads[videoUrl]) return;
-      setPendingDownloadsRaw((prev) => ({ ...prev, [videoUrl]: true }));
+      if (Reflect.get(pendingDownloads, videoUrl)) return;
+      setPendingDownloadsRaw((prev) => {
+        const next = { ...prev };
+        Reflect.set(next, videoUrl, true);
+        return next;
+      });
 
       try {
         const response = await fetch(backEnd + "/download", {
@@ -83,7 +87,7 @@ export default function PlayerPlaylistDrawer({
           // Remove pending state on failure so user can retry
           setPendingDownloadsRaw((prev) => {
             const next = { ...prev };
-            delete next[videoUrl];
+            Reflect.deleteProperty(next, videoUrl);
             return next;
           });
         }
@@ -91,7 +95,7 @@ export default function PlayerPlaylistDrawer({
         console.error("Download request failed", error);
         setPendingDownloadsRaw((prev) => {
           const next = { ...prev };
-          delete next[videoUrl];
+          Reflect.deleteProperty(next, videoUrl);
           return next;
         });
       }
@@ -117,9 +121,9 @@ export default function PlayerPlaylistDrawer({
             : fallbackThumbURL;
         const isCurrent = index === currentPlayerIndex;
         const isAvailable = meta.downloadStatus;
-        const downloadProgress = activeDownloads[meta.videoUrl];
+        const downloadProgress = Reflect.get(activeDownloads, meta.videoUrl);
         const isDownloading = downloadProgress !== undefined;
-        const isPending = !!pendingDownloads[meta.videoUrl];
+        const isPending = !!Reflect.get(pendingDownloads, meta.videoUrl);
 
         return (
           <ListItemButton

@@ -247,7 +247,7 @@ export default function VideoPlayer({
       }
       if (timingIdx === -1) continue;
 
-      const match = lines[timingIdx].match(
+      const match = lines.at(timingIdx).match(
         /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
       );
       if (!match) continue;
@@ -627,7 +627,7 @@ export default function VideoPlayer({
   const handleNext = useCallback(() => {
     if (!openPlayer) return;
     for (let i = currentPlayerIndex + 1; i < items.length; i++) {
-      const meta = items[i].video_metadatum || {};
+      const meta = items.at(i).video_metadatum || {};
       if (meta.downloadStatus) {
         openPlayer(
           meta.saveDirectory ?? playlistDirectory,
@@ -659,7 +659,7 @@ export default function VideoPlayer({
   const handlePrev = useCallback(() => {
     if (!openPlayer) return;
     for (let i = currentPlayerIndex - 1; i >= 0; i--) {
-      const meta = items[i].video_metadatum || {};
+      const meta = items.at(i).video_metadatum || {};
       if (meta.downloadStatus) {
         openPlayer(
           meta.saveDirectory ?? playlistDirectory,
@@ -709,7 +709,7 @@ export default function VideoPlayer({
       openPlayer
     ) {
       for (let i = 0; i < items.length; i++) {
-        const meta = items[i].video_metadatum || {};
+        const meta = items.at(i).video_metadatum || {};
         if (meta.downloadStatus) {
           openPlayer(
             meta.saveDirectory ?? playlistDirectory,
@@ -733,7 +733,7 @@ export default function VideoPlayer({
       openPlayer
     ) {
       for (let i = items.length - 1; i >= 0; i--) {
-        const meta = items[i].video_metadatum || {};
+        const meta = items.at(i).video_metadatum || {};
         if (meta.downloadStatus) {
           openPlayer(
             meta.saveDirectory ?? playlistDirectory,
