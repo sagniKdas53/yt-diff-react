@@ -806,6 +806,7 @@ export default function App() {
     setToken,
     setSnack,
     addNotification,
+    activeDownloads,
   };
 
   // renders mobile main with slide navigation

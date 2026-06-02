@@ -6,12 +6,6 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
-import Drawer from "@mui/material/Drawer";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
-import ListItemAvatar from "@mui/material/ListItemAvatar";
-import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -35,6 +29,7 @@ import { ClosedCaptionDisabled as ClosedCaptionDisabledIcon } from "@mui/icons-m
 
 import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
 const ControlBar = styled(Box, {
   shouldForwardProp: (prop) => prop !== "show",
@@ -129,6 +124,9 @@ export default function VideoPlayer({
   openPlayer,
   playlistDirectory,
   thumbUrls = {},
+  activeDownloads = {},
+  loadedPlayList,
+  rowsPerPage = 8,
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -1310,120 +1308,25 @@ export default function VideoPlayer({
       </ControlBar>
 
       {/* Playlist Drawer inside the Player */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        variant="persistent"
-        sx={{
-          "& .MuiDrawer-paper": {
-            width: { xs: "100%", sm: 350 },
-            bgcolor: "rgba(0, 0, 0, 0.85)",
-            backdropFilter: "blur(8px)",
-            color: "white",
-            boxSizing: "border-box",
-            borderLeft: "1px solid rgba(255,255,255,0.1)",
-            position: "absolute", // Makes it sit inside the dialog/fullscreen container
-          },
-        }}
-      >
-        <Box
-          sx={{
-            p: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <Typography variant="h6">Current Playlist</Typography>
-          <IconButton
-            onClick={() => setDrawerOpen(false)}
-            sx={{ color: "white" }}
-          >
-            <ArrowBackIcon sx={{ transform: "rotate(180deg)" }} />
-          </IconButton>
-        </Box>
-        <List sx={{ overflowY: "auto" }}>
-          {useMemo(() => {
-            const fallbackThumbURL =
-              baseUrl +
-              backEnd +
-              (theme.palette.mode === "light" ? "/404-light.png" : "/404.png");
-            return (
-              items &&
-              items.map((element, index) => {
-                const meta = element.video_metadatum || {};
-                const thumb = meta.thumbNailFile || "";
-                const thumbImg = thumbUrls[thumb]
-                  ? thumbUrls[thumb]
-                  : meta.onlineThumbnail
-                    ? meta.onlineThumbnail
-                    : fallbackThumbURL;
-                const isCurrent = index === currentPlayerIndex;
-                const isAvailable = meta.downloadStatus;
-
-                return (
-                  <ListItemButton
-                    key={index}
-                    disabled={!isAvailable}
-                    selected={isCurrent}
-                    onClick={() => {
-                      if (openPlayer && isAvailable) {
-                        openPlayer(
-                          meta.saveDirectory ?? playlistDirectory,
-                          meta.fileName,
-                          meta.title,
-                          index,
-                          meta.subTitleFile || null,
-                        );
-                      }
-                    }}
-                    sx={{
-                      "&.Mui-selected": {
-                        bgcolor: "rgba(25, 118, 210, 0.3)",
-                        "&:hover": {
-                          bgcolor: "rgba(25, 118, 210, 0.5)",
-                        },
-                      },
-                      opacity: isAvailable ? 1 : 0.4,
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar
-                        variant="rounded"
-                        src={thumbImg}
-                        sx={{ width: 60, height: 45, mr: 1 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={meta.title || "Unknown Title"}
-                      primaryTypographyProps={{
-                        variant: "body2",
-                        noWrap: true,
-                        fontWeight: isCurrent ? "bold" : "normal",
-                      }}
-                      secondary={!isAvailable && "Not Downloaded"}
-                      secondaryTypographyProps={{
-                        variant: "caption",
-                        color: "rgba(255,255,255,0.5)",
-                      }}
-                    />
-                  </ListItemButton>
-                );
-              })
-            );
-          }, [
-            items,
-            currentPlayerIndex,
-            thumbUrls,
-            baseUrl,
-            backEnd,
-            theme.palette.mode,
-            openPlayer,
-            playlistDirectory,
-          ])}
-        </List>
-      </Drawer>
+      <PlayerPlaylistDrawer
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        items={items}
+        itemCount={itemCount}
+        page={page}
+        start={start}
+        currentPlayerIndex={currentPlayerIndex}
+        setPage={setPage}
+        openPlayer={openPlayer}
+        playlistDirectory={playlistDirectory}
+        thumbUrls={thumbUrls}
+        activeDownloads={activeDownloads}
+        loadedPlayList={loadedPlayList}
+        backEnd={backEnd}
+        token={token}
+        baseUrl={baseUrl}
+        rowsPerPage={rowsPerPage}
+      />
     </Box>
   );
 }
@@ -1445,4 +1348,7 @@ VideoPlayer.propTypes = {
   openPlayer: PropTypes.func,
   playlistDirectory: PropTypes.string,
   thumbUrls: PropTypes.object,
+  activeDownloads: PropTypes.object,
+  loadedPlayList: PropTypes.string,
+  rowsPerPage: PropTypes.number,
 };

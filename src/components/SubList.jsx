@@ -57,6 +57,7 @@ export default function SubList({
   setToken,
   setSnack,
   addNotification,
+  activeDownloads = {},
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -1090,6 +1091,9 @@ export default function SubList({
             openPlayer={openPlayer}
             playlistDirectory={playlistDirectory}
             thumbUrls={thumbUrls}
+            activeDownloads={activeDownloads}
+            loadedPlayList={loadedPlayList}
+            rowsPerPage={rowsPerPage}
           />
         )}
       </Dialog>
@@ -1113,6 +1117,7 @@ SubList.propTypes = {
   setToken: PropTypes.func.isRequired,
   setSnack: PropTypes.func.isRequired,
   addNotification: PropTypes.func.isRequired,
+  activeDownloads: PropTypes.object,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,
