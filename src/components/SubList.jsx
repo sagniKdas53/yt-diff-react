@@ -84,6 +84,8 @@ export default function SubList({
   const [currentPlayerSaveDir, setCurrentPlayerSaveDir] = useState("");
   const [currentPlayerFileName, setCurrentPlayerFileName] = useState("");
   const [currentPlayerVideoTitle, setCurrentPlayerVideoTitle] = useState("");
+  const [currentPlayerSubTitleFile, setCurrentPlayerSubTitleFile] =
+    useState(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
   const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
   const thumbMetaRef = useRef({});
@@ -212,10 +214,11 @@ export default function SubList({
     }
   };
 
-  const openPlayer = (saveDir, fileName, title, index) => {
+  const openPlayer = (saveDir, fileName, title, index, subTitleFile = null) => {
     setCurrentPlayerSaveDir(saveDir);
     setCurrentPlayerFileName(fileName);
     setCurrentPlayerVideoTitle(title);
+    setCurrentPlayerSubTitleFile(subTitleFile);
     setCurrentPlayerIndex(index);
     setPlayerOpen(true);
   };
@@ -224,6 +227,7 @@ export default function SubList({
     setPlayerOpen(false);
     setCurrentPlayerSaveDir("");
     setCurrentPlayerFileName("");
+    setCurrentPlayerSubTitleFile(null);
     setCurrentPlayerIndex(-1);
   };
 
@@ -801,6 +805,7 @@ export default function SubList({
                               meta.fileName,
                               meta.title,
                               index,
+                              meta.subTitleFile || null,
                             )
                           }
                           sx={{
@@ -1071,6 +1076,7 @@ export default function SubList({
             saveDirectory={currentPlayerSaveDir}
             fileName={currentPlayerFileName}
             title={currentPlayerVideoTitle}
+            subTitleFile={currentPlayerSubTitleFile}
             backEnd={backEnd}
             token={token}
             onClose={closePlayer}

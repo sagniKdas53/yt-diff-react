@@ -114,6 +114,7 @@ export default function VideoPlayer({
   saveDirectory,
   fileName,
   title,
+  subTitleFile,
   backEnd,
   token,
   onClose,
@@ -132,6 +133,7 @@ export default function VideoPlayer({
   const [videoUrl, setVideoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [subtitleUrl, setSubtitleUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -165,6 +167,7 @@ export default function VideoPlayer({
   const timerRef = useRef(null);
   const recoveryTimerRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const subtitleObjectUrlRef = useRef(null);
   const itemsAtTimeOfNext = useRef(null);
   const itemsAtTimeOfPrev = useRef(null);
   const isPlayingRef = useRef(isPlaying);
@@ -191,6 +194,13 @@ export default function VideoPlayer({
     }
   }, []);
 
+  const clearSubtitleObjectUrl = useCallback(() => {
+    if (subtitleObjectUrlRef.current) {
+      URL.revokeObjectURL(subtitleObjectUrlRef.current);
+      subtitleObjectUrlRef.current = null;
+    }
+  }, []);
+
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -199,6 +209,14 @@ export default function VideoPlayer({
       .map((v) => (v < 10 ? "0" + v : v))
       .filter((v, i) => v !== "00" || i > 0)
       .join(":");
+  };
+
+  const convertSrtToVtt = (srtText) => {
+    const normalizedText = srtText.replace(/^\uFEFF/, "").replace(/\r/g, "");
+    return `WEBVTT\n\n${normalizedText.replace(
+      /(\d{2}:\d{2}:\d{2}),(\d{3})/g,
+      "$1.$2",
+    )}`;
   };
 
   const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
@@ -292,6 +310,86 @@ export default function VideoPlayer({
       }
     }
   };
+
+  const fetchSubtitleUrl = useCallback(
+    async (subtitleFileName, subtitleSaveDirectory, sessionId) => {
+      clearSubtitleObjectUrl();
+      setSubtitleUrl(null);
+
+      if (!subtitleFileName) return;
+
+      try {
+        const response = await fetch(backEnd + "/getfile", {
+          method: "post",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          mode: "cors",
+          body: JSON.stringify({
+            saveDirectory: subtitleSaveDirectory,
+            fileName: subtitleFileName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to get subtitle URL");
+        }
+
+        const data = await response.json();
+        if (
+          !isMountedRef.current ||
+          playerSessionRef.current !== sessionId ||
+          data.status !== "success" ||
+          !data.signedUrlId
+        ) {
+          return;
+        }
+
+        const signedSubtitleUrl =
+          baseUrl +
+          backEnd +
+          "/getfile?fileId=" +
+          data.signedUrlId +
+          "&inline=true";
+
+        if (subtitleFileName.toLowerCase().endsWith(".srt")) {
+          const subtitleResponse = await fetch(signedSubtitleUrl);
+          if (!subtitleResponse.ok) {
+            throw new Error("Failed to load subtitle contents");
+          }
+
+          const subtitleText = await subtitleResponse.text();
+          if (
+            !isMountedRef.current ||
+            playerSessionRef.current !== sessionId
+          ) {
+            return;
+          }
+
+          const vttBlob = new Blob([convertSrtToVtt(subtitleText)], {
+            type: "text/vtt;charset=utf-8",
+          });
+          const objectUrl = URL.createObjectURL(vttBlob);
+          subtitleObjectUrlRef.current = objectUrl;
+          setSubtitleUrl(objectUrl);
+          return;
+        }
+
+        setSubtitleUrl(signedSubtitleUrl);
+      } catch (error) {
+        if (
+          isMountedRef.current &&
+          playerSessionRef.current === sessionId
+        ) {
+          console.warn("Subtitle loading failed", error);
+          setSubtitleUrl(null);
+        }
+      }
+    },
+    [backEnd, baseUrl, clearSubtitleObjectUrl, token],
+  );
 
   const scheduleRefresh = useCallback(
     (
@@ -493,6 +591,7 @@ export default function VideoPlayer({
           meta.fileName,
           meta.title,
           i,
+          meta.subTitleFile || null,
         );
         return;
       }
@@ -524,6 +623,7 @@ export default function VideoPlayer({
           meta.fileName,
           meta.title,
           i,
+          meta.subTitleFile || null,
         );
         return;
       }
@@ -567,6 +667,7 @@ export default function VideoPlayer({
             meta.fileName,
             meta.title,
             i,
+            meta.subTitleFile || null,
           );
           break;
         }
@@ -590,6 +691,7 @@ export default function VideoPlayer({
             meta.fileName,
             meta.title,
             i,
+            meta.subTitleFile || null,
           );
           break;
         }
@@ -610,14 +712,22 @@ export default function VideoPlayer({
     playerSessionRef.current += 1;
     clearRefreshTimer();
     clearRecoveryTimer();
+    clearSubtitleObjectUrl();
     fileIdRef.current = null;
     expiryRef.current = null;
+    setSubtitleUrl(null);
     fetchSignedUrl();
+    fetchSubtitleUrl(
+      subTitleFile,
+      saveDirectory,
+      playerSessionRef.current,
+    );
     const videoElement = videoRef.current;
     return () => {
       playerSessionRef.current += 1;
       clearRefreshTimer();
       clearRecoveryTimer();
+      clearSubtitleObjectUrl();
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       if (mobileVolumeTimeoutRef.current)
         clearTimeout(mobileVolumeTimeoutRef.current);
@@ -635,7 +745,15 @@ export default function VideoPlayer({
     };
     // Dependency on saveDirectory/fileName forces refresh on track change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clearRecoveryTimer, clearRefreshTimer, saveDirectory, fileName]);
+  }, [
+    clearRecoveryTimer,
+    clearRefreshTimer,
+    clearSubtitleObjectUrl,
+    fetchSubtitleUrl,
+    saveDirectory,
+    fileName,
+    subTitleFile,
+  ]);
 
   useEffect(() => {
     if (videoUrl && videoRef.current) {
@@ -655,6 +773,15 @@ export default function VideoPlayer({
       videoRef.current.muted = isMuted;
     }
   }, [videoUrl, volume, isMuted]);
+
+  useEffect(() => {
+    const textTracks = videoRef.current?.textTracks;
+    if (!textTracks) return;
+
+    for (let i = 0; i < textTracks.length; i++) {
+      textTracks[i].mode = subtitleUrl && i === 0 ? "showing" : "disabled";
+    }
+  }, [subtitleUrl, videoUrl]);
 
   const handleError = () => {
     const vid = videoRef.current;
@@ -739,7 +866,17 @@ export default function VideoPlayer({
           onEnded={handleVideoEnded}
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        />
+        >
+          {subtitleUrl && (
+            <track
+              default
+              kind="subtitles"
+              label="English"
+              src={subtitleUrl}
+              srcLang="en"
+            />
+          )}
+        </video>
       )}
 
       {/* Click-to-pause overlay — excludes top bar and bottom controls */}
@@ -1098,6 +1235,7 @@ export default function VideoPlayer({
                           meta.fileName,
                           meta.title,
                           index,
+                          meta.subTitleFile || null,
                         );
                       }
                     }}
@@ -1155,6 +1293,7 @@ VideoPlayer.propTypes = {
   saveDirectory: PropTypes.string.isRequired,
   fileName: PropTypes.string.isRequired,
   title: PropTypes.string,
+  subTitleFile: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
