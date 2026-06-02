@@ -895,7 +895,6 @@ export default function VideoPlayer({
 
       {videoUrl && (
         <video
-          crossOrigin="anonymous"
           ref={videoRef}
           onError={handleError}
           onProgress={handleProgress}
