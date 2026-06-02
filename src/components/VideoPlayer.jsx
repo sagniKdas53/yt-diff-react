@@ -240,7 +240,7 @@ export default function VideoPlayer({
       const lines = block.trim().split("\n");
       let timingIdx = -1;
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes("-->")) {
+        if (lines.at(i).includes("-->")) {
           timingIdx = i;
           break;
         }
