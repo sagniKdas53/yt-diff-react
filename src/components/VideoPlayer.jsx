@@ -30,6 +30,8 @@ import { FullscreenExit as FullscreenExitIcon } from "@mui/icons-material";
 import { PictureInPictureAlt as PictureInPictureAltIcon } from "@mui/icons-material";
 import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { ClosedCaption as ClosedCaptionIcon } from "@mui/icons-material";
+import { ClosedCaptionDisabled as ClosedCaptionDisabledIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -156,6 +158,10 @@ export default function VideoPlayer({
   const [pendingPrevPage, setPendingPrevPage] = useState(false);
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const [bufferedTime, setBufferedTime] = useState(0);
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(() => {
+    const saved = localStorage.getItem("ytdiff_player_subtitles");
+    return saved !== null ? saved === "true" : true; // default ON
+  });
 
   const pipSupported =
     "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
@@ -213,10 +219,15 @@ export default function VideoPlayer({
 
   const convertSrtToVtt = (srtText) => {
     const normalizedText = srtText.replace(/^\uFEFF/, "").replace(/\r/g, "");
-    return `WEBVTT\n\n${normalizedText.replace(
-      /(\d{2}:\d{2}:\d{2}),(\d{3})/g,
-      "$1.$2",
-    )}`;
+    // Replace SRT comma timestamps with VTT dot timestamps
+    // and add position:50% line:85% to place subs over the video
+    const vttBody = normalizedText
+      .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2")
+      .replace(
+        /(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})/g,
+        "$1 --> $2 line:85% position:50% align:center",
+      );
+    return `WEBVTT\n\n${vttBody}`;
   };
 
   const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
@@ -643,6 +654,12 @@ export default function VideoPlayer({
     localStorage.setItem("ytdiff_player_autoplay", newVal);
   };
 
+  const toggleSubtitles = () => {
+    const newVal = !subtitlesEnabled;
+    setSubtitlesEnabled(newVal);
+    localStorage.setItem("ytdiff_player_subtitles", newVal);
+  };
+
   const handleVideoEnded = () => {
     setIsPlaying(false);
     if (autoPlayEnabled) {
@@ -705,6 +722,32 @@ export default function VideoPlayer({
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+    };
+  }, []);
+
+  // Inject global ::cue styles for subtitle appearance
+  useEffect(() => {
+    const styleId = "ytdiff-cue-styles";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        video::cue {
+          background: rgba(0, 0, 0, 0.75);
+          color: #fff;
+          font-size: clamp(14px, 2.5vw, 22px);
+          font-family: 'Roboto', 'Arial', sans-serif;
+          line-height: 1.5;
+          border-radius: 4px;
+          padding: 4px 8px;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    return () => {
+      const el = document.getElementById(styleId);
+      if (el) el.remove();
     };
   }, []);
 
@@ -779,9 +822,10 @@ export default function VideoPlayer({
     if (!textTracks) return;
 
     for (let i = 0; i < textTracks.length; i++) {
-      textTracks[i].mode = subtitleUrl && i === 0 ? "showing" : "disabled";
+      textTracks[i].mode =
+        subtitleUrl && i === 0 && subtitlesEnabled ? "showing" : "disabled";
     }
-  }, [subtitleUrl, videoUrl]);
+  }, [subtitleUrl, videoUrl, subtitlesEnabled]);
 
   const handleError = () => {
     const vid = videoRef.current;
@@ -851,6 +895,7 @@ export default function VideoPlayer({
 
       {videoUrl && (
         <video
+          crossOrigin="anonymous"
           ref={videoRef}
           onError={handleError}
           onProgress={handleProgress}
@@ -1138,6 +1183,37 @@ export default function VideoPlayer({
               }}
             />
           </Stack>
+
+          {subtitleUrl && (
+            <Tooltip title={subtitlesEnabled ? "Subtitles ON" : "Subtitles OFF"}>
+              <IconButton
+                size="small"
+                onClick={toggleSubtitles}
+                sx={{
+                  color: subtitlesEnabled ? "#fff" : "rgba(255,255,255,0.4)",
+                  position: "relative",
+                  "&::after": subtitlesEnabled
+                    ? {
+                        content: "''",
+                        position: "absolute",
+                        bottom: 2,
+                        left: "20%",
+                        right: "20%",
+                        height: 3,
+                        borderRadius: 1.5,
+                        bgcolor: "#fff",
+                      }
+                    : {},
+                }}
+              >
+                {subtitlesEnabled ? (
+                  <ClosedCaptionIcon />
+                ) : (
+                  <ClosedCaptionDisabledIcon />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
 
           {pipSupported && (
             <IconButton
