@@ -1230,36 +1230,53 @@ export default function VideoPlayer({
             />
           </Stack>
 
-          {subtitleUrl && (
-            <Tooltip title={subtitlesEnabled ? "Subtitles ON" : "Subtitles OFF"}>
+          <Tooltip
+            title={
+              !subtitleUrl
+                ? "No subtitles available"
+                : subtitlesEnabled
+                  ? "Subtitles ON"
+                  : "Subtitles OFF"
+            }
+          >
+            <span>
               <IconButton
                 size="small"
                 onClick={toggleSubtitles}
+                disabled={!subtitleUrl}
                 sx={{
-                  color: subtitlesEnabled ? "#fff" : "rgba(255,255,255,0.4)",
+                  color: !subtitleUrl
+                    ? "rgba(255,255,255,0.2)"
+                    : subtitlesEnabled
+                      ? "#fff"
+                      : "rgba(255,255,255,0.4)",
                   position: "relative",
-                  "&::after": subtitlesEnabled
-                    ? {
-                        content: "''",
-                        position: "absolute",
-                        bottom: 2,
-                        left: "20%",
-                        right: "20%",
-                        height: 3,
-                        borderRadius: 1.5,
-                        bgcolor: "#fff",
-                      }
-                    : {},
+                  "&.Mui-disabled": {
+                    color: "rgba(255,255,255,0.2)",
+                  },
+                  "&::after":
+                    subtitleUrl && subtitlesEnabled
+                      ? {
+                          content: "''",
+                          position: "absolute",
+                          bottom: 2,
+                          left: "20%",
+                          right: "20%",
+                          height: 3,
+                          borderRadius: 1.5,
+                          bgcolor: "#fff",
+                        }
+                      : {},
                 }}
               >
-                {subtitlesEnabled ? (
+                {subtitleUrl && subtitlesEnabled ? (
                   <ClosedCaptionIcon />
                 ) : (
                   <ClosedCaptionDisabledIcon />
                 )}
               </IconButton>
-            </Tooltip>
-          )}
+            </span>
+          </Tooltip>
 
           {pipSupported && (
             <IconButton
