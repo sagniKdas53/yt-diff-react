@@ -18,3 +18,4 @@
    1. The current `init` socket event clears the frontend queue to avoid stale entries.
    2. A temporary connection interruption does not necessarily mean the backend restarted, so active or pending downloads may continue after their frontend queue state is cleared.
    3. A future implementation should expose a backend queue snapshot or connection generation identifier so the frontend can distinguish reconnection from backend restart and restore authoritative state.
+9. [ ] Investigate and integrate TanStack Query for declarative data fetching to replace reFetch string hacks and manual caching.

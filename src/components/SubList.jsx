@@ -1,21 +1,9 @@
 import { Add as AddIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { Clear as ClearIcon } from "@mui/icons-material";
-import { DeleteForever as DeleteForeverIcon } from "@mui/icons-material";
-import { DeleteSweep as DeleteSweepIcon } from "@mui/icons-material";
 import { Download as DownloadIcon } from "@mui/icons-material";
-import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
-import { PlayArrow as PlayArrowIcon } from "@mui/icons-material";
-import { PlaylistRemove as PlaylistRemoveIcon } from "@mui/icons-material";
-import { Queue as QueueIcon } from "@mui/icons-material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
-import Card from "@mui/material/Card";
-import Chip from "@mui/material/Chip";
-import CardActions from "@mui/material/CardActions";
-import CardContent from "@mui/material/CardContent";
-import CardMedia from "@mui/material/CardMedia";
 import Checkbox from "@mui/material/Checkbox";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -25,7 +13,6 @@ import Fab from "@mui/material/Fab";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
-import Link from "@mui/material/Link";
 import { useTheme } from "@mui/material/styles";
 import Table from "@mui/material/Table";
 import TableCell from "@mui/material/TableCell";
@@ -34,7 +21,6 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import debounce from "lodash.debounce";
@@ -42,6 +28,7 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
+import SubListItemCard from "./SubListItemCard.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
 export default function SubList({
   setPlayListUrl,
@@ -675,6 +662,79 @@ export default function SubList({
     }
   }, [subListIndex, handleChangePage, rowsPerPage, itemCount]);
 
+  const handleRemove = useCallback(
+    (id) => {
+      const element = items.find((item) => item.id === id);
+      if (!element) return;
+      const meta = element.video_metadatum || {};
+      setConfirmPayload({
+        playListUrl: loadedPlayList,
+        mappingId: element.id,
+        videoUrl: meta.videoUrl,
+        title: meta.title,
+        cleanUp: false,
+        deleteVideoMappings: true,
+        deleteVideosInDB: false,
+      });
+      setConfirmOpen(true);
+    },
+    [items, loadedPlayList],
+  );
+
+  const handleDeleteDownloaded = useCallback(
+    (id) => {
+      const element = items.find((item) => item.id === id);
+      if (!element) return;
+      const meta = element.video_metadatum || {};
+      setConfirmPayload({
+        playListUrl: loadedPlayList,
+        mappingId: element.id,
+        videoUrl: meta.videoUrl,
+        title: meta.title,
+        cleanUp: true,
+        deleteVideoMappings: false,
+        deleteVideosInDB: false,
+      });
+      setConfirmOpen(true);
+    },
+    [items, loadedPlayList],
+  );
+
+  const handleDeleteDB = useCallback(
+    (id) => {
+      const element = items.find((item) => item.id === id);
+      if (!element) return;
+      const meta = element.video_metadatum || {};
+      setConfirmPayload({
+        playListUrl: loadedPlayList,
+        mappingId: element.id,
+        videoUrl: meta.videoUrl,
+        title: meta.title,
+        cleanUp: true,
+        deleteVideoMappings: true,
+        deleteVideosInDB: true,
+      });
+      setConfirmOpen(true);
+    },
+    [items, loadedPlayList],
+  );
+
+  const handlePlay = useCallback(
+    (index) => {
+      const element = items[index];
+      if (!element) return;
+      const meta = element.video_metadatum || {};
+      openPlayer(
+        meta.saveDirectory ?? playlistDirectory,
+        meta.fileName,
+        meta.title,
+        index,
+        meta.subTitleFile || null,
+      );
+    },
+    [items, playlistDirectory],
+  );
+
   return (
     <>
       <Box
@@ -784,235 +844,27 @@ export default function SubList({
                   lg={3}
                   key={element.id ?? `${element.playlistUrl}-${meta.videoUrl}`}
                 >
-                  <Card
-                    variant="outlined"
-                    sx={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      borderColor: isActivelyDownloading
-                        ? "success.main"
-                        : isQueued
-                          ? "secondary.main"
-                          : "divider",
-                      borderWidth: isActivelyDownloading || isQueued ? 2 : 1,
-                      bgcolor: isActivelyDownloading
-                        ? (t) =>
-                            t.palette.mode === "dark"
-                              ? "rgba(102, 187, 106, 0.08)"
-                              : "rgba(67, 160, 71, 0.06)"
-                        : isQueued
-                          ? (t) =>
-                              t.palette.mode === "dark"
-                                ? "rgba(179, 157, 219, 0.08)"
-                                : "rgba(92, 107, 192, 0.06)"
-                          : undefined,
-                      minWidth: 125,
-                      transition: "all 0.2s",
-                      "&:hover": {
-                        boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
-                      },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        position: "relative",
-                        height: mediaHeight,
-                        width: "100%",
-                        bgcolor: "black",
-                      }}
-                    >
-                      <CardMedia
-                        component="img"
-                        height={mediaHeight}
-                        image={
-                          thumbUrls[thumb]
-                            ? thumbUrls[thumb]
-                            : meta.onlineThumbnail
-                              ? meta.onlineThumbnail
-                              : meta.downloadStatus
-                                ? baseUrl +
-                                  backEnd +
-                                  (theme.palette.mode === "light"
-                                    ? "/404-light.png"
-                                    : "/404.png")
-                                : baseUrl +
-                                  backEnd +
-                                  (theme.palette.mode === "light"
-                                    ? "/204-light.png"
-                                    : "/204.png")
-                        }
-                        alt={meta.title}
-                        loading="lazy"
-                        sx={{
-                          opacity: meta.downloadStatus ? 0.7 : 1,
-                          objectFit: "contain",
-                        }}
-                      />
-                      {meta.downloadStatus && (
-                        <IconButton
-                          onClick={() =>
-                            openPlayer(
-                              meta.saveDirectory ?? playlistDirectory,
-                              meta.fileName,
-                              meta.title,
-                              index,
-                              meta.subTitleFile || null,
-                            )
-                          }
-                          sx={{
-                            position: "absolute",
-                            top: "50%",
-                            left: "50%",
-                            transform: "translate(-50%, -50%)",
-                            color: "white",
-                            backgroundColor: "rgba(0,0,0,0.6)",
-                            backdropFilter: "blur(4px)",
-                            "&:hover": {
-                              backgroundColor: "rgba(25, 118, 210, 0.8)",
-                            },
-                          }}
-                          size="large"
-                        >
-                          <PlayArrowIcon sx={{ fontSize: 40 }} />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <CardContent sx={{ flex: 1, my: 0, pb: 0 }}>
-                      <Typography variant="subtitle1" component="div">
-                        <Link
-                          href={meta.videoUrl}
-                          color={
-                            element.isAvailable
-                              ? "inherit"
-                              : meta.title === "[Deleted video]"
-                                ? "error"
-                                : meta.title === "[Private video]"
-                                  ? "#f57c00"
-                                  : "inherit"
-                          }
-                          underline="hover"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {meta.title}
-                        </Link>
-                      </Typography>
-                    </CardContent>
-                    <CardActions sx={{ justifyContent: "space-between" }}>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                      >
-                        <Checkbox
-                          color="primary"
-                          checked={
-                            Reflect.get(selectedItems, meta.videoUrl) || false
-                          }
-                          onChange={handleSelection}
-                          id={meta.videoUrl}
-                        />
-                        {isQueued && (
-                          <Chip
-                            icon={<QueueIcon />}
-                            label={`#${queuePosition}`}
-                            size="small"
-                            color={
-                              isActivelyDownloading ? "success" : "secondary"
-                            }
-                            variant="outlined"
-                          />
-                        )}
-                      </Box>
-                      <ButtonGroup size="small">
-                        {/* Remove from playlist (keep files too on disk) — always available */}
-                        <Tooltip title="Remove video from playlist">
-                          <IconButton
-                            onClick={() => {
-                              setConfirmPayload({
-                                playListUrl: loadedPlayList,
-                                mappingId: element.id,
-                                videoUrl: meta.videoUrl,
-                                title: meta.title,
-                                cleanUp: false,
-                                deleteVideoMappings: true,
-                                deleteVideosInDB: false,
-                              });
-                              setConfirmOpen(true);
-                            }}
-                            size="large"
-                          >
-                            <PlaylistRemoveIcon color="warning" />
-                          </IconButton>
-                        </Tooltip>
-                        {meta.downloadStatus ? (
-                          // Only delete the downloaded files
-                          <Tooltip title="Delete the downloaded files">
-                            <IconButton
-                              onClick={() => {
-                                setConfirmPayload({
-                                  playListUrl: loadedPlayList,
-                                  mappingId: element.id,
-                                  videoUrl: meta.videoUrl,
-                                  title: meta.title,
-                                  cleanUp: true, // only delete downloaded files
-                                  deleteVideoMappings: false, // leave everthing else intact
-                                  deleteVideosInDB: false, // leave everthing else intact
-                                });
-                                setConfirmOpen(true);
-                              }}
-                              size="large"
-                            >
-                              {/* This deletes only the downloaded files, the video mappings and the video are not deleted */}
-                              <DeleteSweepIcon color="success" />
-                            </IconButton>
-                          </Tooltip>
-                        ) : (
-                          // This deletes the video from the DB, the video mappings and the files
-                          <Tooltip title="Delete video from DB">
-                            <IconButton
-                              onClick={() => {
-                                setConfirmPayload({
-                                  playListUrl: loadedPlayList,
-                                  mappingId: element.id,
-                                  videoUrl: meta.videoUrl,
-                                  title: meta.title,
-                                  cleanUp: true,
-                                  deleteVideoMappings: true,
-                                  deleteVideosInDB: true,
-                                });
-                                setConfirmOpen(true);
-                              }}
-                              size="large"
-                            >
-                              {/* This deletes everything */}
-                              <DeleteForeverIcon color="error" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <Tooltip title="Download file">
-                          {/* Maybe I should wire it up to call /download for the item instead of returning null when download icon is clicked for an undownloaded item */}
-                          <IconButton
-                            onClick={() =>
-                              meta.downloadStatus
-                                ? getFileAndDownload(
-                                    meta.saveDirectory ?? playlistDirectory,
-                                    meta.fileName,
-                                  )
-                                : null
-                            }
-                            size="large"
-                          >
-                            <FileDownloadIcon
-                              color={
-                                meta.downloadStatus ? "success" : "disabled"
-                              }
-                              sx={{ pt: 0.3 }}
-                            />
-                          </IconButton>
-                        </Tooltip>
-                      </ButtonGroup>
-                    </CardActions>
-                  </Card>
+                  <SubListItemCard
+                    element={element}
+                    index={index}
+                    mediaHeight={mediaHeight}
+                    thumbUrl={thumbUrls[thumb]}
+                    backEnd={backEnd}
+                    playlistDirectory={playlistDirectory}
+                    isQueued={isQueued}
+                    queuePosition={queuePosition}
+                    isActivelyDownloading={isActivelyDownloading}
+                    isSelected={
+                      Reflect.get(selectedItems, meta.videoUrl) || false
+                    }
+                    loadedPlayList={loadedPlayList}
+                    onSelect={handleSelection}
+                    onPlay={handlePlay}
+                    onRemove={handleRemove}
+                    onDeleteDownloaded={handleDeleteDownloaded}
+                    onDeleteDB={handleDeleteDB}
+                    onDownloadFile={getFileAndDownload}
+                  />
                 </Grid>
               );
             })}

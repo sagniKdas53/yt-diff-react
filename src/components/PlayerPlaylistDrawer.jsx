@@ -146,10 +146,7 @@ export default function PlayerPlaylistDrawer({
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDownload(
-                      meta.videoUrl,
-                      element.positionInPlaylist,
-                    );
+                    handleDownload(meta.videoUrl, element.positionInPlaylist);
                   }}
                   sx={{
                     color: "rgba(255,255,255,0.7)",

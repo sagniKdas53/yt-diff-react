@@ -2,7 +2,6 @@ import { Add as AddIcon } from "@mui/icons-material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import { DeleteForever as DeleteForeverIcon } from "@mui/icons-material";
 import { DeleteOutline as DeleteOutlineIcon } from "@mui/icons-material";
-import { MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { Clear as ClearIcon } from "@mui/icons-material";
 import { Typography } from "@mui/material";
 import Box from "@mui/material/Box";
@@ -17,7 +16,6 @@ import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import InputLabel from "@mui/material/InputLabel";
-import Link from "@mui/material/Link";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -32,12 +30,12 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
+import PlayListItemRow from "./PlayListItemRow.jsx";
 
 function PlayList({
   setPlayListUrl,
@@ -284,60 +282,80 @@ function PlayList({
     }
   };
 
-  // memoize the fetch result using useMemo
-  const memoizedFetch = useMemo(async () => {
-    //console.log("Fetching Playlists");
-    const response = await fetch(backEnd + "/getplay", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        start: start,
-        stop: stop,
-        sort: sort,
-        order: order,
-        query: query,
-      }),
-    });
-    if (response.ok) {
-      const data = await response.text();
-      const json_data = JSON.parse(data);
-      return json_data;
-    } else {
-      if (response.status === 401) {
-        setSnack("Session expired. Please log in again.", "error");
-        setToken(null);
-      }
+  useEffect(() => {
+    let active = true;
 
-      return {
-        count: 1,
-        rows: [
-          {
-            playlistUrl: "",
-            title: `Error in fetching playlists: ${response.status} ${response.statusText}`,
-            sortOrder: 0,
-            monitoringType: "N/A",
-            saveDirectory: "",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+    const fetchPlaylists = async () => {
+      try {
+        const response = await fetch(backEnd + "/getplay", {
+          method: "post",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-        ],
-      };
-    }
+          mode: "cors",
+          body: JSON.stringify({
+            start: start,
+            stop: stop,
+            sort: sort,
+            order: order,
+            query: query,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.text();
+          if (active) {
+            const json_data = JSON.parse(data);
+            setItems(json_data["rows"]);
+            setTotalItems(json_data["count"]);
+          }
+        } else {
+          if (response.status === 401 && active) {
+            setSnack("Session expired. Please log in again.", "error");
+            setToken(null);
+          }
+          if (active) {
+            setItems([
+              {
+                playlistUrl: "",
+                title: `Error in fetching playlists: ${response.status} ${response.statusText}`,
+                sortOrder: 0,
+                monitoringType: "N/A",
+                saveDirectory: "",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            ]);
+            setTotalItems(1);
+          }
+        }
+      } catch (error) {
+        if (active) {
+          setItems([
+            {
+              playlistUrl: "",
+              title: `Network error: ${error.message}`,
+              sortOrder: 0,
+              monitoringType: "N/A",
+              saveDirectory: "",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ]);
+          setTotalItems(1);
+        }
+      }
+    };
+
+    fetchPlaylists();
+
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backEnd, start, stop, sort, order, query, reFetch]);
-
-  // use the memoized fetch result to set the items state
-  useEffect(() => {
-    memoizedFetch.then((data) => {
-      setItems(data["rows"]);
-      setTotalItems(data["count"]);
-    });
-  }, [memoizedFetch]);
 
   const handleChangePage = useCallback(
     (_event, newPage) => {
@@ -558,125 +576,17 @@ function PlayList({
             {items.map((element, index) => {
               const isMenuOpen = openMenuIndex === index;
               return (
-                <TableRow
-                  hover
-                  role="checkbox"
-                  tabIndex={-1}
+                <PlayListItemRow
                   key={index}
-                  sx={{
-                    transition: "all 0.2s",
-                    "&:hover": {
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-                    },
-                  }}
-                >
-                  <TableCell
-                    key={element.sortOrder + "-order"}
-                    align="left"
-                    style={{ paddingInlineEnd: "0px" }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        whiteSpace: "nowrap",
-                        justifyContent: "space-between",
-                        m: 0,
-                        p: 0,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        component="div"
-                        sx={{ m: 0, p: 0, fontWeight: 600 }}
-                      >
-                        {+element.sortOrder + 1}
-                      </Typography>
-                      <Tooltip title="Delete options">
-                        <IconButton
-                          aria-label="more"
-                          id={index + "-long-button"}
-                          aria-controls={isMenuOpen ? "long-menu" : undefined}
-                          aria-expanded={isMenuOpen ? "true" : undefined}
-                          aria-haspopup="true"
-                          onClick={(e) => handleClickAnchor(e, index)}
-                          sx={{ m: 0, pb: 0.3, pt: 0, px: 0 }}
-                        >
-                          <MoreVertIcon size="small" sx={{ m: 0, p: 0 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                  <TableCell
-                    key={element.sortOrder + "-title"}
-                    align="left"
-                    sx={{ width: "75%" }}
-                    style={{
-                      paddingInline: "0px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    <Link
-                      href={element.playlistUrl}
-                      color="inherit"
-                      underline="hover"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {element.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell
-                    key={element.sortOrder + "-watch"}
-                    align="right"
-                    style={{ paddingInlineEnd: "0px", paddingTop: "0px" }}
-                  >
-                    <FormControl
-                      variant="standard"
-                      sx={{ m: 0, minWidth: 80, minHeight: 45 }}
-                      size="small"
-                    >
-                      <InputLabel id={element.sortOrder + "-label"}>
-                        {lastUpdateCalc(element.lastUpdatedByScheduler)}
-                      </InputLabel>
-                      <Select
-                        labelId={element.sortOrder + "-label"}
-                        id={element.sortOrder + "-select"}
-                        value={element.monitoringType}
-                        label="Watch"
-                        onChange={(e) => changeWatch(e, element.playlistUrl)}
-                      >
-                        <MenuItem value={"N/A"}>N/A</MenuItem>
-                        <MenuItem value={"Start"}>Start</MenuItem>
-                        <MenuItem value={"End"}>End</MenuItem>
-                        <MenuItem value={"Full"}>Full</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                  <TableCell
-                    key={element.sortOrder + "-button"}
-                    align="center"
-                    style={{ paddingInline: "8px" }}
-                  >
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color={
-                        playListUrl === element.playlistUrl
-                          ? "success"
-                          : "secondary"
-                      }
-                      onClick={() =>
-                        handleLoad(element.playlistUrl, element.title)
-                      }
-                    >
-                      <Typography variant="button">
-                        {playListUrl === element.playlistUrl ? "DONE" : "LIST"}
-                      </Typography>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  element={element}
+                  index={index}
+                  isMenuOpen={isMenuOpen}
+                  playListUrl={playListUrl}
+                  handleClickAnchor={handleClickAnchor}
+                  changeWatch={changeWatch}
+                  handleLoad={handleLoad}
+                  lastUpdateCalc={lastUpdateCalc}
+                />
               );
             })}
           </TableBody>

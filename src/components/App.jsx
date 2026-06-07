@@ -257,51 +257,32 @@ export default function App() {
     setNotifications((prev) => [...prev, newNotification]);
   }, []);
 
-  // keep refs in sync so socket handlers use latest functions
-  useEffect(() => {
-    setSnackRef.current = setSnack;
-  }, [setSnack]);
-  useEffect(() => {
-    addNotificationRef.current = addNotification;
-  }, [addNotification]);
-
   const dismissNotification = (id) => {
     setNotifications((prev) => prev.filter((note) => note.id !== id));
   };
 
   // --- Refs to avoid stale closures ---
+  // Synced in render phase instead of useEffect to avoid delay
   const playListUrlRef = useRef(playListUrl);
-  useEffect(() => {
-    playListUrlRef.current = playListUrl;
-  }, [playListUrl]);
+  playListUrlRef.current = playListUrl;
 
   const disableProgressRef = useRef(disableProgress);
-  useEffect(() => {
-    disableProgressRef.current = disableProgress;
-  }, [disableProgress]);
+  disableProgressRef.current = disableProgress;
 
   const toggleProgressCallBackRef = useRef(toggleProgressCallBack);
-  useEffect(() => {
-    toggleProgressCallBackRef.current = toggleProgressCallBack;
-  }, [toggleProgressCallBack]);
+  toggleProgressCallBackRef.current = toggleProgressCallBack;
 
   const addNotificationRef = useRef(addNotification);
-  useEffect(() => {
-    addNotificationRef.current = addNotification;
-  }, [addNotification]);
+  addNotificationRef.current = addNotification;
 
   const setSnackRef = useRef(setSnack);
-  useEffect(() => {
-    setSnackRef.current = setSnack;
-  }, [setSnack]);
+  setSnackRef.current = setSnack;
 
   const activeDownloadsRef = useRef(activeDownloads);
 
   // Mobile ref — so socket handlers can check mobile state without stale closures
-  const isMobileRef = useRef(false);
-  useEffect(() => {
-    isMobileRef.current = isMobile;
-  }, [isMobile]);
+  const isMobileRef = useRef(isMobile);
+  isMobileRef.current = isMobile;
 
   // Helper for socket handlers to trigger mobile slide-in
   const triggerMobileSlideIfNeeded = (title) => {
