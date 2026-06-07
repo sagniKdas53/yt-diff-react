@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -32,75 +32,30 @@ export default function PlayerPlaylistDrawer({
   playlistDirectory,
   thumbUrls,
   activeDownloads,
+  queuedItems,
+  queueDownloads,
   loadedPlayList,
   backEnd,
-  token,
   baseUrl,
   rowsPerPage,
 }) {
   const theme = useTheme();
-  // Track URLs where the user clicked download but socket events haven't arrived yet
-  const [pendingDownloadsRaw, setPendingDownloadsRaw] = useState({});
-
-  // Derived: strip out URLs that have appeared in activeDownloads or became downloaded
-  const pendingDownloads = useMemo(() => {
-    const filtered = {};
-    for (const url of Object.keys(pendingDownloadsRaw)) {
-      const inActive = Reflect.get(activeDownloads, url) !== undefined;
-      const item = items?.find((el) => el.video_metadatum?.videoUrl === url);
-      const isDownloaded = item?.video_metadatum?.downloadStatus;
-      if (!inActive && !isDownloaded) {
-        Reflect.set(filtered, url, true);
-      }
-    }
-    return filtered;
-  }, [pendingDownloadsRaw, activeDownloads, items]);
 
   const totalPages = Math.max(1, Math.ceil(itemCount / rowsPerPage));
 
   const handleDownload = useCallback(
-    async (videoUrl) => {
-      // Prevent double-clicks
-      if (Reflect.get(pendingDownloads, videoUrl)) return;
-      setPendingDownloadsRaw((prev) => {
-        const next = { ...prev };
-        Reflect.set(next, videoUrl, true);
-        return next;
-      });
+    (videoUrl, positionInPlaylist) => {
+      if (Reflect.has(queuedItems, videoUrl)) return;
 
-      try {
-        const response = await fetch(backEnd + "/download", {
-          method: "post",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
-          body: JSON.stringify({
-            urlList: [videoUrl],
-            playListUrl: loadedPlayList,
-          }),
-        });
-
-        if (!response.ok) {
-          // Remove pending state on failure so user can retry
-          setPendingDownloadsRaw((prev) => {
-            const next = { ...prev };
-            Reflect.deleteProperty(next, videoUrl);
-            return next;
-          });
-        }
-      } catch (error) {
-        console.error("Download request failed", error);
-        setPendingDownloadsRaw((prev) => {
-          const next = { ...prev };
-          Reflect.deleteProperty(next, videoUrl);
-          return next;
-        });
-      }
+      queueDownloads([
+        {
+          url: videoUrl,
+          playlistUrl: loadedPlayList,
+          positionInPlaylist: positionInPlaylist || 0,
+        },
+      ]);
     },
-    [backEnd, token, loadedPlayList, pendingDownloads],
+    [loadedPlayList, queueDownloads, queuedItems],
   );
 
   const fallbackThumbURL =
@@ -123,7 +78,8 @@ export default function PlayerPlaylistDrawer({
         const isAvailable = meta.downloadStatus;
         const downloadProgress = Reflect.get(activeDownloads, meta.videoUrl);
         const isDownloading = downloadProgress !== undefined;
-        const isPending = !!Reflect.get(pendingDownloads, meta.videoUrl);
+        const queueItem = Reflect.get(queuedItems, meta.videoUrl);
+        const isQueued = !!queueItem;
 
         return (
           <ListItemButton
@@ -150,7 +106,7 @@ export default function PlayerPlaylistDrawer({
                   bgcolor: "rgba(25, 118, 210, 0.5)",
                 },
               },
-              opacity: isAvailable || isDownloading ? 1 : isPending ? 0.7 : 0.5,
+              opacity: isAvailable || isDownloading ? 1 : isQueued ? 0.7 : 0.5,
             }}
           >
             <ListItemAvatar>
@@ -170,27 +126,30 @@ export default function PlayerPlaylistDrawer({
               secondary={
                 isDownloading
                   ? null
-                  : isPending
-                    ? "Queued"
+                  : isQueued
+                    ? `Queued #${queueItem.queuePosition}`
                     : !isAvailable
                       ? "Not Downloaded"
                       : null
               }
               secondaryTypographyProps={{
                 variant: "caption",
-                color: isPending
+                color: isQueued
                   ? theme.palette.info.main
                   : "rgba(255,255,255,0.5)",
               }}
             />
             {/* Download button for non-downloaded, non-active items */}
-            {!isAvailable && !isDownloading && !isPending && (
+            {!isAvailable && !isDownloading && !isQueued && (
               <Tooltip title="Download video">
                 <IconButton
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDownload(meta.videoUrl);
+                    handleDownload(
+                      meta.videoUrl,
+                      element.positionInPlaylist,
+                    );
                   }}
                   sx={{
                     color: "rgba(255,255,255,0.7)",
@@ -240,7 +199,7 @@ export default function PlayerPlaylistDrawer({
     openPlayer,
     playlistDirectory,
     activeDownloads,
-    pendingDownloads,
+    queuedItems,
     handleDownload,
     theme.palette.success.main,
     theme.palette.info.main,
@@ -349,9 +308,10 @@ PlayerPlaylistDrawer.propTypes = {
   playlistDirectory: PropTypes.string,
   thumbUrls: PropTypes.object,
   activeDownloads: PropTypes.object,
+  queuedItems: PropTypes.object,
+  queueDownloads: PropTypes.func.isRequired,
   loadedPlayList: PropTypes.string,
   backEnd: PropTypes.string.isRequired,
-  token: PropTypes.string.isRequired,
   baseUrl: PropTypes.string,
   rowsPerPage: PropTypes.number,
 };

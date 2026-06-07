@@ -407,6 +407,81 @@ export default function App() {
     [],
   );
 
+  const queueDownloads = useCallback(
+    async (entries) => {
+      if (entries.length === 0) return [];
+
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const urls = entries.map((entry) => entry.url);
+
+      // Queue first so a fast socket completion cannot arrive before the item exists.
+      addToDownloadQueue(entries, requestId);
+
+      try {
+        const response = await fetch(backEnd + "/download", {
+          method: "post",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          mode: "cors",
+          body: JSON.stringify({
+            urlList: urls,
+            playListUrl: entries[0].playlistUrl,
+          }),
+        });
+
+        if (response.ok) {
+          try {
+            const result = await response.json();
+            const acceptedUrls = (result.items || []).map((item) => item.url);
+            rollbackDownloadQueueRequest(requestId, acceptedUrls);
+            setSnack("Initiated download...", "success");
+            return acceptedUrls;
+          } catch (_error) {
+            rollbackDownloadQueueRequest(requestId, []);
+            setSnack("Could not confirm the download queue.", "error");
+            return [];
+          }
+        }
+
+        rollbackDownloadQueueRequest(requestId, []);
+
+        if (response.status === 401) {
+          setSnack("Session expired. Please log in again.", "error");
+          addNotification("Session expired. Please log in again.", "error");
+          setToken(null);
+        } else if (response.status === 429) {
+          setSnack("Too many downloads requested. Please wait.", "error");
+          addNotification(
+            "Too many downloads requested. Please wait.",
+            "error",
+          );
+        } else {
+          const message = `Failed to queue downloads: ${response.status} ${response.statusText}`;
+          setSnack(message, "error");
+          addNotification(message, "error");
+        }
+      } catch (error) {
+        rollbackDownloadQueueRequest(requestId, []);
+        setSnack(`Failed to queue downloads: ${error.message}`, "error");
+        addNotification(`Failed to queue downloads: ${error.message}`, "error");
+      }
+
+      return [];
+    },
+    [
+      addNotification,
+      addToDownloadQueue,
+      rollbackDownloadQueueRequest,
+      setSnack,
+      token,
+    ],
+  );
+
   const activeListingCountRef = useRef(0);
   const incrementListings = () => {
     setActiveListingCount((prev) => {
@@ -928,8 +1003,7 @@ export default function App() {
     addNotification,
     activeDownloads,
     queuedItems,
-    addToDownloadQueue,
-    rollbackDownloadQueueRequest,
+    queueDownloads,
   };
 
   // renders mobile main with slide navigation
@@ -994,7 +1068,7 @@ export default function App() {
               addNotification={subListProps.addNotification}
               activeDownloads={subListProps.activeDownloads}
               queuedItems={subListProps.queuedItems}
-              addToDownloadQueue={subListProps.addToDownloadQueue}
+              queueDownloads={subListProps.queueDownloads}
               rollbackDownloadQueueRequest={
                 subListProps.rollbackDownloadQueueRequest
               }
@@ -1056,7 +1130,7 @@ export default function App() {
               addNotification={subListProps.addNotification}
               activeDownloads={subListProps.activeDownloads}
               queuedItems={subListProps.queuedItems}
-              addToDownloadQueue={subListProps.addToDownloadQueue}
+              queueDownloads={subListProps.queueDownloads}
               rollbackDownloadQueueRequest={
                 subListProps.rollbackDownloadQueueRequest
               }

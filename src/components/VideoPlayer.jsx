@@ -125,6 +125,8 @@ export default function VideoPlayer({
   playlistDirectory,
   thumbUrls = {},
   activeDownloads = {},
+  queuedItems = {},
+  queueDownloads,
   loadedPlayList,
   rowsPerPage = 8,
 }) {
@@ -1312,9 +1314,10 @@ export default function VideoPlayer({
         playlistDirectory={playlistDirectory}
         thumbUrls={thumbUrls}
         activeDownloads={activeDownloads}
+        queuedItems={queuedItems}
+        queueDownloads={queueDownloads}
         loadedPlayList={loadedPlayList}
         backEnd={backEnd}
-        token={token}
         baseUrl={baseUrl}
         rowsPerPage={rowsPerPage}
       />
@@ -1340,6 +1343,8 @@ VideoPlayer.propTypes = {
   playlistDirectory: PropTypes.string,
   thumbUrls: PropTypes.object,
   activeDownloads: PropTypes.object,
+  queuedItems: PropTypes.object,
+  queueDownloads: PropTypes.func.isRequired,
   loadedPlayList: PropTypes.string,
   rowsPerPage: PropTypes.number,
 };

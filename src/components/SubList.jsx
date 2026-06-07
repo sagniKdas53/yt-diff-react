@@ -61,8 +61,7 @@ export default function SubList({
   addNotification,
   activeDownloads = {},
   queuedItems = {},
-  addToDownloadQueue,
-  rollbackDownloadQueueRequest,
+  queueDownloads,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -247,9 +246,6 @@ export default function SubList({
 
     if (data.length === 0) return;
 
-    const requestId =
-      globalThis.crypto?.randomUUID?.() ??
-      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const queueEntries = data.map((url) => {
       const item = items.find(
         (candidate) => candidate.video_metadatum.videoUrl === url,
@@ -262,64 +258,14 @@ export default function SubList({
       };
     });
 
-    // Queue first so a fast socket completion cannot arrive before the item exists.
-    addToDownloadQueue(queueEntries, requestId);
+    const acceptedUrls = await queueDownloads(queueEntries);
 
-    try {
-      const response = await fetch(backEnd + "/download", {
-        method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        mode: "cors",
-        body: JSON.stringify({
-          urlList: data,
-          playListUrl: loadedPlayList,
-        }),
-      });
-
-      if (response.ok) {
-        try {
-          const result = await response.json();
-          const acceptedUrls = (result.items || []).map((item) => item.url);
-          rollbackDownloadQueueRequest(requestId, acceptedUrls);
-
-          // Uncheck accepted items
-          updateSelected((prev) => {
-            const next = { ...prev };
-            acceptedUrls.forEach((url) => Reflect.set(next, url, false));
-            return next;
-          });
-          setSelectAll(false);
-        } catch (_e) {
-          rollbackDownloadQueueRequest(requestId, []);
-          setSnack("Could not confirm the download queue.", "error");
-          return;
-        }
-        setSnack("Initiated download...", "success");
-      } else {
-        rollbackDownloadQueueRequest(requestId, []);
-      }
-
-      if (response.status === 401) {
-        setSnack("Session expired. Please log in again.", "error");
-        addNotification("Session expired. Please log in again.", "error");
-        setToken(null);
-      } else if (response.status === 429) {
-        setSnack("Too many downloads requested. Please wait.", "error");
-        addNotification("Too many downloads requested. Please wait.", "error");
-      } else if (!response.ok) {
-        const message = `Failed to queue downloads: ${response.status} ${response.statusText}`;
-        setSnack(message, "error");
-        addNotification(message, "error");
-      }
-    } catch (error) {
-      rollbackDownloadQueueRequest(requestId, []);
-      setSnack(`Failed to queue downloads: ${error.message}`, "error");
-      addNotification(`Failed to queue downloads: ${error.message}`, "error");
-    }
+    updateSelected((prev) => {
+      const next = { ...prev };
+      acceptedUrls.forEach((url) => Reflect.set(next, url, false));
+      return next;
+    });
+    if (acceptedUrls.length > 0) setSelectAll(false);
   }
 
   const getFileAndDownload = async (saveDirectory, fileName) => {
@@ -1214,6 +1160,8 @@ export default function SubList({
             playlistDirectory={playlistDirectory}
             thumbUrls={thumbUrls}
             activeDownloads={activeDownloads}
+            queuedItems={queuedItems}
+            queueDownloads={queueDownloads}
             loadedPlayList={loadedPlayList}
             rowsPerPage={rowsPerPage}
           />
@@ -1241,8 +1189,7 @@ SubList.propTypes = {
   addNotification: PropTypes.func.isRequired,
   activeDownloads: PropTypes.object,
   queuedItems: PropTypes.object,
-  addToDownloadQueue: PropTypes.func,
-  rollbackDownloadQueueRequest: PropTypes.func,
+  queueDownloads: PropTypes.func.isRequired,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,
