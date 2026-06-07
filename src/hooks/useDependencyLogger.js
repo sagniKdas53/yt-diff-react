@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Hook to log changes in dependencies for debugging useEffects.
+ * Hook to log tracked value changes after a component render.
  * @param {Object} deps - The dependencies object to check for changes.
  * @param {string} [componentName="component"] - The name of the component for logging context.
  */
@@ -12,35 +12,25 @@ export const useDependencyLogger = (deps, componentName = "component") => {
     if (!import.meta.env.DEV) return;
 
     const prev = prevDepsRef.current;
-    const curr = deps;
 
     if (!prev) {
-      console.log(`[effect] ${componentName} initial deps:`, curr);
+      console.log(`[render] ${componentName} initial values:`, deps);
     } else {
-      const changed = Object.keys(curr).filter((k) => {
-        try {
-          return JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
-        } catch {
-          return prev[k] !== curr[k];
-        }
-      });
+      const changed = Object.keys(deps).filter(
+        (key) => !Object.is(prev[key], deps[key]),
+      );
 
       if (changed.length) {
         console.group(
-          `[effect] ${componentName} deps changed: ${changed.join(", ")}`,
+          `[render] ${componentName} values changed: ${changed.join(", ")}`,
         );
-        changed.forEach((k) => {
-          console.log(k, "prev:", prev[k], "curr:", curr[k]);
+        changed.forEach((key) => {
+          console.log(key, "prev:", prev[key], "curr:", deps[key]);
         });
-        //console.trace();
         console.groupEnd();
-      } else {
-        console.log(
-          `[effect] ${componentName} ran but no dep change detected (unexpected)`,
-        );
       }
     }
 
-    prevDepsRef.current = { ...curr };
-  }, [deps, componentName]);
+    prevDepsRef.current = { ...deps };
+  });
 };

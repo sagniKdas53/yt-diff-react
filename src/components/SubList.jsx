@@ -62,6 +62,7 @@ export default function SubList({
   activeDownloads = {},
   queuedItems = {},
   addToDownloadQueue,
+  rollbackDownloadQueueRequest,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -239,28 +240,52 @@ export default function SubList({
     setCurrentPlayerIndex(-1);
   };
 
-  function downloadFunc() {
+  async function downloadFunc() {
     const data = Object.keys(selectedItems).filter((key) =>
       Reflect.get(selectedItems, key),
     );
-    //console.log(JSON.stringify({ urls: data }));
-    fetch(backEnd + "/download", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        urlList: data,
-        playListUrl: loadedPlayList,
-      }),
-    }).then(async (response) => {
+
+    if (data.length === 0) return;
+
+    const requestId =
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const queueEntries = data.map((url) => {
+      const item = items.find(
+        (candidate) => candidate.video_metadatum.videoUrl === url,
+      );
+
+      return {
+        url,
+        playlistUrl: loadedPlayList,
+        positionInPlaylist: item?.positionInPlaylist || 0,
+      };
+    });
+
+    // Queue first so a fast socket completion cannot arrive before the item exists.
+    addToDownloadQueue(queueEntries, requestId);
+
+    try {
+      const response = await fetch(backEnd + "/download", {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          urlList: data,
+          playListUrl: loadedPlayList,
+        }),
+      });
+
       if (response.ok) {
         try {
           const result = await response.json();
           const acceptedUrls = (result.items || []).map((item) => item.url);
+          rollbackDownloadQueueRequest(requestId, acceptedUrls);
+
           // Uncheck accepted items
           updateSelected((prev) => {
             const next = { ...prev };
@@ -268,21 +293,16 @@ export default function SubList({
             return next;
           });
           setSelectAll(false);
-          // Mark them as queued globally
-          addToDownloadQueue(
-            acceptedUrls.map((url) => ({
-              url,
-              playlistUrl: loadedPlayList,
-              positionInPlaylist: items.find(
-                (i) => i.video_metadatum.videoUrl === url
-              )?.video_metadatum.positionInPlaylist || 0,
-            }))
-          );
         } catch (_e) {
-          // If response parsing fails, still show the success snack
+          rollbackDownloadQueueRequest(requestId, []);
+          setSnack("Could not confirm the download queue.", "error");
+          return;
         }
         setSnack("Initiated download...", "success");
+      } else {
+        rollbackDownloadQueueRequest(requestId, []);
       }
+
       if (response.status === 401) {
         setSnack("Session expired. Please log in again.", "error");
         addNotification("Session expired. Please log in again.", "error");
@@ -290,8 +310,16 @@ export default function SubList({
       } else if (response.status === 429) {
         setSnack("Too many downloads requested. Please wait.", "error");
         addNotification("Too many downloads requested. Please wait.", "error");
+      } else if (!response.ok) {
+        const message = `Failed to queue downloads: ${response.status} ${response.statusText}`;
+        setSnack(message, "error");
+        addNotification(message, "error");
       }
-    });
+    } catch (error) {
+      rollbackDownloadQueueRequest(requestId, []);
+      setSnack(`Failed to queue downloads: ${error.message}`, "error");
+      addNotification(`Failed to queue downloads: ${error.message}`, "error");
+    }
   }
 
   const getFileAndDownload = async (saveDirectory, fileName) => {
@@ -794,13 +822,22 @@ export default function SubList({
               const thumb = meta.thumbNailFile || "";
               const queueItemData = Reflect.get(queuedItems, meta.videoUrl);
               const isQueued = !!queueItemData;
-              const queuePosition = queueItemData ? queueItemData.queuePosition : null;
+              const queuePosition = queueItemData
+                ? queueItemData.queuePosition
+                : null;
               const isActivelyDownloading = Reflect.has(
                 activeDownloads,
                 meta.videoUrl,
               );
               return (
-                <Grid item xs={12} sm={6} md={6} lg={3} key={index}>
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                  md={6}
+                  lg={3}
+                  key={element.id ?? `${element.playlistUrl}-${meta.videoUrl}`}
+                >
                   <Card
                     variant="outlined"
                     sx={{
@@ -812,8 +849,7 @@ export default function SubList({
                         : isQueued
                           ? "secondary.main"
                           : "divider",
-                      borderWidth:
-                        isActivelyDownloading || isQueued ? 2 : 1,
+                      borderWidth: isActivelyDownloading || isQueued ? 2 : 1,
                       bgcolor: isActivelyDownloading
                         ? (t) =>
                             t.palette.mode === "dark"
@@ -918,7 +954,9 @@ export default function SubList({
                       </Typography>
                     </CardContent>
                     <CardActions sx={{ justifyContent: "space-between" }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
                         <Checkbox
                           color="primary"
                           checked={
@@ -1204,6 +1242,7 @@ SubList.propTypes = {
   activeDownloads: PropTypes.object,
   queuedItems: PropTypes.object,
   addToDownloadQueue: PropTypes.func,
+  rollbackDownloadQueueRequest: PropTypes.func,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,

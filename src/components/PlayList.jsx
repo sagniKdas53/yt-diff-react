@@ -35,11 +35,11 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 
-export default function PlayList({
+function PlayList({
   setPlayListUrl,
   playListUrl,
   backEnd,
@@ -956,3 +956,5 @@ PlayList.propTypes = {
   onMobileLoad: PropTypes.func,
   mobileAddDialogRef: PropTypes.object,
 };
+
+export default memo(PlayList);

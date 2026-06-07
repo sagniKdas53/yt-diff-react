@@ -179,9 +179,9 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [activeDownloads, setActiveDownloads] = useState({});
   // Download queue state — lives here so it persists across playlist switches
-  // Structure: { videoUrl: { playlistUrl, positionInPlaylist, queuePosition } }
+  // Structure:
+  // { videoUrl: { playlistUrl, positionInPlaylist, queuePosition, requestId } }
   const [queuedItems, setQueuedItems] = useState({});
-  const queueCounterRef = useRef(0);
 
   // Mobile slide navigation state
   const [mobileView, setMobileView] = useState("playlists"); // "playlists" | "videos"
@@ -323,18 +323,21 @@ export default function App() {
   const removeFromQueueAndRenumber = useCallback((url) => {
     setQueuedItems((prev) => {
       if (!Reflect.has(prev, url)) return prev;
-      const next = { ...prev };
-      Reflect.deleteProperty(next, url);
-      // Renumber remaining items sequentially
-      const remaining = Object.entries(next).sort(
-        ([, a], [, b]) => a.queuePosition - b.queuePosition,
-      );
-      const renumbered = {};
-      remaining.forEach(([itemUrl, data], idx) =>
-        Reflect.set(renumbered, itemUrl, { ...data, queuePosition: idx + 1 }),
-      );
-      queueCounterRef.current = remaining.length;
-      return renumbered;
+      const removedPosition = prev[url].queuePosition;
+      const next = {};
+
+      Object.entries(prev).forEach(([itemUrl, data]) => {
+        if (itemUrl === url) return;
+        Reflect.set(
+          next,
+          itemUrl,
+          data.queuePosition > removedPosition
+            ? { ...data, queuePosition: data.queuePosition - 1 }
+            : data,
+        );
+      });
+
+      return next;
     });
   }, []);
 
@@ -343,25 +346,64 @@ export default function App() {
     removeFromQueueRef.current = removeFromQueueAndRenumber;
   }, [removeFromQueueAndRenumber]);
 
-  const addToDownloadQueue = useCallback((entries) => {
-    // entries: [{ url, playlistUrl, positionInPlaylist }]
+  const addToDownloadQueue = useCallback((entries, requestId) => {
     setQueuedItems((prev) => {
       const next = { ...prev };
-      let counter = queueCounterRef.current;
+      let counter = Object.keys(prev).length;
+      let changed = false;
+
       entries.forEach((entry) => {
         if (!Reflect.has(next, entry.url)) {
           counter++;
+          changed = true;
           Reflect.set(next, entry.url, {
             playlistUrl: entry.playlistUrl,
             positionInPlaylist: entry.positionInPlaylist,
             queuePosition: counter,
+            requestId,
           });
         }
       });
-      queueCounterRef.current = counter;
-      return next;
+
+      return changed ? next : prev;
     });
   }, []);
+
+  const rollbackDownloadQueueRequest = useCallback(
+    (requestId, acceptedUrls) => {
+      const accepted = new Set(acceptedUrls);
+
+      setQueuedItems((prev) => {
+        const rejectedUrls = Object.entries(prev)
+          .filter(
+            ([url, data]) => data.requestId === requestId && !accepted.has(url),
+          )
+          .map(([url]) => url);
+
+        if (rejectedUrls.length === 0) return prev;
+
+        const rejected = new Set(rejectedUrls);
+        const remaining = Object.entries(prev)
+          .filter(([url]) => !rejected.has(url))
+          .sort(([, a], [, b]) => a.queuePosition - b.queuePosition);
+        const next = {};
+
+        remaining.forEach(([url, data], index) => {
+          const queuePosition = index + 1;
+          Reflect.set(
+            next,
+            url,
+            data.queuePosition === queuePosition
+              ? data
+              : { ...data, queuePosition },
+          );
+        });
+
+        return next;
+      });
+    },
+    [],
+  );
 
   const activeListingCountRef = useRef(0);
   const incrementListings = () => {
@@ -409,8 +451,7 @@ export default function App() {
         return prev !== 0 ? 0 : prev;
       });
       // Clear download queue on reconnect
-      setQueuedItems({});
-      queueCounterRef.current = 0;
+      setQueuedItems((prev) => (Object.keys(prev).length ? {} : prev));
       // call latest callback
       toggleProgressCallBackRef.current &&
         toggleProgressCallBackRef.current(false);
@@ -886,6 +927,7 @@ export default function App() {
     activeDownloads,
     queuedItems,
     addToDownloadQueue,
+    rollbackDownloadQueueRequest,
   };
 
   // renders mobile main with slide navigation
@@ -951,6 +993,9 @@ export default function App() {
               activeDownloads={subListProps.activeDownloads}
               queuedItems={subListProps.queuedItems}
               addToDownloadQueue={subListProps.addToDownloadQueue}
+              rollbackDownloadQueueRequest={
+                subListProps.rollbackDownloadQueueRequest
+              }
               isMobile={true}
               onBack={handleMobileBack}
               onOpenAddDialog={handleMobileOpenAddDialog}
@@ -1010,6 +1055,9 @@ export default function App() {
               activeDownloads={subListProps.activeDownloads}
               queuedItems={subListProps.queuedItems}
               addToDownloadQueue={subListProps.addToDownloadQueue}
+              rollbackDownloadQueueRequest={
+                subListProps.rollbackDownloadQueueRequest
+              }
             />
           </Suspense>
         </Grid>
