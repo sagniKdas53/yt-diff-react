@@ -284,6 +284,8 @@ export default function App() {
   const isMobileRef = useRef(isMobile);
   isMobileRef.current = isMobile;
 
+  const connectionGenerationRef = useRef(null);
+
   // Helper for socket handlers to trigger mobile slide-in
   const triggerMobileSlideIfNeeded = (title) => {
     if (isMobileRef.current) {
@@ -342,8 +344,14 @@ export default function App() {
           Reflect.set(next, entry.url, {
             playlistUrl: entry.playlistUrl,
             positionInPlaylist: entry.positionInPlaylist,
-            queuePosition: counter,
+            queuePosition: entry.queuePosition ?? counter,
             requestId,
+          });
+        } else if (entry.queuePosition && next[entry.url].queuePosition !== entry.queuePosition) {
+          changed = true;
+          Reflect.set(next, entry.url, {
+            ...next[entry.url],
+            queuePosition: entry.queuePosition,
           });
         }
       });
@@ -479,6 +487,65 @@ export default function App() {
     });
   };
 
+  const syncQueueFromBackend = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(backEnd + "/queuestatus", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        mode: "cors",
+        body: JSON.stringify({}),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Batch queue items and active downloads from the snapshot
+        const newActiveDownloads = {};
+        const newQueuedItems = {};
+
+        result.queue.forEach((item) => {
+          if (item.status === "downloading") {
+            newActiveDownloads[item.url] = item.percentage ?? 0;
+          }
+          newQueuedItems[item.url] = {
+            playlistUrl: "", // Unknown from snapshot alone, but sufficient for queue UI
+            positionInPlaylist: null,
+            queuePosition: item.queuePosition,
+            requestId: "backend-sync",
+          };
+        });
+
+        updateActiveDownloads(newActiveDownloads);
+        setQueuedItems(newQueuedItems);
+        if (result.generation) {
+          connectionGenerationRef.current = result.generation;
+        }
+      }
+    } catch (_e) {
+      // Failed to sync
+    }
+  }, [token]);
+
+  const syncQueueFromBackendRef = useRef(syncQueueFromBackend);
+  syncQueueFromBackendRef.current = syncQueueFromBackend;
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncQueueFromBackendRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   useDependencyLogger(
     {
       socket,
@@ -503,13 +570,25 @@ export default function App() {
     const onInit = (data) => {
       setConnectionId(data.id);
 
-      updateActiveDownloads((prev) => (Object.keys(prev).length ? {} : prev));
-      setActiveListingCount((prev) => {
-        activeListingCountRef.current = 0;
-        return prev !== 0 ? 0 : prev;
-      });
-      // Clear download queue on reconnect
-      setQueuedItems((prev) => (Object.keys(prev).length ? {} : prev));
+      const isReconnect = connectionGenerationRef.current === data.generation;
+      connectionGenerationRef.current = data.generation;
+
+      if (isReconnect) {
+        // Just reconnect to same backend -> sync queue
+        syncQueueFromBackendRef.current();
+      } else {
+        // Backend restarted or first connect -> clear local state, then sync to get any items that might exist
+        updateActiveDownloads((prev) => (Object.keys(prev).length ? {} : prev));
+        setActiveListingCount((prev) => {
+          activeListingCountRef.current = 0;
+          return prev !== 0 ? 0 : prev;
+        });
+        setQueuedItems((prev) => (Object.keys(prev).length ? {} : prev));
+        
+        // Calling sync just in case backend has existing downloads running
+        syncQueueFromBackendRef.current();
+      }
+
       // call latest callback
       toggleProgressCallBackRef.current &&
         toggleProgressCallBackRef.current(false);
@@ -546,6 +625,21 @@ export default function App() {
       const url = data.url || "unknown";
       const percent = isNaN(+data.percentage) ? 0 : +data.percentage;
       updateActiveDownloads((prev) => ({ ...prev, [url]: percent }));
+      
+      // Update queue position if provided
+      if (data.queuePosition) {
+        setQueuedItems((prev) => {
+          if (!prev[url] || prev[url].queuePosition === data.queuePosition) return prev;
+          return {
+            ...prev,
+            [url]: {
+              ...prev[url],
+              queuePosition: data.queuePosition
+            }
+          };
+        });
+      }
+
       toggleProgressCallBackRef.current &&
         toggleProgressCallBackRef.current(false);
     };
