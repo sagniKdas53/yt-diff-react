@@ -7,10 +7,12 @@ import { Download as DownloadIcon } from "@mui/icons-material";
 import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import { PlayArrow as PlayArrowIcon } from "@mui/icons-material";
 import { PlaylistRemove as PlaylistRemoveIcon } from "@mui/icons-material";
+import { Queue as QueueIcon } from "@mui/icons-material";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
@@ -58,6 +60,8 @@ export default function SubList({
   setSnack,
   addNotification,
   activeDownloads = {},
+  queuedItems = {},
+  addToDownloadQueue,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -78,7 +82,6 @@ export default function SubList({
   const [selectAll, setSelectAll] = useState(false);
   const [playlistDirectory, setPlaylistDirectory] = useState("init");
   const [thumbUrls, setThumbUrls] = useState({});
-  // Confirmation dialog state for delete actions on sub list items
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmPayload, setConfirmPayload] = useState(null);
   const [playerOpen, setPlayerOpen] = useState(false);
@@ -253,8 +256,31 @@ export default function SubList({
         urlList: data,
         playListUrl: loadedPlayList,
       }),
-    }).then((response) => {
+    }).then(async (response) => {
       if (response.ok) {
+        try {
+          const result = await response.json();
+          const acceptedUrls = (result.items || []).map((item) => item.url);
+          // Uncheck accepted items
+          updateSelected((prev) => {
+            const next = { ...prev };
+            acceptedUrls.forEach((url) => Reflect.set(next, url, false));
+            return next;
+          });
+          setSelectAll(false);
+          // Mark them as queued globally
+          addToDownloadQueue(
+            acceptedUrls.map((url) => ({
+              url,
+              playlistUrl: loadedPlayList,
+              positionInPlaylist: items.find(
+                (i) => i.video_metadatum.videoUrl === url
+              )?.video_metadatum.positionInPlaylist || 0,
+            }))
+          );
+        } catch (_e) {
+          // If response parsing fails, still show the success snack
+        }
         setSnack("Initiated download...", "success");
       }
       if (response.status === 401) {
@@ -395,6 +421,7 @@ export default function SubList({
       items,
       itemCount,
       page,
+      queuedItems,
     },
     "SubList",
   );
@@ -608,17 +635,26 @@ export default function SubList({
   }, [clearThumbnailRefreshTimer]);
 
   useEffect(() => {
-    setSelectAll(false);
-    items.map((element) =>
-      Reflect.set(selectedItems, element.video_metadatum.videoUrl, false),
-    );
-    // Remove keys not present in data
-    Object.keys(selectedItems).forEach((key) => {
-      if (!items.find((element) => element.video_metadatum.videoUrl === key)) {
-        Reflect.deleteProperty(selectedItems, key);
-      }
+    updateSelected((prevSelected) => {
+      const next = { ...prevSelected };
+      // Only initialize new items — preserve existing selections
+      items.forEach((element) => {
+        const url = element.video_metadatum.videoUrl;
+        if (!(url in next)) {
+          Reflect.set(next, url, false);
+        }
+      });
+      // Remove keys not present in current items
+      const currentUrls = new Set(
+        items.map((el) => el.video_metadatum.videoUrl),
+      );
+      Object.keys(next).forEach((key) => {
+        if (!currentUrls.has(key)) {
+          Reflect.deleteProperty(next, key);
+        }
+      });
+      return next;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   useEffect(() => {
@@ -756,6 +792,13 @@ export default function SubList({
             {items.map((element, index) => {
               const meta = element.video_metadatum || {};
               const thumb = meta.thumbNailFile || "";
+              const queueItemData = Reflect.get(queuedItems, meta.videoUrl);
+              const isQueued = !!queueItemData;
+              const queuePosition = queueItemData ? queueItemData.queuePosition : null;
+              const isActivelyDownloading = Reflect.has(
+                activeDownloads,
+                meta.videoUrl,
+              );
               return (
                 <Grid item xs={12} sm={6} md={6} lg={3} key={index}>
                   <Card
@@ -764,7 +807,24 @@ export default function SubList({
                       height: "100%",
                       display: "flex",
                       flexDirection: "column",
-                      borderColor: "divider",
+                      borderColor: isActivelyDownloading
+                        ? "success.main"
+                        : isQueued
+                          ? "secondary.main"
+                          : "divider",
+                      borderWidth:
+                        isActivelyDownloading || isQueued ? 2 : 1,
+                      bgcolor: isActivelyDownloading
+                        ? (t) =>
+                            t.palette.mode === "dark"
+                              ? "rgba(102, 187, 106, 0.08)"
+                              : "rgba(67, 160, 71, 0.06)"
+                        : isQueued
+                          ? (t) =>
+                              t.palette.mode === "dark"
+                                ? "rgba(179, 157, 219, 0.08)"
+                                : "rgba(92, 107, 192, 0.06)"
+                          : undefined,
                       minWidth: 125,
                       transition: "all 0.2s",
                       "&:hover": {
@@ -858,14 +918,27 @@ export default function SubList({
                       </Typography>
                     </CardContent>
                     <CardActions sx={{ justifyContent: "space-between" }}>
-                      <Checkbox
-                        color="primary"
-                        checked={
-                          Reflect.get(selectedItems, meta.videoUrl) || false
-                        }
-                        onChange={handleSelection}
-                        id={meta.videoUrl}
-                      />
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        <Checkbox
+                          color="primary"
+                          checked={
+                            Reflect.get(selectedItems, meta.videoUrl) || false
+                          }
+                          onChange={handleSelection}
+                          id={meta.videoUrl}
+                        />
+                        {isQueued && (
+                          <Chip
+                            icon={<QueueIcon />}
+                            label={`#${queuePosition}`}
+                            size="small"
+                            color={
+                              isActivelyDownloading ? "success" : "secondary"
+                            }
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
                       <ButtonGroup size="small">
                         {/* Remove from playlist (keep files too on disk) — always available */}
                         <Tooltip title="Remove video from playlist">
@@ -1129,6 +1202,8 @@ SubList.propTypes = {
   setSnack: PropTypes.func.isRequired,
   addNotification: PropTypes.func.isRequired,
   activeDownloads: PropTypes.object,
+  queuedItems: PropTypes.object,
+  addToDownloadQueue: PropTypes.func,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,

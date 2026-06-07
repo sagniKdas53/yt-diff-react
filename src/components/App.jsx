@@ -178,6 +178,10 @@ export default function App() {
   const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
   const [notifications, setNotifications] = useState([]);
   const [activeDownloads, setActiveDownloads] = useState({});
+  // Download queue state — lives here so it persists across playlist switches
+  // Structure: { videoUrl: { playlistUrl, positionInPlaylist, queuePosition } }
+  const [queuedItems, setQueuedItems] = useState({});
+  const queueCounterRef = useRef(0);
 
   // Mobile slide navigation state
   const [mobileView, setMobileView] = useState("playlists"); // "playlists" | "videos"
@@ -315,6 +319,50 @@ export default function App() {
     });
   };
 
+  // Queue management helpers
+  const removeFromQueueAndRenumber = useCallback((url) => {
+    setQueuedItems((prev) => {
+      if (!Reflect.has(prev, url)) return prev;
+      const next = { ...prev };
+      Reflect.deleteProperty(next, url);
+      // Renumber remaining items sequentially
+      const remaining = Object.entries(next).sort(
+        ([, a], [, b]) => a.queuePosition - b.queuePosition,
+      );
+      const renumbered = {};
+      remaining.forEach(([itemUrl, data], idx) =>
+        Reflect.set(renumbered, itemUrl, { ...data, queuePosition: idx + 1 }),
+      );
+      queueCounterRef.current = remaining.length;
+      return renumbered;
+    });
+  }, []);
+
+  const removeFromQueueRef = useRef(removeFromQueueAndRenumber);
+  useEffect(() => {
+    removeFromQueueRef.current = removeFromQueueAndRenumber;
+  }, [removeFromQueueAndRenumber]);
+
+  const addToDownloadQueue = useCallback((entries) => {
+    // entries: [{ url, playlistUrl, positionInPlaylist }]
+    setQueuedItems((prev) => {
+      const next = { ...prev };
+      let counter = queueCounterRef.current;
+      entries.forEach((entry) => {
+        if (!Reflect.has(next, entry.url)) {
+          counter++;
+          Reflect.set(next, entry.url, {
+            playlistUrl: entry.playlistUrl,
+            positionInPlaylist: entry.positionInPlaylist,
+            queuePosition: counter,
+          });
+        }
+      });
+      queueCounterRef.current = counter;
+      return next;
+    });
+  }, []);
+
   const activeListingCountRef = useRef(0);
   const incrementListings = () => {
     setActiveListingCount((prev) => {
@@ -360,6 +408,9 @@ export default function App() {
         activeListingCountRef.current = 0;
         return prev !== 0 ? 0 : prev;
       });
+      // Clear download queue on reconnect
+      setQueuedItems({});
+      queueCounterRef.current = 0;
       // call latest callback
       toggleProgressCallBackRef.current &&
         toggleProgressCallBackRef.current(false);
@@ -403,6 +454,7 @@ export default function App() {
     const onDownloadDone = (data) => {
       //console.log("[Socket] download-done", data);
       removeActiveDownload(data.url);
+      removeFromQueueRef.current && removeFromQueueRef.current(data.url);
       downloadedItem.current = {
         url: data.url,
         title: data.title,
@@ -422,6 +474,7 @@ export default function App() {
     const onDownloadFailed = (data) => {
       //console.log("[Socket] download-failed", data);
       removeActiveDownload(data.url);
+      removeFromQueueRef.current && removeFromQueueRef.current(data.url);
       setSnackRef.current && setSnackRef.current(`${data.title}`, "error");
       addNotificationRef.current &&
         addNotificationRef.current(`Download Failed: ${data.title}`, "error");
@@ -831,6 +884,8 @@ export default function App() {
     setSnack,
     addNotification,
     activeDownloads,
+    queuedItems,
+    addToDownloadQueue,
   };
 
   // renders mobile main with slide navigation
@@ -894,6 +949,8 @@ export default function App() {
               setSnack={subListProps.setSnack}
               addNotification={subListProps.addNotification}
               activeDownloads={subListProps.activeDownloads}
+              queuedItems={subListProps.queuedItems}
+              addToDownloadQueue={subListProps.addToDownloadQueue}
               isMobile={true}
               onBack={handleMobileBack}
               onOpenAddDialog={handleMobileOpenAddDialog}
@@ -951,6 +1008,8 @@ export default function App() {
               setSnack={subListProps.setSnack}
               addNotification={subListProps.addNotification}
               activeDownloads={subListProps.activeDownloads}
+              queuedItems={subListProps.queuedItems}
+              addToDownloadQueue={subListProps.addToDownloadQueue}
             />
           </Suspense>
         </Grid>
