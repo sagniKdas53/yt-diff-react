@@ -347,7 +347,10 @@ export default function App() {
             queuePosition: entry.queuePosition ?? counter,
             requestId,
           });
-        } else if (entry.queuePosition && next[entry.url].queuePosition !== entry.queuePosition) {
+        } else if (
+          entry.queuePosition &&
+          next[entry.url].queuePosition !== entry.queuePosition
+        ) {
           changed = true;
           Reflect.set(next, entry.url, {
             ...next[entry.url],
@@ -503,7 +506,7 @@ export default function App() {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Batch queue items and active downloads from the snapshot
         const newActiveDownloads = {};
         const newQueuedItems = {};
@@ -584,7 +587,7 @@ export default function App() {
           return prev !== 0 ? 0 : prev;
         });
         setQueuedItems((prev) => (Object.keys(prev).length ? {} : prev));
-        
+
         // Calling sync just in case backend has existing downloads running
         syncQueueFromBackendRef.current();
       }
@@ -625,17 +628,18 @@ export default function App() {
       const url = data.url || "unknown";
       const percent = isNaN(+data.percentage) ? 0 : +data.percentage;
       updateActiveDownloads((prev) => ({ ...prev, [url]: percent }));
-      
+
       // Update queue position if provided
       if (data.queuePosition) {
         setQueuedItems((prev) => {
-          if (!prev[url] || prev[url].queuePosition === data.queuePosition) return prev;
+          if (!prev[url] || prev[url].queuePosition === data.queuePosition)
+            return prev;
           return {
             ...prev,
             [url]: {
               ...prev[url],
-              queuePosition: data.queuePosition
-            }
+              queuePosition: data.queuePosition,
+            },
           };
         });
       }
