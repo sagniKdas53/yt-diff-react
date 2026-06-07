@@ -18,7 +18,7 @@ export default function Login({
   height,
   toggleSignUpComponent,
 }) {
-  const [userName, setUsername] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +38,7 @@ export default function Login({
 
   const handleLogin = async () => {
     // Send login request to backend
-    if (userName === "" || password === "") {
+    if (username === "" || password === "") {
       setSnack("Username or password is empty", "error");
       return;
     }
@@ -50,7 +50,7 @@ export default function Login({
       },
       mode: "cors",
       body: JSON.stringify({
-        userName,
+        username,
         password,
       }),
     });
@@ -128,7 +128,7 @@ export default function Login({
             label="Username"
             variant="outlined"
             autoComplete="username"
-            value={userName}
+            value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Username"
           />
