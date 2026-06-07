@@ -755,7 +755,7 @@ export default function SubList({
                     selectAll
                       ? false
                       : Object.values(selectedItems).filter((value) => value)
-                          .length > 0
+                        .length > 0
                   }
                   checked={selectAll}
                   onChange={bulkAction}
@@ -852,14 +852,14 @@ export default function SubList({
                       borderWidth: isActivelyDownloading || isQueued ? 2 : 1,
                       bgcolor: isActivelyDownloading
                         ? (t) =>
-                            t.palette.mode === "dark"
-                              ? "rgba(102, 187, 106, 0.08)"
-                              : "rgba(67, 160, 71, 0.06)"
+                          t.palette.mode === "dark"
+                            ? "rgba(102, 187, 106, 0.08)"
+                            : "rgba(67, 160, 71, 0.06)"
                         : isQueued
                           ? (t) =>
-                              t.palette.mode === "dark"
-                                ? "rgba(179, 157, 219, 0.08)"
-                                : "rgba(92, 107, 192, 0.06)"
+                            t.palette.mode === "dark"
+                              ? "rgba(179, 157, 219, 0.08)"
+                              : "rgba(92, 107, 192, 0.06)"
                           : undefined,
                       minWidth: 125,
                       transition: "all 0.2s",
@@ -886,15 +886,15 @@ export default function SubList({
                               ? meta.onlineThumbnail
                               : meta.downloadStatus
                                 ? baseUrl +
-                                  backEnd +
-                                  (theme.palette.mode === "light"
-                                    ? "/404-light.png"
-                                    : "/404.png")
+                                backEnd +
+                                (theme.palette.mode === "light"
+                                  ? "/404-light.png"
+                                  : "/404.png")
                                 : baseUrl +
-                                  backEnd +
-                                  (theme.palette.mode === "light"
-                                    ? "/204-light.png"
-                                    : "/204.png")
+                                backEnd +
+                                (theme.palette.mode === "light"
+                                  ? "/204-light.png"
+                                  : "/204.png")
                         }
                         alt={meta.title}
                         loading="lazy"
@@ -1049,9 +1049,9 @@ export default function SubList({
                             onClick={() =>
                               meta.downloadStatus
                                 ? getFileAndDownload(
-                                    meta.saveDirectory ?? playlistDirectory,
-                                    meta.fileName,
-                                  )
+                                  meta.saveDirectory ?? playlistDirectory,
+                                  meta.fileName,
+                                )
                                 : null
                             }
                             size="large"
@@ -1126,7 +1126,7 @@ export default function SubList({
       <TablePagination
         rowsPerPageOptions={[1, 8, 16, 32, 64]}
         component="div"
-        labelRowsPerPage="Items per page:"
+        labelRowsPerPage={isMobile ? "IC:" : "Item count:"}
         count={itemCount}
         rowsPerPage={rowsPerPage}
         page={page}
@@ -1148,14 +1148,14 @@ export default function SubList({
                 Are you sure you want to{" "}
                 <strong>
                   {confirmPayload.cleanUp &&
-                  confirmPayload.deleteVideoMappings &&
-                  confirmPayload.deleteVideosInDB
+                    confirmPayload.deleteVideoMappings &&
+                    confirmPayload.deleteVideosInDB
                     ? "Delete from DB and file system"
                     : confirmPayload.cleanUp &&
-                        !confirmPayload.deleteVideoMappings
+                      !confirmPayload.deleteVideoMappings
                       ? "Delete downloaded files"
                       : !confirmPayload.cleanUp &&
-                          confirmPayload.deleteVideoMappings
+                        confirmPayload.deleteVideoMappings
                         ? "Delete video from playlist"
                         : "Delete"}
                 </strong>{" "}

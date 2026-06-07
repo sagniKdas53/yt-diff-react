@@ -21,7 +21,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useDependencyLogger } from "../hooks/useDependencyLogger";
+import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 
 import io from "socket.io-client";
 
@@ -541,13 +541,13 @@ export default function App() {
     };
 
     const onListingStarted = () =>
-      //data
-      {
-        //console.log("Listing started: ", data);
-        incrementListings();
-        toggleProgressCallBackRef.current &&
-          toggleProgressCallBackRef.current(false);
-      };
+    //data
+    {
+      //console.log("Listing started: ", data);
+      incrementListings();
+      toggleProgressCallBackRef.current &&
+        toggleProgressCallBackRef.current(false);
+    };
 
     const onListingPlaylistComplete = (data) => {
       //console.log("Listing playlist done: ", data);
@@ -956,7 +956,7 @@ export default function App() {
             token={playListProps.token}
             setToken={playListProps.setToken}
             addNotification={playListProps.addNotification}
-            isMobile={true}
+            isMobile
             onMobileLoad={handleMobileLoadPlaylist}
             mobileAddDialogRef={mobileAddDialogRef}
           />
@@ -996,7 +996,7 @@ export default function App() {
               rollbackDownloadQueueRequest={
                 subListProps.rollbackDownloadQueueRequest
               }
-              isMobile={true}
+              isMobile
               onBack={handleMobileBack}
               onOpenAddDialog={handleMobileOpenAddDialog}
               activePlaylistTitle={activePlaylistTitle}

@@ -699,7 +699,7 @@ function PlayList({
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
         component="div"
-        labelRowsPerPage="Item count:"
+        labelRowsPerPage={isMobile ? "IC:" : "Item count:"}
         count={totalItems}
         rowsPerPage={rowsPerPage}
         page={!totalItems || totalItems <= 0 ? 0 : page}
