@@ -191,9 +191,7 @@ export default function App() {
 
   // Detect mobile — create the theme once and use it throughout
   const appliedTheme = useMemo(() => themeObj(theme), [theme]);
-  const isMobileViewport = useMediaQuery(
-    appliedTheme.breakpoints.down("md"),
-  );
+  const isMobileViewport = useMediaQuery(appliedTheme.breakpoints.down("md"));
   const isTouchDevice = useMediaQuery("(hover: none) and (pointer: coarse)");
   const isMobile = isMobileViewport || isTouchDevice;
 
@@ -545,13 +543,13 @@ export default function App() {
     };
 
     const onListingStarted = () =>
-    //data
-    {
-      //console.log("Listing started: ", data);
-      incrementListings();
-      toggleProgressCallBackRef.current &&
-        toggleProgressCallBackRef.current(false);
-    };
+      //data
+      {
+        //console.log("Listing started: ", data);
+        incrementListings();
+        toggleProgressCallBackRef.current &&
+          toggleProgressCallBackRef.current(false);
+      };
 
     const onListingPlaylistComplete = (data) => {
       //console.log("Listing playlist done: ", data);
