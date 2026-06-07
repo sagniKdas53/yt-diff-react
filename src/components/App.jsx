@@ -191,7 +191,11 @@ export default function App() {
 
   // Detect mobile — create the theme once and use it throughout
   const appliedTheme = useMemo(() => themeObj(theme), [theme]);
-  const isMobile = useMediaQuery(appliedTheme.breakpoints.down("md"));
+  const isMobileViewport = useMediaQuery(
+    appliedTheme.breakpoints.down("md"),
+  );
+  const isTouchDevice = useMediaQuery("(hover: none) and (pointer: coarse)");
+  const isMobile = isMobileViewport || isTouchDevice;
 
   const notificationRef = useRef(0);
   const downloadedItem = useRef({
