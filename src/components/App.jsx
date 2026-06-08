@@ -512,7 +512,7 @@ export default function App() {
         const newQueuedItems = {};
 
         result.queue.forEach((item) => {
-          if (item.status === "downloading") {
+          if (item.status === "downloading" || item.status === "running") {
             newActiveDownloads[item.url] = item.percentage ?? 0;
           }
           newQueuedItems[item.url] = {
