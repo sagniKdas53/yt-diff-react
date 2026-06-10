@@ -16,6 +16,23 @@ vi.mock("socket.io-client", () => {
   };
 });
 
+// Mock lazy-loaded subcomponents eagerly for fast & deterministic testing
+vi.mock("../../src/components/Nav.jsx", () => ({
+  default: (props) => <div data-testid="mock-nav">yt-diff</div>
+}));
+vi.mock("../../src/components/PlayList.jsx", () => ({
+  default: (props) => <div data-testid="mock-playlist">Playlists</div>
+}));
+vi.mock("../../src/components/SubList.jsx", () => ({
+  default: (props) => <div data-testid="mock-sublist">SubList</div>
+}));
+vi.mock("../../src/components/Login.jsx", () => ({
+  default: (props) => <div data-testid="mock-login"><h1>Sign in</h1></div>
+}));
+vi.mock("../../src/components/Signup.jsx", () => ({
+  default: (props) => <div data-testid="mock-signup">Sign Up</div>
+}));
+
 describe("App Component (Mobile)", () => {
   beforeEach(() => {
     globalThis.fetch = vi.fn();

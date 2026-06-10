@@ -32,7 +32,18 @@ describe("VideoPlayer Component (Mobile)", () => {
   };
 
   beforeEach(() => {
-    globalThis.fetch = vi.fn();
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post") {
+        if (body.fileName === "video.mp4") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: "success", signedUrlId: "url_123", expiry: Date.now() + 3600000 }),
+          });
+        }
+      }
+      return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+    });
     localStorage.clear();
     HTMLVideoElement.prototype.load = vi.fn();
     HTMLVideoElement.prototype.pause = vi.fn();
@@ -44,11 +55,6 @@ describe("VideoPlayer Component (Mobile)", () => {
   });
 
   test("single click on volume button toggles mobile volume slider overlay", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", signedUrlId: "url_123", expiry: Date.now() + 100000 }),
-    });
-
     render(
       <ThemeProvider theme={theme}>
         <VideoPlayer {...defaultProps} />
@@ -73,11 +79,6 @@ describe("VideoPlayer Component (Mobile)", () => {
   });
 
   test("double click on volume button toggles mute state", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", signedUrlId: "url_123", expiry: Date.now() + 100000 }),
-    });
-
     render(
       <ThemeProvider theme={theme}>
         <VideoPlayer {...defaultProps} />

@@ -79,7 +79,7 @@ describe("PlayListItemRow Component (Desktop)", () => {
     const handleClickAnchor = vi.fn();
     renderRow({ handleClickAnchor });
 
-    const button = screen.getByLabelText("Delete options");
+    const button = screen.getByLabelText("more");
     fireEvent.click(button);
 
     expect(handleClickAnchor).toHaveBeenCalled();

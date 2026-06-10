@@ -125,7 +125,7 @@ describe("SubList Component (Desktop)", () => {
     // Click checkbox for Video Song Two (second item, index 2 in checkboxes array)
     fireEvent.click(checkboxes[2]);
 
-    const downloadFAB = screen.getByRole("button", { name: "download" });
+    const downloadFAB = screen.getByRole("button", { name: "download selected" });
     expect(downloadFAB).toBeInTheDocument();
     fireEvent.click(downloadFAB);
 

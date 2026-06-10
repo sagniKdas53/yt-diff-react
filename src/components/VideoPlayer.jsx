@@ -1109,7 +1109,7 @@ export default function VideoPlayer({
           >
             <Replay10Icon />
           </IconButton>
-          <IconButton onClick={togglePlay} sx={{ color: "white" }}>
+          <IconButton onClick={togglePlay} sx={{ color: "white" }} aria-label="play">
             {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
           </IconButton>
           <IconButton
@@ -1152,6 +1152,7 @@ export default function VideoPlayer({
             {/* Mobile volume overlay — appears above the volume button */}
             {isMobile && showMobileVolume && (
               <Box
+                aria-label="volume slider overlay"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
                 sx={{
@@ -1173,6 +1174,7 @@ export default function VideoPlayer({
                 }}
               >
                 <Slider
+                  aria-label="mobile volume slider"
                   orientation="vertical"
                   size="small"
                   value={isMuted ? 0 : volume}
@@ -1202,6 +1204,7 @@ export default function VideoPlayer({
               size="small"
               onClick={handleVolumeButtonClick}
               sx={{ color: "white" }}
+              aria-label="mute volume"
             >
               {isMuted || volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />}
             </IconButton>

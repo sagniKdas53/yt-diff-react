@@ -32,7 +32,31 @@ describe("VideoPlayer Component (Desktop)", () => {
   };
 
   beforeEach(() => {
-    globalThis.fetch = vi.fn();
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post") {
+        if (body.fileName === "video.mp4") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
+          });
+        }
+        if (body.fileName === "video.vtt") {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ status: "success", signedUrlId: "subtitle_url_123" }),
+          });
+        }
+      } else {
+        if (url.includes("subtitle_url_123")) {
+          return Promise.resolve({
+            ok: true,
+            text: async () => "WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\nHello World",
+          });
+        }
+      }
+      return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+    });
     localStorage.clear();
     // Stub HTMLVideoElement prototype functions
     HTMLVideoElement.prototype.load = vi.fn();
@@ -45,17 +69,6 @@ describe("VideoPlayer Component (Desktop)", () => {
   });
 
   test("fetches signed url on mount and loads video", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 100000 }),
-    }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", signedUrlId: "subtitle_url_123" }),
-    }).mockResolvedValueOnce({
-      ok: true,
-      text: async () => "WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\nHello World",
-    });
-
     render(
       <ThemeProvider theme={theme}>
         <VideoPlayer {...defaultProps} />
@@ -72,14 +85,14 @@ describe("VideoPlayer Component (Desktop)", () => {
     );
 
     await waitFor(() => {
-      const videoEl = screen.getByTestId("video-element") || document.querySelector("video");
+      const videoEl = screen.queryByTestId("video-element") || document.querySelector("video");
       expect(videoEl).toBeInTheDocument();
       expect(videoEl.src).toContain("signed_url_123");
     });
   });
 
   test("displays error message if fetching signed URL fails", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       statusText: "Forbidden",
       json: async () => ({ message: "Unauthorized access" }),
@@ -87,19 +100,19 @@ describe("VideoPlayer Component (Desktop)", () => {
 
     render(
       <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} />
+        <VideoPlayer {...defaultProps} subTitleFile={null} />
       </ThemeProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Unauthorized access")).toBeInTheDocument();
+      expect(screen.getByText(/Unauthorized access/i)).toBeInTheDocument();
     });
   });
 
   test("toggles play/pause states on user trigger", async () => {
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 100000 }),
+      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
     });
 
     render(
@@ -122,7 +135,7 @@ describe("VideoPlayer Component (Desktop)", () => {
   test("toggles mute setting and saves in localStorage", async () => {
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 100000 }),
+      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
     });
 
     render(

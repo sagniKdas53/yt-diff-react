@@ -6,6 +6,10 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 describe("Nav Component (Mobile)", () => {
   const theme = createTheme();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   
   const defaultProps = {
     themeSwitcher: vi.fn(),

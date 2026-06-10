@@ -28,6 +28,7 @@ describe("Nav Component (Desktop)", () => {
   beforeEach(() => {
     globalThis.fetch = vi.fn();
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
   test("renders desktop navigation buttons and connection status", () => {
