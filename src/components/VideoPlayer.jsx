@@ -1109,7 +1109,11 @@ export default function VideoPlayer({
           >
             <Replay10Icon />
           </IconButton>
-          <IconButton onClick={togglePlay} sx={{ color: "white" }} aria-label="play">
+          <IconButton
+            onClick={togglePlay}
+            sx={{ color: "white" }}
+            aria-label="play"
+          >
             {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
           </IconButton>
           <IconButton

@@ -257,68 +257,77 @@ export default function SubList({
     if (acceptedUrls.length > 0) setSelectAll(false);
   }
 
-  const getFileAndDownload = useCallback(async (saveDirectory, fileName) => {
-    if (!fileName) {
-      setSnack("No file available", "error");
-      return;
-    }
-
-    try {
-      // perform the request and stream the response so we can report progress
-      //console.log("Requesting file: ", { saveDirectory, fileName });
-      setSnack(`Downloading: ${fileName}`, "info");
-      const response = await fetch(backEnd + "/getfile", {
-        method: "post",
-        headers: {
-          Accept: "application/octet-stream",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        mode: "cors",
-        body: JSON.stringify({ saveDirectory, fileName }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setSnack("Session expired. Please log in again.", "error");
-          addNotification("Session expired. Please log in again.", "error");
-          setToken(null);
-        } else {
-          const text = await response.json().catch(() => response.statusText);
-          setSnack(`Failed to download file: ${text.message}`, "error");
-          addNotification(`Failed to download file: ${text.message}`, "error");
-        }
+  const getFileAndDownload = useCallback(
+    async (saveDirectory, fileName) => {
+      if (!fileName) {
+        setSnack("No file available", "error");
         return;
       }
 
-      // Now the backend sends a json response with the signed
-      const data = await response.text();
-      const json_data = JSON.parse(data);
-      if (json_data.status === "success" && json_data.signedUrlId) {
-        // When on PROD use globalThis.location.origin else use ""
-        // the backEnd will have the correct path on dev
-        const downloadUrl = new URL(baseUrl + backEnd + "/getfile");
-        downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
-        //console.log("Opening download URL: ", downloadUrl.toString());
-        // open in new tab
-        globalThis.open(
-          downloadUrl.toString(),
-          "_blank",
-          "noopener,noreferrer",
+      try {
+        // perform the request and stream the response so we can report progress
+        //console.log("Requesting file: ", { saveDirectory, fileName });
+        setSnack(`Downloading: ${fileName}`, "info");
+        const response = await fetch(backEnd + "/getfile", {
+          method: "post",
+          headers: {
+            Accept: "application/octet-stream",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          mode: "cors",
+          body: JSON.stringify({ saveDirectory, fileName }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            setSnack("Session expired. Please log in again.", "error");
+            addNotification("Session expired. Please log in again.", "error");
+            setToken(null);
+          } else {
+            const text = await response.json().catch(() => response.statusText);
+            setSnack(`Failed to download file: ${text.message}`, "error");
+            addNotification(
+              `Failed to download file: ${text.message}`,
+              "error",
+            );
+          }
+          return;
+        }
+
+        // Now the backend sends a json response with the signed
+        const data = await response.text();
+        const json_data = JSON.parse(data);
+        if (json_data.status === "success" && json_data.signedUrlId) {
+          // When on PROD use globalThis.location.origin else use ""
+          // the backEnd will have the correct path on dev
+          const downloadUrl = new URL(baseUrl + backEnd + "/getfile");
+          downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
+          //console.log("Opening download URL: ", downloadUrl.toString());
+          // open in new tab
+          globalThis.open(
+            downloadUrl.toString(),
+            "_blank",
+            "noopener,noreferrer",
+          );
+          setSnack(`Download started: ${fileName}`, "success");
+        } else {
+          setSnack(`Failed to get download URL`, "error");
+          addNotification(
+            `Failed to get download URL for ${fileName}`,
+            "error",
+          );
+        }
+      } catch (error) {
+        setSnack(`Error downloading file: ${error.message}`, "error");
+        addNotification(
+          `Error downloading file ${fileName}: ${error.message}`,
+          "error",
         );
-        setSnack(`Download started: ${fileName}`, "success");
-      } else {
-        setSnack(`Failed to get download URL`, "error");
-        addNotification(`Failed to get download URL for ${fileName}`, "error");
       }
-    } catch (error) {
-      setSnack(`Error downloading file: ${error.message}`, "error");
-      addNotification(
-        `Error downloading file ${fileName}: ${error.message}`,
-        "error",
-      );
-    }
-  }, [backEnd, token, setSnack, addNotification, setToken, baseUrl]);
+    },
+    [backEnd, token, setSnack, addNotification, setToken, baseUrl],
+  );
 
   /**
    * Delete a video from the playlist.
@@ -558,7 +567,7 @@ export default function SubList({
           "download-completed-" +
             loadedPlayList +
             downloadedItem.url +
-            Date.now().toString()
+            Date.now().toString(),
         );
       }
       setItems((prevItems) => {

@@ -28,7 +28,7 @@ describe("PlayList Component (Mobile)", () => {
     reFetch: "init_refetch",
     setReFetch: vi.fn(),
     setSubListIndex: vi.fn(),
-    tableContainerHeight: 500,
+    tableContainerHeight: "500px",
     rowsPerPageSubList: 8,
     setRowsPerPageSubList: vi.fn(),
     token: "mock_token",

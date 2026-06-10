@@ -35,7 +35,7 @@ describe("SubList Component (Mobile)", () => {
     backEnd: "http://localhost:8888/ytdiff",
     reFetch: "init_refetch",
     setReFetch: vi.fn(),
-    tableContainerHeight: 600,
+    tableContainerHeight: "600px",
     rowsPerPage: 8,
     setRowsPerPage: vi.fn(),
     token: "mock_token",

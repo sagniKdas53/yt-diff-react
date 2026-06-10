@@ -35,7 +35,7 @@ describe("PlayList Component (Desktop)", () => {
     reFetch: "init_refetch",
     setReFetch: vi.fn(),
     setSubListIndex: vi.fn(),
-    tableContainerHeight: 500,
+    tableContainerHeight: "500px",
     rowsPerPageSubList: 8,
     setRowsPerPageSubList: vi.fn(),
     token: "mock_token",
@@ -116,6 +116,11 @@ describe("PlayList Component (Desktop)", () => {
 
     const submitBtn = screen.getByRole("button", { name: "Submit" });
     fireEvent.click(submitBtn);
+
+    // Wait for input field to clear (indicating async submission process is complete)
+    await waitFor(() => {
+      expect(inputField.value).toBe("");
+    });
 
     expect(globalThis.fetch).toHaveBeenLastCalledWith(
       "http://localhost:8888/ytdiff/list",

@@ -46,7 +46,7 @@ describe("SubList Component (Desktop)", () => {
     backEnd: "http://localhost:8888/ytdiff",
     reFetch: "init_refetch",
     setReFetch: vi.fn(),
-    tableContainerHeight: 600,
+    tableContainerHeight: "600px",
     rowsPerPage: 8,
     setRowsPerPage: vi.fn(),
     token: "mock_token",
@@ -128,6 +128,11 @@ describe("SubList Component (Desktop)", () => {
     const downloadFAB = screen.getByRole("button", { name: "download selected" });
     expect(downloadFAB).toBeInTheDocument();
     fireEvent.click(downloadFAB);
+
+    // Wait for selection checkbox to clear (indicating bulk download process is finished)
+    await waitFor(() => {
+      expect(checkboxes[2].checked).toBe(false);
+    });
 
     expect(defaultProps.queueDownloads).toHaveBeenCalledWith([
       {
