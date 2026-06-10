@@ -53,6 +53,7 @@ export default function SubList({
   isMobile,
   onBack,
   onOpenAddDialog,
+  activePlaylistTitle,
 }) {
   // Query and sort state
   const [query, updateQuery] = useState("");
@@ -68,6 +69,7 @@ export default function SubList({
   const [selectedItems, updateSelected] = useState({});
   const [selectAll, setSelectAll] = useState(false);
   const [playlistDirectory, setPlaylistDirectory] = useState("init");
+  const [playlistTitle, setPlaylistTitle] = useState("");
   const [thumbUrls, setThumbUrls] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmPayload, setConfirmPayload] = useState(null);
@@ -180,10 +182,10 @@ export default function SubList({
     setRowsPerPage(parseInt(event.target.value));
   };
 
-  const handleSelection = (event) => {
+  const handleSelection = useCallback((event) => {
     const { id, checked } = event.target;
     updateSelected((prevItems) => ({ ...prevItems, [id]: checked }));
-  };
+  }, []);
 
   const bulkAction = () => {
     const tempState = {};
@@ -255,7 +257,7 @@ export default function SubList({
     if (acceptedUrls.length > 0) setSelectAll(false);
   }
 
-  const getFileAndDownload = async (saveDirectory, fileName) => {
+  const getFileAndDownload = useCallback(async (saveDirectory, fileName) => {
     if (!fileName) {
       setSnack("No file available", "error");
       return;
@@ -316,7 +318,7 @@ export default function SubList({
         "error",
       );
     }
-  };
+  }, [backEnd, token, setSnack, addNotification, setToken, baseUrl]);
 
   /**
    * Delete a video from the playlist.
@@ -420,6 +422,7 @@ export default function SubList({
         const json_data = JSON.parse(data);
         setItems(json_data["rows"]);
         setPlaylistDirectory(json_data["saveDirectory"]);
+        setPlaylistTitle(json_data["playlistTitle"] || "");
         setItemCount(parseInt(json_data["count"]));
       } else {
         if (response.status === 401) {
@@ -550,6 +553,14 @@ export default function SubList({
   useEffect(() => {
     if (downloadedItem.url !== null) {
       //console.log(downloadedItem);
+      if (sort) {
+        setReFetch(
+          "download-completed-" +
+            loadedPlayList +
+            downloadedItem.url +
+            Date.now().toString()
+        );
+      }
       setItems((prevItems) => {
         return prevItems.map((item) => {
           if (item.video_metadatum.videoUrl === downloadedItem.url) {
@@ -578,7 +589,7 @@ export default function SubList({
         });
       });
     }
-  }, [downloadedItem]);
+  }, [downloadedItem, sort, loadedPlayList, setReFetch]);
 
   useEffect(() => {
     updateSelected({});
@@ -778,7 +789,11 @@ export default function SubList({
               >
                 <TextField
                   id="title-input"
-                  label="Title"
+                  label={
+                    loadedPlayList === "None"
+                      ? "Title"
+                      : playlistTitle || activePlaylistTitle || "Title"
+                  }
                   variant="outlined"
                   size="small"
                   value={localQuery}
@@ -1046,6 +1061,7 @@ SubList.propTypes = {
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,
   onOpenAddDialog: PropTypes.func,
+  activePlaylistTitle: PropTypes.string,
 };
 
 function SubListFab({ selectedItems, clear, download, mobileBackMode }) {
