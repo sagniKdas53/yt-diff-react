@@ -1,7 +1,8 @@
-import { Visibility } from "@mui/icons-material";
-import { VisibilityOff } from "@mui/icons-material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import TextField from "@mui/material/TextField";
@@ -18,6 +19,7 @@ export default function Signup({
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -27,29 +29,33 @@ export default function Signup({
     event.preventDefault();
   };
 
-  const handleSignup = async () => {
+  const handleSignup = async (event) => {
+    if (event) {
+      event.preventDefault();
+    }
     // Send signup request to backend
     if (username === "" || password === "") {
       setSnack("Username or password is empty", "error");
       return;
     }
-    const response = await fetch(backEnd + "/register", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      mode: "cors",
-      body: JSON.stringify({
-        username,
-        password,
-      }),
-    });
-
-    // Handle response (e.g., store token)
-    const data = await response.json();
-    // Propagate it to the main app
+    setLoading(true);
     try {
+      const response = await fetch(backEnd + "/register", {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        mode: "cors",
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+
+      // Handle response (e.g., store token)
+      const data = await response.json();
+      // Propagate it to the main app
       if (response.ok) {
         setSnack("Account successfully created.", "success");
         toggleSignUpComponent(false);
@@ -58,6 +64,8 @@ export default function Signup({
       }
     } catch (_error) {
       setSnack("Signup failed.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,73 +77,91 @@ export default function Signup({
       spacing={0}
       sx={{ my: 0, p: 0, height: height }}
     >
-      <Grid container spacing={3} sx={{ m: 1 }}>
-        <Grid xs={12} sx={{ alignItems: "center" }}>
-          <Typography component="h1" variant="h5">
-            Sign Up
-          </Typography>
+      <form onSubmit={handleSignup} style={{ width: "100%", maxWidth: "360px" }}>
+        <Grid container spacing={3} sx={{ m: 1 }}>
+          <Grid xs={12} sx={{ alignItems: "center" }}>
+            <Typography component="h1" variant="h5">
+              Sign Up
+            </Typography>
+          </Grid>
+          <Grid xs={12}>
+            <TextField
+              sx={{ m: 0, width: "100%" }}
+              label="Username"
+              variant="outlined"
+              autoComplete="username"
+              id="signup-username"
+              name="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              disabled={loading}
+              inputProps={{
+                spellCheck: false,
+              }}
+            />
+          </Grid>
+          <Grid xs={12}>
+            <TextField
+              sx={{ m: 0, width: "100%" }}
+              label="Password"
+              variant="outlined"
+              autoComplete="new-password"
+              id="signup-password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              disabled={loading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleClickShowPassword}
+                      onMouseDown={handleMouseDownPassword}
+                      edge="end"
+                      disabled={loading}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid xs={12}>
+            <Box sx={{ flexGrow: 1 }}></Box>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              sx={{ float: "right", minHeight: "36.5px" }}
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                <Typography variant="button">Sign Up</Typography>
+              )}
+            </Button>
+          </Grid>
+          <Grid xs={12}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              sx={{ float: "right" }}
+              onClick={() => toggleSignUpComponent(false)}
+              disabled={loading}
+            >
+              <Typography variant="button">Login</Typography>
+            </Button>
+          </Grid>
         </Grid>
-        <Grid xs={12}>
-          <TextField
-            sx={{ m: 0, width: "100%" }}
-            label="Username"
-            variant="outlined"
-            autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-          />
-        </Grid>
-        <Grid xs={12}>
-          <TextField
-            sx={{ m: 0, width: "100%" }}
-            label="Password"
-            variant="outlined"
-            autoComplete="new-password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={handleClickShowPassword}
-                    onMouseDown={handleMouseDownPassword}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
-        <Grid xs={12}>
-          <Box sx={{ flexGrow: 1 }}></Box>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            sx={{ float: "right" }}
-            onClick={handleSignup}
-          >
-            <Typography variant="button">Sign Up</Typography>
-          </Button>
-        </Grid>
-        <Grid xs={12}>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            sx={{ float: "right" }}
-            onClick={() => toggleSignUpComponent(false)}
-          >
-            <Typography variant="button">Login</Typography>
-          </Button>
-        </Grid>
-      </Grid>
+      </form>
     </Grid>
   );
 }

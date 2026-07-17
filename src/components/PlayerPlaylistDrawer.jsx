@@ -148,6 +148,7 @@ export default function PlayerPlaylistDrawer({
                     e.stopPropagation();
                     handleDownload(meta.videoUrl, element.positionInPlaylist);
                   }}
+                  aria-label="Download video"
                   sx={{
                     color: "rgba(255,255,255,0.7)",
                     "&:hover": { color: theme.palette.success.main },
@@ -234,6 +235,7 @@ export default function PlayerPlaylistDrawer({
         <Typography variant="h6">Current Playlist</Typography>
         <IconButton
           onClick={() => setDrawerOpen(false)}
+          aria-label="close drawer"
           sx={{ color: "white" }}
         >
           <ArrowBackIcon sx={{ transform: "rotate(180deg)" }} />
@@ -262,6 +264,7 @@ export default function PlayerPlaylistDrawer({
             size="small"
             disabled={page <= 0}
             onClick={() => setPage(page - 1)}
+            aria-label="previous page"
             sx={{
               color: "white",
               "&.Mui-disabled": { color: "rgba(255,255,255,0.2)" },
@@ -279,6 +282,7 @@ export default function PlayerPlaylistDrawer({
             size="small"
             disabled={start + (items ? items.length : 0) >= itemCount}
             onClick={() => setPage(page + 1)}
+            aria-label="next page"
             sx={{
               color: "white",
               "&.Mui-disabled": { color: "rgba(255,255,255,0.2)" },

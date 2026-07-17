@@ -66,6 +66,9 @@ export default function TablePaginationActions({
           );
           onPageChange(null, newPage);
         }}
+        inputProps={{
+          "aria-label": "page number",
+        }}
         sx={{ m: 0, p: 0 }}
         autoWidth
         variant="standard"

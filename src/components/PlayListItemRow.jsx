@@ -30,7 +30,7 @@ const PlayListItemRow = memo(function PlayListItemRow({
       role="checkbox"
       tabIndex={-1}
       sx={{
-        transition: "all 0.2s",
+        transition: "box-shadow 0.2s",
         "&:hover": {
           boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
         },

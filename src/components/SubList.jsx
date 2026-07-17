@@ -25,12 +25,13 @@ import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 import SubListItemCard from "./SubListItemCard.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
-export default function SubList({
+
+function SubList({
   setPlayListUrl,
   loadedPlayList,
   subListIndex,
@@ -83,6 +84,11 @@ export default function SubList({
   const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
   const thumbMetaRef = useRef({});
   const thumbRefreshTimerRef = useRef(null);
+
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   const clearThumbnailRefreshTimer = useCallback(() => {
     if (thumbRefreshTimerRef.current) {
@@ -415,6 +421,7 @@ export default function SubList({
           Authorization: `Bearer ${token}`,
         },
         mode: "cors",
+        signal: controller.signal,
         body: JSON.stringify({
           start,
           stop,
@@ -684,7 +691,7 @@ export default function SubList({
 
   const handleRemove = useCallback(
     (id) => {
-      const element = items.find((item) => item.id === id);
+      const element = itemsRef.current.find((item) => item.id === id);
       if (!element) return;
       const meta = element.video_metadatum || {};
       setConfirmPayload({
@@ -698,12 +705,12 @@ export default function SubList({
       });
       setConfirmOpen(true);
     },
-    [items, loadedPlayList],
+    [loadedPlayList],
   );
 
   const handleDeleteDownloaded = useCallback(
     (id) => {
-      const element = items.find((item) => item.id === id);
+      const element = itemsRef.current.find((item) => item.id === id);
       if (!element) return;
       const meta = element.video_metadatum || {};
       setConfirmPayload({
@@ -717,12 +724,12 @@ export default function SubList({
       });
       setConfirmOpen(true);
     },
-    [items, loadedPlayList],
+    [loadedPlayList],
   );
 
   const handleDeleteDB = useCallback(
     (id) => {
-      const element = items.find((item) => item.id === id);
+      const element = itemsRef.current.find((item) => item.id === id);
       if (!element) return;
       const meta = element.video_metadatum || {};
       setConfirmPayload({
@@ -736,12 +743,12 @@ export default function SubList({
       });
       setConfirmOpen(true);
     },
-    [items, loadedPlayList],
+    [loadedPlayList],
   );
 
   const handlePlay = useCallback(
     (index) => {
-      const element = items[index];
+      const element = itemsRef.current[index];
       if (!element) return;
       const meta = element.video_metadatum || {};
       openPlayer(
@@ -752,7 +759,7 @@ export default function SubList({
         meta.subTitleFile || null,
       );
     },
-    [items, playlistDirectory],
+    [playlistDirectory],
   );
 
   return (
@@ -797,7 +804,7 @@ export default function SubList({
                 sx={{ width: "85%" }}
               >
                 <TextField
-                  id="title-input"
+                  id="video-search-input"
                   label={
                     loadedPlayList === "None"
                       ? "Title"
@@ -1113,3 +1120,5 @@ SubListFab.propTypes = {
   clear: PropTypes.func.isRequired,
   mobileBackMode: PropTypes.bool,
 };
+
+export default memo(SubList);

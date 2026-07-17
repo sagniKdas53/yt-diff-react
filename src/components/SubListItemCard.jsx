@@ -69,7 +69,7 @@ const SubListItemCard = memo(function SubListItemCard({
                   : "rgba(92, 107, 192, 0.06)"
             : undefined,
         minWidth: 125,
-        transition: "all 0.2s",
+        transition: "box-shadow 0.2s, border-color 0.2s",
         "&:hover": {
           boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
         },
@@ -113,6 +113,7 @@ const SubListItemCard = memo(function SubListItemCard({
         {meta.downloadStatus && (
           <IconButton
             onClick={() => onPlay(index)}
+            aria-label="play video"
             sx={{
               position: "absolute",
               top: "50%",
@@ -172,7 +173,11 @@ const SubListItemCard = memo(function SubListItemCard({
         </Box>
         <ButtonGroup size="small">
           <Tooltip title="Remove video from playlist">
-            <IconButton onClick={() => onRemove(element.id)} size="large">
+            <IconButton
+              onClick={() => onRemove(element.id)}
+              aria-label="remove video from playlist"
+              size="large"
+            >
               <PlaylistRemoveIcon color="warning" />
             </IconButton>
           </Tooltip>
@@ -180,6 +185,7 @@ const SubListItemCard = memo(function SubListItemCard({
             <Tooltip title="Delete the downloaded files">
               <IconButton
                 onClick={() => onDeleteDownloaded(element.id)}
+                aria-label="delete downloaded files"
                 size="large"
               >
                 <DeleteSweepIcon color="success" />
@@ -187,7 +193,11 @@ const SubListItemCard = memo(function SubListItemCard({
             </Tooltip>
           ) : (
             <Tooltip title="Delete video from DB">
-              <IconButton onClick={() => onDeleteDB(element.id)} size="large">
+              <IconButton
+                onClick={() => onDeleteDB(element.id)}
+                aria-label="delete video from database"
+                size="large"
+              >
                 <DeleteForeverIcon color="error" />
               </IconButton>
             </Tooltip>
@@ -200,6 +210,7 @@ const SubListItemCard = memo(function SubListItemCard({
                   meta.fileName,
                 )
               }
+              aria-label="download file"
               size="large"
             >
               <FileDownloadIcon

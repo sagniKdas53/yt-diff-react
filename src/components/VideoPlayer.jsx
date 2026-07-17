@@ -847,7 +847,7 @@ export default function VideoPlayer({
   };
 
   const truncatedTitle =
-    title && title.length > 60 ? title.substring(0, 57) + "..." : title;
+    title && title.length > 60 ? title.substring(0, 57) + "…" : title;
 
   const handleProgress = () => {
     if (videoRef.current && videoRef.current.buffered.length > 0) {
@@ -978,7 +978,11 @@ export default function VideoPlayer({
       )}
 
       <TopBar show={showControls} onClick={(e) => e.stopPropagation()}>
-        <IconButton onClick={onClose} sx={{ color: "white", mr: 2 }}>
+        <IconButton
+          onClick={onClose}
+          aria-label="go back"
+          sx={{ color: "white", mr: 2 }}
+        >
           <ArrowBackIcon />
         </IconButton>
         <Typography
@@ -1005,6 +1009,7 @@ export default function VideoPlayer({
         <Tooltip title="Playlist">
           <IconButton
             onClick={() => setDrawerOpen((prev) => !prev)}
+            aria-label="toggle playlist drawer"
             sx={{ color: drawerOpen ? "#1976d2" : "white", ml: 1 }}
           >
             <QueueMusicIcon />
@@ -1015,6 +1020,7 @@ export default function VideoPlayer({
       {!loading && !isPlaying && showControls && !drawerOpen && (
         <IconButton
           onClick={togglePlay}
+          aria-label="play video"
           sx={{
             position: "absolute",
             zIndex: 3,
@@ -1098,6 +1104,7 @@ export default function VideoPlayer({
               onClick={handlePrev}
               sx={{ color: "white" }}
               title="Previous Video"
+              aria-label="previous video"
             >
               <SkipPreviousIcon />
             </IconButton>
@@ -1106,13 +1113,14 @@ export default function VideoPlayer({
             size="small"
             onClick={() => skip(-10)}
             sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
+            aria-label="rewind 10 seconds"
           >
             <Replay10Icon />
           </IconButton>
           <IconButton
             onClick={togglePlay}
             sx={{ color: "white" }}
-            aria-label="play"
+            aria-label={isPlaying ? "pause" : "play"}
           >
             {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
           </IconButton>
@@ -1120,6 +1128,7 @@ export default function VideoPlayer({
             size="small"
             onClick={() => skip(10)}
             sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
+            aria-label="forward 10 seconds"
           >
             <Forward10Icon />
           </IconButton>
@@ -1129,6 +1138,7 @@ export default function VideoPlayer({
               onClick={handleNext}
               sx={{ color: "white" }}
               title="Next Video"
+              aria-label="next video"
             >
               <SkipNextIcon />
             </IconButton>
@@ -1208,7 +1218,7 @@ export default function VideoPlayer({
               size="small"
               onClick={handleVolumeButtonClick}
               sx={{ color: "white" }}
-              aria-label="mute volume"
+              aria-label={isMuted || volume === 0 ? "unmute volume" : "mute volume"}
             >
               {isMuted || volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />}
             </IconButton>
@@ -1242,29 +1252,14 @@ export default function VideoPlayer({
                 size="small"
                 onClick={toggleSubtitles}
                 disabled={!subtitleUrl}
+                aria-label={subtitlesEnabled ? "disable subtitles" : "enable subtitles"}
                 sx={{
                   color: !subtitleUrl
                     ? "rgba(255,255,255,0.2)"
                     : subtitlesEnabled
                       ? "#fff"
                       : "rgba(255,255,255,0.4)",
-                  position: "relative",
-                  "&.Mui-disabled": {
-                    color: "rgba(255,255,255,0.2)",
-                  },
-                  "&::after":
-                    subtitleUrl && subtitlesEnabled
-                      ? {
-                          content: "''",
-                          position: "absolute",
-                          bottom: 2,
-                          left: "20%",
-                          right: "20%",
-                          height: 3,
-                          borderRadius: 1.5,
-                          bgcolor: "#fff",
-                        }
-                      : {},
+                  "&:hover": { color: "white" },
                 }}
               >
                 {subtitleUrl && subtitlesEnabled ? (
@@ -1281,6 +1276,7 @@ export default function VideoPlayer({
               size="small"
               onClick={togglePiP}
               title="Picture in Picture"
+              aria-label="picture in picture"
               sx={{
                 color: "white",
                 display: { xs: "none", sm: "inline-flex" },
@@ -1293,6 +1289,7 @@ export default function VideoPlayer({
             size="small"
             onClick={handleOpenInNewTab}
             title="Open in New Tab"
+            aria-label="open in new tab"
             sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
           >
             <OpenInNewIcon />
@@ -1300,6 +1297,7 @@ export default function VideoPlayer({
           <IconButton
             size="small"
             onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "exit fullscreen" : "enter fullscreen"}
             sx={{ color: "white" }}
           >
             {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}

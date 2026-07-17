@@ -37,6 +37,13 @@ import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 import PlayListItemRow from "./PlayListItemRow.jsx";
 
+const options = [
+  // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
+  ["Delete playlist", false, true, false, "playlist", "warning"],
+  ["Unlink videos", true, false, false, "videos", "secondary"],
+  ["Delete everything", true, true, true, "everything", "error"],
+];
+
 function PlayList({
   setPlayListUrl,
   playListUrl,
@@ -110,12 +117,6 @@ function PlayList({
     setOpenMenuIndex(null);
   };
   const ITEM_HEIGHT = 48;
-  const options = [
-    // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
-    ["Delete playlist", false, true, false, "playlist", "warning"],
-    ["Unlink videos", true, false, false, "videos", "secondary"],
-    ["Delete everything", true, true, true, "everything", "error"],
-  ];
   const updateUrls = (event) => {
     setUrlList(event.target.value);
   };
@@ -232,7 +233,7 @@ function PlayList({
     deletePlaylist,
     cleanUp,
   ) => {
-    setSnack("Deleting playlist...", "info");
+    setSnack("Deleting playlist…", "info");
     const response = await fetch(backEnd + "/delplay", {
       method: "post",
       headers: {
@@ -523,12 +524,10 @@ function PlayList({
                 sx={{ width: { xs: "50%", sm: "60%", md: "75%" } }}
                 style={{
                   paddingInline: "0px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
                 <TextField
-                  id="title-input"
+                  id="playlist-search-input"
                   label="Title"
                   variant="outlined"
                   size="small"

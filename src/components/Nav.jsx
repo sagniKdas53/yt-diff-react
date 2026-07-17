@@ -141,6 +141,7 @@ export default function Navigation({
                 color="inherit"
                 onClick={() => setReindexOpen(true)}
                 sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}
+                aria-label="Re-Index"
               >
                 <SyncIcon />
                 <Typography
@@ -154,6 +155,7 @@ export default function Navigation({
                 color="inherit"
                 onClick={() => setPlayListUrl("None")}
                 sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}
+                aria-label="Unlisted"
               >
                 <ListAltIcon />
                 <Typography
@@ -169,6 +171,7 @@ export default function Navigation({
             onClick={() => themeSwitcherHandler(!theme)}
             color="inherit"
             sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}
+            aria-label={theme ? "Dark" : "Light"}
           >
             {theme ? <DarkModeIcon /> : <LightModeIcon />}
             <Typography
@@ -195,6 +198,7 @@ export default function Navigation({
             }}
             color="inherit"
             sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}
+            aria-label={token ? "Logout" : "Login"}
           >
             {token ? <LogoutIcon /> : <LoginIcon />}
             <Typography
@@ -364,6 +368,7 @@ function NotificationDrawer({
         onClick={() => setOpen(true)}
         color="inherit"
         sx={{ minWidth: "auto", p: { xs: 0.5, sm: 1 } }}
+        aria-label={connectionId ? "Connected" : "Disconnected"}
       >
         <Badge
           color={badgeColor}

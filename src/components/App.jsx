@@ -431,7 +431,7 @@ export default function App() {
             const result = await response.json();
             const acceptedUrls = (result.items || []).map((item) => item.url);
             rollbackDownloadQueueRequest(requestId, acceptedUrls);
-            setSnack("Initiated download...", "success");
+            setSnack("Initiated download…", "success");
             return acceptedUrls;
           } catch (_error) {
             rollbackDownloadQueueRequest(requestId, []);
