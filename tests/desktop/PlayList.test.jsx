@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import PlayList from "../../src/components/PlayList.jsx";
@@ -6,7 +5,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 describe("PlayList Component (Desktop)", () => {
   const theme = createTheme();
-  
+
   const mockPlaylists = {
     count: 2,
     rows: [
@@ -133,6 +132,72 @@ describe("PlayList Component (Desktop)", () => {
           sleep: true,
         }),
       })
+    );
+  });
+
+  /** Submits one url and resolves /list with the given backlog figure. */
+  const submitWithQueueDepth = async (queueDepthBefore, props) => {
+    globalThis.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify(mockPlaylists),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          JSON.stringify({ status: "success", queueDepthBefore }),
+      });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <PlayList {...props} />
+      </ThemeProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Awesome Playlist 1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "action" }));
+    const inputField = screen.getByLabelText("Url List");
+    fireEvent.change(inputField, {
+      target: { value: "https://youtube.com/playlist?list=new_id" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => {
+      expect(inputField.value).toBe("");
+    });
+  };
+
+  test("warns about the listing backlog when items are already queued ahead", async () => {
+    // Mirrors "submitted 10, 3 finished, submit more": 7 are still pending.
+    const props = { ...defaultProps, setSnack: vi.fn() };
+    await submitWithQueueDepth(7, props);
+
+    expect(props.setSnack).toHaveBeenCalledWith(
+      "Added to listing queue — 7 ahead",
+      "info"
+    );
+  });
+
+  test("stays quiet when the listing queue is shallow", async () => {
+    const props = { ...defaultProps, setSnack: vi.fn() };
+    await submitWithQueueDepth(3, props);
+
+    expect(props.setSnack).not.toHaveBeenCalledWith(
+      expect.stringContaining("ahead"),
+      expect.anything()
+    );
+  });
+
+  test("stays quiet when the backend reports no backlog field", async () => {
+    const props = { ...defaultProps, setSnack: vi.fn() };
+    await submitWithQueueDepth(undefined, props);
+
+    expect(props.setSnack).not.toHaveBeenCalledWith(
+      expect.stringContaining("ahead"),
+      expect.anything()
     );
   });
 });
