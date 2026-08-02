@@ -37,6 +37,10 @@ import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import TablePaginationActions from "./Pagination.jsx";
 import PlayListItemRow from "./PlayListItemRow.jsx";
 
+// Only warn about the listing backlog once it is deeper than a single ordinary
+// submission, so the common case stays quiet.
+const QUEUE_DEPTH_NOTICE_THRESHOLD = 5;
+
 const options = [
   // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
   ["Delete playlist", false, true, false, "playlist", "warning"],
@@ -202,6 +206,17 @@ function PlayList({
       const data = await response.text();
       const json_data = JSON.parse(data);
       //console.log("postUrl response: ", json_data);
+      // queueDepthBefore counts what was already pending when this submission
+      // landed — the user's own items are not included. Worth mentioning only
+      // when there is a real backlog (a batch re-index, typically); submitting
+      // a handful into an empty queue needs no explanation.
+      const queuedAhead = json_data.queueDepthBefore ?? 0;
+      if (queuedAhead > QUEUE_DEPTH_NOTICE_THRESHOLD) {
+        setSnack(
+          `Added to listing queue — ${queuedAhead} ahead`,
+          "info",
+        );
+      }
       return json_data;
     } else {
       if (response.status === 401) {

@@ -35,6 +35,18 @@ const base = import.meta.env.PROD ? "" : "http://localhost:8888";
 const path = import.meta.env.VITE_BASE_PATH || "/ytdiff";
 const backEnd = base + path;
 
+// How long per-playlist completions are collapsed before one playlist-list
+// re-fetch is issued during a batch re-index.
+const BATCH_REFETCH_COALESCE_MS = 3000;
+
+const emptyBatchReindex = () => ({
+  active: false,
+  batchId: null,
+  total: 0,
+  completed: 0,
+  failed: 0,
+});
+
 const themeObj = (theme) =>
   createTheme({
     palette: {
@@ -183,6 +195,11 @@ export default function App() {
   // { videoUrl: { playlistUrl, positionInPlaylist, queuePosition, requestId } }
   const [queuedItems, setQueuedItems] = useState({});
 
+  // Batch re-index progress. A batch fans out over every playlist, so the
+  // per-playlist listing events it emits must not drive the same navigation /
+  // re-fetch side effects a single interactive listing does.
+  const [batchReindex, setBatchReindex] = useState(emptyBatchReindex);
+
   // Mobile slide navigation state
   const [mobileView, setMobileView] = useState("playlists"); // "playlists" | "videos"
   const [slideDirection, setSlideDirection] = useState("none"); // "in" | "out" | "none"
@@ -285,6 +302,40 @@ export default function App() {
   isMobileRef.current = isMobile;
 
   const connectionGenerationRef = useRef(null);
+
+  // Mirrors batchReindex so socket handlers read a value that is current within
+  // the same tick, even when React batches the state updates.
+  const batchReindexRef = useRef(emptyBatchReindex());
+  const setBatchReindexState = (next) => {
+    batchReindexRef.current = next;
+    setBatchReindex(next);
+  };
+  /** Increments "completed" or "failed"; no-op (returns null) outside a batch. */
+  const bumpBatchReindex = (field) => {
+    const prev = batchReindexRef.current;
+    if (!prev.active) return null;
+    const next = { ...prev, [field]: prev[field] + 1 };
+    batchReindexRef.current = next;
+    setBatchReindex(next);
+    return next;
+  };
+
+  // A batch can finish hundreds of playlists; refetching the playlist list on
+  // each one is a request storm. Collapse them onto a trailing-edge timer.
+  const batchRefetchTimerRef = useRef(null);
+  const flushBatchPlaylistRefetch = () => {
+    if (batchRefetchTimerRef.current) {
+      clearTimeout(batchRefetchTimerRef.current);
+      batchRefetchTimerRef.current = null;
+    }
+  };
+  const scheduleBatchPlaylistRefetch = (tag) => {
+    if (batchRefetchTimerRef.current) return;
+    batchRefetchTimerRef.current = setTimeout(() => {
+      batchRefetchTimerRef.current = null;
+      setReFetchPlaylist(tag + "-coalesced-" + Date.now());
+    }, BATCH_REFETCH_COALESCE_MS);
+  };
 
   // Helper for socket handlers to trigger mobile slide-in
   const triggerMobileSlideIfNeeded = (title) => {
@@ -587,6 +638,12 @@ export default function App() {
           return prev !== 0 ? 0 : prev;
         });
         setQueuedItems((prev) => (Object.keys(prev).length ? {} : prev));
+        // A batch cannot survive a backend restart, and leaving it "active"
+        // would pin the progress bar forever.
+        flushBatchPlaylistRefetch();
+        if (batchReindexRef.current.active) {
+          setBatchReindexState(emptyBatchReindex());
+        }
 
         // Calling sync just in case backend has existing downloads running
         syncQueueFromBackendRef.current();
@@ -708,6 +765,30 @@ export default function App() {
     const onListingPlaylistComplete = (data) => {
       //console.log("Listing playlist done: ", data);
       decrementListings();
+
+      const batch = batchReindexRef.current;
+      if (batch.active) {
+        const next = bumpBatchReindex("completed");
+        const done = next.completed + next.failed;
+        const message =
+          `${data.playlistTitle} re-indexed — ${done}/${next.total}`;
+        setSnackRef.current && setSnackRef.current(message, "success");
+        addNotificationRef.current &&
+          addNotificationRef.current(message, "success");
+
+        const batchTag =
+          "reindex-playlist-complete-" + data.url + "-" + nowTag();
+        // Playlist list is refreshed on a timer; the open sublist is refreshed
+        // immediately since we already know it just changed.
+        scheduleBatchPlaylistRefetch(batchTag);
+        if (playListUrlRef.current === data.url) {
+          setReFetchSubList(batchTag);
+        }
+        // Deliberately no auto-load / mobile slide: a batch must not yank the
+        // user to whichever playlist happened to finish first.
+        return;
+      }
+
       setSnackRef.current &&
         setSnackRef.current(`${data.playlistTitle}`, "success");
       const tag =
@@ -782,6 +863,21 @@ export default function App() {
 
     const onListingSingleItemComplete = (data) => {
       decrementListings();
+
+      // A batch item normally completes as a playlist, but an entry the
+      // pipeline reclassifies as a single item (x.com URLs) lands here. Count
+      // it toward the batch and keep the no-navigation rule intact.
+      if (batchReindexRef.current.active) {
+        const next = bumpBatchReindex("completed");
+        const done = next.completed + next.failed;
+        const label = data.itemLabel || data.title || data.url;
+        const message = `${label} re-indexed — ${done}/${next.total}`;
+        setSnackRef.current && setSnackRef.current(message, "success");
+        addNotificationRef.current &&
+          addNotificationRef.current(message, "success");
+        return;
+      }
+
       setReFetchSubList(
         "listing-single-item-complete-" + data.url + "-" + nowTag(),
       );
@@ -834,6 +930,19 @@ export default function App() {
 
     const onListingError = (data) => {
       decrementListings();
+
+      const batch = batchReindexRef.current;
+      if (batch.active) {
+        const next = bumpBatchReindex("failed");
+        const done = next.completed + next.failed;
+        const message =
+          `Failed re-indexing ${data.url} — ${done}/${next.total}`;
+        setSnackRef.current && setSnackRef.current(message, "error");
+        addNotificationRef.current &&
+          addNotificationRef.current(message, "error");
+        return;
+      }
+
       setSnackRef.current && setSnackRef.current(`${data.url}`, "error");
       addNotificationRef.current &&
         addNotificationRef.current(`Failed Listing: ${data.url}`, "error");
@@ -847,6 +956,59 @@ export default function App() {
       const message = `${data.message}${locationNote}`;
       setSnackRef.current && setSnackRef.current(message, "info");
       addNotificationRef.current && addNotificationRef.current(message, "info");
+    };
+
+    const onReindexBatchStarted = (data) => {
+      const queued = data.queued ?? 0;
+      setBatchReindexState({
+        active: true,
+        batchId: data.batchId ?? null,
+        total: queued,
+        completed: 0,
+        failed: 0,
+      });
+      const message = `Batch re-index started — ${queued} playlist(s)`;
+      setSnackRef.current && setSnackRef.current(message, "info");
+      addNotificationRef.current &&
+        addNotificationRef.current(message, "info");
+    };
+
+    // Ignore lifecycle events from a batch other than the one being tracked,
+    // e.g. a late arrival after the tab reconnected to a restarted backend.
+    const isStaleBatch = (data) => {
+      const tracked = batchReindexRef.current.batchId;
+      return Boolean(tracked && data.batchId && tracked !== data.batchId);
+    };
+
+    const onReindexBatchComplete = (data) => {
+      if (isStaleBatch(data)) return;
+      flushBatchPlaylistRefetch();
+      setBatchReindexState(emptyBatchReindex());
+
+      const failed = data.failed ?? 0;
+      const message = failed > 0
+        ? `Batch re-index complete — ${data.completed}/${data.total} (${failed} failed)`
+        : `Batch re-index complete — ${data.completed}/${data.total}`;
+      const severity = failed > 0 ? "warning" : "success";
+      setSnackRef.current && setSnackRef.current(message, severity);
+      addNotificationRef.current &&
+        addNotificationRef.current(message, severity);
+
+      // One final refresh so the list reflects every playlist the coalescer
+      // may have skipped.
+      setReFetchPlaylist("reindex-batch-complete-" + nowTag());
+    };
+
+    const onReindexBatchFailed = (data) => {
+      if (isStaleBatch(data)) return;
+      flushBatchPlaylistRefetch();
+      setBatchReindexState(emptyBatchReindex());
+
+      const message = `Batch re-index failed: ${data.error}`;
+      setSnackRef.current && setSnackRef.current(message, "error");
+      addNotificationRef.current &&
+        addNotificationRef.current(message, "error");
+      setReFetchPlaylist("reindex-batch-failed-" + nowTag());
     };
 
     // Register listeners
@@ -877,6 +1039,10 @@ export default function App() {
       onListingVideoSkippedBecauseDownloaded,
     );
 
+    socket.on("reindex-batch-started", onReindexBatchStarted);
+    socket.on("reindex-batch-complete", onReindexBatchComplete);
+    socket.on("reindex-batch-failed", onReindexBatchFailed);
+
     // Cleanup on unmount or when socket changes
     return () => {
       try {
@@ -906,15 +1072,30 @@ export default function App() {
           "listing-video-skipped-because-downloaded",
           onListingVideoSkippedBecauseDownloaded,
         );
+
+        socket.off("reindex-batch-started", onReindexBatchStarted);
+        socket.off("reindex-batch-complete", onReindexBatchComplete);
+        socket.off("reindex-batch-failed", onReindexBatchFailed);
       } catch (_e) {
         // socket might already be closed; ignore
         //console.warn("Error removing socket listeners", _e);
       }
+      flushBatchPlaylistRefetch();
     };
   }, [socket]); // only recreate if socket reference changes
 
   // Derive average progress and indeterminate state from active downloads and listings
   const { calculatedProgress, isActuallyIndeterminate } = useMemo(() => {
+    // A batch re-index knows its own denominator, so it can drive a real
+    // determinate bar instead of the indeterminate one listings normally get.
+    if (batchReindex.active && batchReindex.total > 0) {
+      const done = batchReindex.completed + batchReindex.failed;
+      return {
+        calculatedProgress: (done / batchReindex.total) * 100,
+        isActuallyIndeterminate: false,
+      };
+    }
+
     const keys = Object.keys(activeDownloads).filter(
       (k) => k !== "unknown" && k !== "listing",
     );
@@ -939,7 +1120,7 @@ export default function App() {
     const isIndet =
       (activeListingCount > 0 && keys.length === 0) || allDownloadsWaiting;
     return { calculatedProgress: progress, isActuallyIndeterminate: isIndet };
-  }, [activeDownloads, activeListingCount]);
+  }, [activeDownloads, activeListingCount, batchReindex]);
 
   // UI renders
   // renders login/signup grid
