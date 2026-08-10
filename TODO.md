@@ -19,5 +19,5 @@
    2. A temporary connection interruption does not necessarily mean the backend restarted, so active or pending downloads may continue after their frontend queue state is cleared.
    3. A future implementation should expose a backend queue snapshot or connection generation identifier so the frontend can distinguish reconnection from backend restart and restore authoritative state.
 9. [-] Investigate and integrate TanStack Query for declarative data fetching to replace reFetch string hacks and manual caching.
-   1. I don't think this will be useful at all, not only is it a popular risky [library](npmscan.com/vulnerability/GHSA-g7cv-rxg3-hmpx)
+   1. I don't think this will be useful at all. Not only is it a popular but potentially risky [library](https://npmscan.com/vulnerability/GHSA-g7cv-rxg3-hmpx), but I also don't understand how it works.
    2. I don't understand how it works
