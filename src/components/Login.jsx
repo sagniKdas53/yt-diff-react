@@ -63,8 +63,12 @@ export default function Login({ height, toggleSignUpComponent }) {
       // Propagate it to the main app
       if (response.ok) {
         // AuthContext owns persistence; "remember me" decides whether the
-        // token outlives the tab.
-        setToken(data.token, { persist: rememberMe });
+        // token outlives the tab. `expiresAt` is the server's own `exp` claim
+        // — the renewal loop schedules off it rather than decoding the JWT.
+        setToken(data.token, {
+          persist: rememberMe,
+          expiresAt: data.expiresAt ?? null,
+        });
       } else {
         setSnack(`${data.message}`, "error");
       }
