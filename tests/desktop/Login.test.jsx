@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import Login from "../../src/components/Login.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Login Component (Desktop)", () => {
   const defaultProps = {
@@ -28,10 +28,7 @@ describe("Login Component (Desktop)", () => {
   });
 
   test("checks if registration is allowed on mount and renders Sign Up button if true", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: true }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ registrationAllowed: true })));
 
     renderLogin();
 
@@ -45,10 +42,7 @@ describe("Login Component (Desktop)", () => {
   });
 
   test("checks if registration is allowed on mount and hides Sign Up button if false", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: false }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ registrationAllowed: false })));
 
     renderLogin();
 
@@ -59,10 +53,7 @@ describe("Login Component (Desktop)", () => {
 
   test("shows error snack if username or password is empty on submit", async () => {
     // Mock isregallowed first
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: true }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ registrationAllowed: true })));
 
     renderLogin();
 
@@ -77,16 +68,10 @@ describe("Login Component (Desktop)", () => {
 
   test("submits login and does not persist the token without rememberMe", async () => {
     // 1st fetch: reg check on mount
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: true }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ registrationAllowed: true })));
 
     // 2nd fetch: login submit
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ token: "mock_token" }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ token: "mock_token" })));
 
     renderLogin();
 
@@ -118,18 +103,12 @@ describe("Login Component (Desktop)", () => {
   });
 
   test("asks for the token to be persisted if rememberMe is checked", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: true }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ registrationAllowed: true })));
 
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({
         token: "mock_token_remembered",
         expiresAt: 1893456000,
-      }),
-    });
+      })));
 
     renderLogin();
 

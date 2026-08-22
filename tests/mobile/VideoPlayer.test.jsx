@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("VideoPlayer Component (Mobile)", () => {
   const defaultProps = {
@@ -35,10 +35,7 @@ describe("VideoPlayer Component (Mobile)", () => {
       const body = options?.body ? JSON.parse(options.body) : {};
       if (options?.method?.toLowerCase() === "post") {
         if (body.fileName === "video.mp4") {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({ status: "success", signedUrlId: "url_123", expiry: Date.now() + 3600000 }),
-          });
+          return Promise.resolve(mockResponse(({ status: "success", signedUrlId: "url_123", expiry: Date.now() + 3600000 })));
         }
       }
       return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));

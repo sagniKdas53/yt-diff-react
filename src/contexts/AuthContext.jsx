@@ -58,22 +58,25 @@ export const AuthProvider = ({ children }) => {
    * Memoised, because `apiFetch` and every effect that depends on it key off
    * the identity of these functions.
    */
-  const setToken = useCallback((newToken, { persist = true, expiresAt: nextExpiry = null } = {}) => {
-    setTokenState(newToken);
-    setExpiresAt(newToken ? nextExpiry : null);
+  const setToken = useCallback(
+    (newToken, { persist = true, expiresAt: nextExpiry = null } = {}) => {
+      setTokenState(newToken);
+      setExpiresAt(newToken ? nextExpiry : null);
 
-    if (newToken && persist) {
-      localStorage.setItem(TOKEN_KEY, newToken);
-      if (nextExpiry) {
-        localStorage.setItem(EXPIRY_KEY, String(nextExpiry));
+      if (newToken && persist) {
+        localStorage.setItem(TOKEN_KEY, newToken);
+        if (nextExpiry) {
+          localStorage.setItem(EXPIRY_KEY, String(nextExpiry));
+        } else {
+          localStorage.removeItem(EXPIRY_KEY);
+        }
       } else {
+        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(EXPIRY_KEY);
       }
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(EXPIRY_KEY);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const logout = useCallback(() => {
     setToken(null);

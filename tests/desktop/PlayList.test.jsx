@@ -1,7 +1,7 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import PlayList from "../../src/components/PlayList.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("PlayList Component (Desktop)", () => {
   const mockPlaylists = {
@@ -52,10 +52,7 @@ describe("PlayList Component (Desktop)", () => {
   });
 
   test("fetches and renders playlists on mount", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(mockPlaylists),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(mockPlaylists));
 
     renderPlayList();
 
@@ -81,13 +78,7 @@ describe("PlayList Component (Desktop)", () => {
   });
 
   test("opens Add Dialog on clicking FAB, and submits url list", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(mockPlaylists),
-    }).mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify({ status: "success" }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(mockPlaylists)).mockResolvedValueOnce(mockResponse({ status: "success" }));
 
     renderPlayList();
 
@@ -129,15 +120,8 @@ describe("PlayList Component (Desktop)", () => {
   /** Submits one url and resolves /list with the given backlog figure. */
   const submitWithQueueDepth = async (queueDepthBefore, props) => {
     globalThis.fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        text: async () => JSON.stringify(mockPlaylists),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        text: async () =>
-          JSON.stringify({ status: "success", queueDepthBefore }),
-      });
+      .mockResolvedValueOnce(mockResponse(mockPlaylists))
+      .mockResolvedValueOnce(mockResponse({ status: "success", queueDepthBefore }));
 
     renderPlayList(props);
 

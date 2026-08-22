@@ -37,7 +37,8 @@ import {
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { NotificationContext } from "../contexts/NotificationContext";
 import { DownloadContext } from "../contexts/DownloadContext";
-import { useApi } from "../hooks/useApi.js";
+import { ApiError } from "../api/client.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 import { assetBase } from "../config.js";
 import TablePaginationActions from "./Pagination.jsx";
 import SubListItemCard from "./SubListItemCard.jsx";
@@ -63,7 +64,7 @@ function SubList({
   const { setSnack, addNotification } = useContext(NotificationContext);
   const { activeDownloads, queuedItems, queueDownloads } =
     useContext(DownloadContext);
-  const apiFetch = useApi();
+  const api = useApiClient();
 
   // Query and sort state
   const [query, updateQuery] = useState("");
@@ -130,42 +131,35 @@ function SubList({
       }
 
       try {
-        const response = await apiFetch("/refreshfiles", {
-          method: "post",
-          body: JSON.stringify({
-            fileIds: dueEntries.map(([, entry]) => entry.fileId),
-          }),
+        const data = await api.post("/refreshfiles", {
+          fileIds: dueEntries.map(([, entry]) => entry.fileId),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.status === "success" && data.files) {
-            dueEntries.forEach(([fileName, entry]) => {
-              const refreshed = Reflect.get(data.files, entry.fileId);
-              if (refreshed?.expiry) {
-                Reflect.set(thumbMetaRef.current, fileName, {
-                  ...Reflect.get(thumbMetaRef.current, fileName),
-                  expiry: refreshed.expiry,
-                });
-              } else {
-                Reflect.deleteProperty(thumbMetaRef.current, fileName);
-                setThumbUrls((prev) => {
-                  const next = { ...prev };
-                  Reflect.set(next, fileName, null);
-                  return next;
-                });
-              }
-            });
-          }
+        if (data.status === "success" && data.files) {
+          dueEntries.forEach(([fileName, entry]) => {
+            const refreshed = Reflect.get(data.files, entry.fileId);
+            if (refreshed?.expiry) {
+              Reflect.set(thumbMetaRef.current, fileName, {
+                ...Reflect.get(thumbMetaRef.current, fileName),
+                expiry: refreshed.expiry,
+              });
+            } else {
+              Reflect.deleteProperty(thumbMetaRef.current, fileName);
+              setThumbUrls((prev) => {
+                const next = { ...prev };
+                Reflect.set(next, fileName, null);
+                return next;
+              });
+            }
+          });
         }
-        // 401 is already reported and logged out by apiFetch.
       } catch (_error) {
         // Let the next bulk fetch recover if this refresh fails.
       }
 
       scheduleThumbnailRefresh();
     }, refreshTime);
-  }, [apiFetch, clearThumbnailRefreshTimer]);
+  }, [api, clearThumbnailRefreshTimer]);
   // const functions and normal functions
   const handleChangePage = useCallback(
     (_event, newPage) => {
@@ -274,28 +268,11 @@ function SubList({
         // perform the request and stream the response so we can report progress
         //console.log("Requesting file: ", { saveDirectory, fileName });
         setSnack(`Downloading: ${fileName}`, "info");
-        const response = await apiFetch("/getfile", {
-          method: "post",
-          headers: { Accept: "application/octet-stream" },
-          body: JSON.stringify({ saveDirectory, fileName }),
+        const json_data = await api.post("/getfile", {
+          saveDirectory,
+          fileName,
         });
 
-        if (!response.ok) {
-          // 401 is already reported and logged out by apiFetch.
-          if (response.status !== 401) {
-            const text = await response.json().catch(() => response.statusText);
-            setSnack(`Failed to download file: ${text.message}`, "error");
-            addNotification(
-              `Failed to download file: ${text.message}`,
-              "error",
-            );
-          }
-          return;
-        }
-
-        // Now the backend sends a json response with the signed
-        const data = await response.text();
-        const json_data = JSON.parse(data);
         if (json_data.status === "success" && json_data.signedUrlId) {
           const downloadUrl = new URL(assetBase + "/getfile");
           downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
@@ -315,14 +292,16 @@ function SubList({
           );
         }
       } catch (error) {
-        setSnack(`Error downloading file: ${error.message}`, "error");
+        // A dead session has already been reported once, by apiFetch.
+        if (error.sessionExpired) return;
+        setSnack(`Failed to download file: ${error.message}`, "error");
         addNotification(
-          `Error downloading file ${fileName}: ${error.message}`,
+          `Failed to download ${fileName}: ${error.message}`,
           "error",
         );
       }
     },
-    [apiFetch, setSnack, addNotification],
+    [api, setSnack, addNotification],
   );
 
   /**
@@ -345,27 +324,23 @@ function SubList({
     deleteVideosInDB,
   ) => {
     setSnack(`Deleting: ${videoUrl}`, "info");
-    const response = await apiFetch("/delsub", {
-      method: "post",
-      body: JSON.stringify({
+    try {
+      await api.post("/delsub", {
         playListUrl: playListUrl,
         mappingIds: mappingId ? [mappingId] : [],
         videoUrls: mappingId ? [] : [videoUrl],
         cleanUp: cleanUp,
         deleteVideoMappings: deleteVideoMappings,
         deleteVideosInDB: deleteVideosInDB,
-      }),
-    });
-    if (response.ok) {
+      });
+
       setSnack("Video deleted successfully.", "success");
       addNotification(`Deleted ${title ? title : videoUrl}`, "info");
-      //console.log(`Deleted: ${videoUrl}`);
       setReFetch(
         "delete-sublist-item" + playListUrl + videoUrl + Date.now().toString(),
       );
       setSubListIndex(start); // Reset to start index after deletion
-    }
-    if (!response.ok) {
+    } catch (_error) {
       setSnack(`Failed to delete: ${title ? title : videoUrl}`, "error");
       addNotification(`Failed to delete: ${title ? title : videoUrl}`, "error");
     }
@@ -396,36 +371,35 @@ function SubList({
     //console.log("Fetching items with params: ", { start, stop, sort, query, url: loadedPlayList });
 
     try {
-      const response = await apiFetch("/getsub", {
-        method: "post",
-        signal: controller.signal,
-        body: JSON.stringify({
+      const json_data = await api.post(
+        "/getsub",
+        {
           start,
           stop,
           sortDownloaded: sort,
           query,
           url: loadedPlayList,
-        }),
-      });
+        },
+        { signal: controller.signal },
+      );
 
       if (controller.signal.aborted) return; // Don't update state if component unmounted
 
-      if (response.ok) {
-        const data = await response.text();
-        const json_data = JSON.parse(data);
-        setItems(json_data["rows"]);
-        setPlaylistDirectory(json_data["saveDirectory"]);
-        setPlaylistTitle(json_data["playlistTitle"] || "");
-        setItemCount(parseInt(json_data["count"]));
-      } else {
-        // 401 is already reported and logged out by apiFetch.
+      setItems(json_data["rows"]);
+      setPlaylistDirectory(json_data["saveDirectory"]);
+      setPlaylistTitle(json_data["playlistTitle"] || "");
+      setItemCount(parseInt(json_data["count"]));
+    } catch (error) {
+      if (error instanceof ApiError && !controller.signal.aborted) {
+        // The table is the only place there is to say this, so the refusal is
+        // rendered as the one row it can show.
         setItems([
           {
             positionInPlaylist: 1,
             id: "error-row",
             playlistUrl: loadedPlayList,
             video_metadatum: {
-              title: `Error in fetching sub-lists: ${response.status} ${response.statusText}`,
+              title: `Error in fetching sub-lists: ${error.status} ${error.message}`,
               videoId: "",
               videoUrl: "",
               downloadStatus: false,
@@ -435,10 +409,8 @@ function SubList({
         ]);
         setItemCount(1);
       }
-    } catch (_error) {
-      if (!controller.signal.aborted) {
-        //console.error("Fetch error:", error);
-      }
+      // Anything else -- an abort, or the network -- leaves the table showing
+      // what it already had.
     }
   };
   // useEffects  to load items
@@ -454,7 +426,7 @@ function SubList({
     fetchData(abortController);
     return () => abortController.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiFetch, start, stop, sort, query, loadedPlayList, reFetch]);
+  }, [api, start, stop, sort, query, loadedPlayList, reFetch]);
 
   // Responsive card media height using MUI breakpoints
   const theme = useTheme();
@@ -490,36 +462,29 @@ function SubList({
       setThumbUrls((prev) => ({ ...prev, ...newThumbUrls }));
 
       try {
-        const response = await apiFetch("/getfiles", {
-          method: "post",
-          body: JSON.stringify({ files: filesToFetch }),
-        });
+        const data = await api.post("/getfiles", { files: filesToFetch });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.status === "success" && data.files) {
-            const updates = {};
-            Object.entries(data.files).forEach(([fileName, fileData]) => {
-              if (fileData?.signedUrlId) {
-                Reflect.set(
-                  updates,
-                  fileName,
-                  assetBase + "/getfile?fileId=" + fileData.signedUrlId,
-                );
-                Reflect.set(thumbMetaRef.current, fileName, {
-                  fileId: fileData.signedUrlId,
-                  expiry: fileData.expiry,
-                });
-              } else {
-                Reflect.set(updates, fileName, null);
-                Reflect.deleteProperty(thumbMetaRef.current, fileName);
-              }
-            });
-            setThumbUrls((prev) => ({ ...prev, ...updates }));
-            scheduleThumbnailRefresh();
-          }
+        if (data.status === "success" && data.files) {
+          const updates = {};
+          Object.entries(data.files).forEach(([fileName, fileData]) => {
+            if (fileData?.signedUrlId) {
+              Reflect.set(
+                updates,
+                fileName,
+                assetBase + "/getfile?fileId=" + fileData.signedUrlId,
+              );
+              Reflect.set(thumbMetaRef.current, fileName, {
+                fileId: fileData.signedUrlId,
+                expiry: fileData.expiry,
+              });
+            } else {
+              Reflect.set(updates, fileName, null);
+              Reflect.deleteProperty(thumbMetaRef.current, fileName);
+            }
+          });
+          setThumbUrls((prev) => ({ ...prev, ...updates }));
+          scheduleThumbnailRefresh();
         }
-        // 401 is already reported and logged out by apiFetch.
       } catch (_error) {
         //console.error("Error fetching thumbnails:", error);
       }
@@ -527,7 +492,7 @@ function SubList({
 
     fetchThumbnails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, playlistDirectory, apiFetch]);
+  }, [items, playlistDirectory, api]);
 
   useEffect(() => {
     if (downloadedItem.url !== null) {

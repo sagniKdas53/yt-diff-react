@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import { useApi } from "./useApi.js";
+import { useApiClient } from "./useApiClient.js";
 
 /**
  * The largest delay `setTimeout` accepts — its argument is a signed 32-bit
@@ -31,13 +31,13 @@ const MIN_DELAY_MS = 30 * 1000;
  *   them hard in background tabs, so a tab woken after its timer should have
  *   fired must not wait for a timer that already missed.
  *
- * Renewal runs through `apiFetch`, so a token that died while the machine was
+ * Renewal runs through the API client, so a token that died while the machine was
  * asleep gets the ordinary 401 path — one "Session expired" and a logout —
  * rather than a special case here.
  */
 export function useTokenRefresh() {
   const { token, expiresAt, setToken } = useContext(AuthContext);
-  const apiFetch = useApi();
+  const api = useApiClient();
   const timerRef = useRef(null);
   const inFlightRef = useRef(false);
 
@@ -55,13 +55,7 @@ export function useTokenRefresh() {
       // The body has to be a JSON object, not nothing: the server's
       // `parseRequestJson` rejects an empty body with a 400 before the handler
       // runs. `/isregallowed` takes the same empty `{}` for the same reason.
-      const response = await apiFetch("/refresh", {
-        method: "post",
-        body: JSON.stringify({}),
-      });
-      if (!response.ok) return null;
-
-      const data = await response.json();
+      const data = await api.post("/refresh", {});
       if (!data?.token) return null;
 
       // Renewal never upgrades a memory-only session to a persisted one: if
@@ -71,13 +65,13 @@ export function useTokenRefresh() {
       setToken(data.token, { persist, expiresAt: data.expiresAt ?? null });
       return data.expiresAt ?? null;
     } catch {
-      // Offline, or the server is down. The existing token is still valid for
-      // now; the next trigger tries again.
+      // A refused renewal, or the server is unreachable. The existing token is
+      // still valid for now; the next trigger tries again.
       return null;
     } finally {
       inFlightRef.current = false;
     }
-  }, [apiFetch, setToken]);
+  }, [api, setToken]);
 
   useEffect(() => {
     const clear = () => {

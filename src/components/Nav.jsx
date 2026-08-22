@@ -40,13 +40,14 @@ import { useContext, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { SocketContext } from "../contexts/SocketContext";
 import { NotificationContext } from "../contexts/NotificationContext";
-import { useApi } from "../hooks/useApi.js";
+import { ApiError } from "../api/client.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 
 export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
   const { token, setToken, logout } = useContext(AuthContext);
   const { connectionId, setConnectionId } = useContext(SocketContext);
   const { setSnack, addNotification } = useContext(NotificationContext);
-  const apiFetch = useApi();
+  const api = useApiClient();
 
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
@@ -95,22 +96,20 @@ export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
 
       setReindexOpen(false);
 
-      const response = await apiFetch("/reindexall", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      const data = await api.post("/reindexall", body);
 
-      const data = await response.json();
-      if (response.ok) {
-        setSnack(data.message || "Batch re-index started", "success");
-        addNotification(data.message || "Batch re-index started", "success");
-      } else {
-        setSnack(data.message || "Failed to start re-index", "error");
-        addNotification(data.message || "Failed to start re-index", "error");
-      }
+      const message = data.message || "Batch re-index started";
+      setSnack(message, "success");
+      addNotification(message, "success");
     } catch (error) {
-      setSnack("Network error: " + error.message, "error");
-      addNotification("Network error: " + error.message, "error");
+      // An ApiError is a refusal and carries the server's own message; a
+      // transport failure never reached the server and gets said as one.
+      const message =
+        error instanceof ApiError
+          ? error.message || "Failed to start re-index"
+          : "Network error: " + error.message;
+      setSnack(message, "error");
+      addNotification(message, "error");
     }
   };
 
@@ -302,9 +301,8 @@ Navigation.propTypes = {
 };
 
 function NotificationDrawer({ connectionId, badgeColor }) {
-  const { notifications, dismissNotification } = useContext(
-    NotificationContext,
-  );
+  const { notifications, dismissNotification } =
+    useContext(NotificationContext);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
 

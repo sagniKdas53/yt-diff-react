@@ -11,11 +11,12 @@ import Grid from "@mui/material/Unstable_Grid2";
 import PropTypes from "prop-types";
 import { useContext, useState } from "react";
 import { NotificationContext } from "../contexts/NotificationContext";
-import { useApi } from "../hooks/useApi.js";
+import { ApiError } from "../api/client.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 
 export default function Signup({ height, toggleSignUpComponent }) {
   const { setSnack } = useContext(NotificationContext);
-  const apiFetch = useApi();
+  const api = useApiClient();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -40,25 +41,17 @@ export default function Signup({ height, toggleSignUpComponent }) {
     }
     setLoading(true);
     try {
-      const response = await apiFetch("/register", {
-        method: "post",
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      });
+      await api.post("/register", { username, password });
 
-      // Handle response (e.g., store token)
-      const data = await response.json();
-      // Propagate it to the main app
-      if (response.ok) {
-        setSnack("Account successfully created.", "success");
-        toggleSignUpComponent(false);
-      } else {
-        setSnack(`${data.message}`, "error");
-      }
-    } catch (_error) {
-      setSnack("Signup failed.", "error");
+      setSnack("Account successfully created.", "success");
+      toggleSignUpComponent(false);
+    } catch (error) {
+      // A refusal carries the server's own message; anything else never
+      // reached the server.
+      setSnack(
+        error instanceof ApiError ? error.message : "Signup failed.",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -72,7 +65,10 @@ export default function Signup({ height, toggleSignUpComponent }) {
       spacing={0}
       sx={{ my: 0, p: 0, height: height }}
     >
-      <form onSubmit={handleSignup} style={{ width: "100%", maxWidth: "360px" }}>
+      <form
+        onSubmit={handleSignup}
+        style={{ width: "100%", maxWidth: "360px" }}
+      >
         <Grid container spacing={3} sx={{ m: 1 }}>
           <Grid xs={12} sx={{ alignItems: "center" }}>
             <Typography component="h1" variant="h5">

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import PlayList from "../../src/components/PlayList.jsx";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { mockResponse } from "../contextHarness.jsx";
 
 describe("PlayList Component (Mobile)", () => {
   const theme = createTheme();
@@ -49,10 +50,7 @@ describe("PlayList Component (Mobile)", () => {
   });
 
   test("triggers onMobileLoad instead of setPlayListUrl when LOAD button is clicked on mobile", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(mockPlaylists),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(mockPlaylists));
 
     render(
       <ThemeProvider theme={theme}>

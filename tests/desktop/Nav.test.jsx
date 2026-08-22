@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import Navigation from "../../src/components/Nav.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Nav Component (Desktop)", () => {
   const defaultProps = {
@@ -85,10 +85,7 @@ describe("Nav Component (Desktop)", () => {
   });
 
   test("opens batch re-index dialog and submits config settings", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Batch re-index started successfully" }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ message: "Batch re-index started successfully" })));
 
     renderNav();
 
@@ -112,7 +109,7 @@ describe("Nav Component (Desktop)", () => {
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "http://localhost:8888/ytdiff/reindexall",
       expect.objectContaining({
-        method: "POST",
+        method: "post",
         body: JSON.stringify({
           start: 5,
           stop: 20,

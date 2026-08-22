@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../src/components/App.jsx";
 import AppProviders from "../../src/AppProviders.jsx";
 import { NotificationContext } from "../../src/contexts/NotificationContext";
+import { mockResponse } from "../contextHarness.jsx";
 
 // Hoisted so the socket.io mock factory (which vitest lifts above imports) can
 // close over the same object the tests inspect.
@@ -78,11 +79,11 @@ const BATCH_ID = "batch-abc";
 
 const renderApp = async () => {
   localStorage.setItem("ytdiff_token", "stored_mock_token");
-  globalThis.fetch.mockResolvedValue({
-    ok: true,
-    json: async () => ({ queue: [], generation: "gen_1" }),
-    text: async () => JSON.stringify({ count: 0, rows: [] }),
-  });
+  // Two endpoints fire on mount and this stands in for both, so the body
+  // carries what each of them reads.
+  globalThis.fetch.mockResolvedValue(
+    mockResponse({ queue: [], generation: "gen_1", count: 0, rows: [] }),
+  );
 
   render(
     <AppProviders>

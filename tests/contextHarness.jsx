@@ -8,6 +8,29 @@ import { SocketContext } from "../src/contexts/SocketContext";
 import { DownloadContext } from "../src/contexts/DownloadContext";
 
 /**
+ * A stand-in for a `fetch` Response, with every reader a real one has.
+ *
+ * Mocks used to be written out by hand per test, each supplying only the
+ * reader the component under test happened to call -- some `json`, some
+ * `text`, and none of them `status`. That made a mock's shape a statement
+ * about the component's internals, so moving a call onto the shared API client
+ * broke tests that were not testing anything about the change.
+ *
+ * @param body - Parsed to JSON for `json()`, serialized for `text()`.
+ * @param init - `ok` defaults to true; `status` follows it unless given.
+ */
+export function mockResponse(body, { ok = true, status, statusText = "" } = {}) {
+  const serialized = JSON.stringify(body ?? null);
+  return {
+    ok,
+    status: status ?? (ok ? 200 : 500),
+    statusText,
+    json: async () => JSON.parse(serialized),
+    text: async () => serialized,
+  };
+}
+
+/**
  * Builds a set of context values with vi.fn() in every slot, so a test can
  * assert on the calls a component makes the way it used to assert on props.
  *

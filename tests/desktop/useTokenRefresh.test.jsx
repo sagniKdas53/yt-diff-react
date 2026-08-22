@@ -4,6 +4,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { AuthContext } from "../../src/contexts/AuthContext";
 import { NotificationContext } from "../../src/contexts/NotificationContext";
 import { useTokenRefresh } from "../../src/hooks/useTokenRefresh";
+import { mockResponse } from "../contextHarness.jsx";
 
 function Harness() {
   useTokenRefresh();
@@ -33,7 +34,7 @@ function renderRefresher({ token = "live_token", expiresAt = expiryIn(3600) } = 
 }
 
 function mockRefreshResponse(body, ok = true) {
-  globalThis.fetch.mockResolvedValueOnce({ ok, status: ok ? 200 : 401, json: async () => body });
+  globalThis.fetch.mockResolvedValueOnce(mockResponse(body));
 }
 
 describe("useTokenRefresh (Desktop)", () => {
