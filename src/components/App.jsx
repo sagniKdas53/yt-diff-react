@@ -28,6 +28,7 @@ import { AuthContext } from "../contexts/AuthContext";
 import { SocketContext } from "../contexts/SocketContext";
 import { NotificationContext } from "../contexts/NotificationContext";
 import { DownloadContext } from "../contexts/DownloadContext";
+import ErrorBoundary from "./ErrorBoundary.jsx";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
@@ -147,6 +148,26 @@ const Loader = () => (
     <CircularProgress color="secondary" />
   </Grid>
 );
+
+/**
+ * A lazy region: its own error boundary, then its own Suspense.
+ *
+ * `Suspense` catches the wait, not the failure. Every one of these wraps a
+ * dynamic import, and a rejected import is a throw during render — without a
+ * boundary inside it, a chunk that 404s after a deploy takes the whole tree
+ * down instead of the one panel that could not load. The boundary goes outside
+ * `Suspense` because that is where React looks once the lazy promise rejects.
+ */
+const LazyRegion = ({ label, children }) => (
+  <ErrorBoundary compact label={label}>
+    <Suspense fallback={<Loader />}>{children}</Suspense>
+  </ErrorBoundary>
+);
+
+LazyRegion.propTypes = {
+  label: PropTypes.string,
+  children: PropTypes.node,
+};
 
 export default function App() {
   // Auth, transport, messaging and the download queue all live in providers
@@ -815,16 +836,13 @@ export default function App() {
         xs={12}
         sx={{ height: fullHeight, m: 0, p: 0 }}
       >
-        <Suspense fallback={<Loader />}>
+        <LazyRegion label="The sign-in form">
           {showSignUp ? (
-            <Signup
-              height={fullHeight}
-              toggleSignUpComponent={setShowSignUp}
-            />
+            <Signup height={fullHeight} toggleSignUpComponent={setShowSignUp} />
           ) : (
             <Login height={fullHeight} toggleSignUpComponent={setShowSignUp} />
           )}
-        </Suspense>
+        </LazyRegion>
       </Grid>
       {/* right spacer */}
       <Grid
@@ -914,14 +932,14 @@ export default function App() {
         className="mobile-panel mobile-panel-playlist"
         sx={{ display: "flex", flexDirection: "column" }}
       >
-        <Suspense fallback={<Loader />}>
+        <LazyRegion label="The playlist list">
           <PlayList
             {...playListProps}
             isMobile
             onMobileLoad={handleMobileLoadPlaylist}
             mobileAddDialogRef={mobileAddDialogRef}
           />
-        </Suspense>
+        </LazyRegion>
       </Box>
 
       {/* Panel 2: Videos — slides in/out */}
@@ -934,7 +952,7 @@ export default function App() {
             bgcolor: "background.default",
           }}
         >
-          <Suspense fallback={<Loader />}>
+          <LazyRegion label="The video list">
             <SubList
               {...subListProps}
               isMobile
@@ -942,7 +960,7 @@ export default function App() {
               onOpenAddDialog={handleMobileOpenAddDialog}
               activePlaylistTitle={activePlaylistTitle}
             />
-          </Suspense>
+          </LazyRegion>
         </Box>
       )}
     </Box>
@@ -954,14 +972,14 @@ export default function App() {
     return (
       <Grid container spacing={0}>
         <Grid xl={4} lg={4} md={6} sm={12} xs={12} sx={{ height: fullHeight }}>
-          <Suspense fallback={<Loader />}>
+          <LazyRegion label="The playlist list">
             <PlayList {...playListProps} />
-          </Suspense>
+          </LazyRegion>
         </Grid>
         <Grid xl={8} lg={8} md={6} sm={12} xs={12} sx={{ height: fullHeight }}>
-          <Suspense fallback={<Loader />}>
+          <LazyRegion label="The video list">
             <SubList {...subListProps} />
-          </Suspense>
+          </LazyRegion>
         </Grid>
       </Grid>
     );
@@ -980,7 +998,7 @@ export default function App() {
         }}
       >
         {/* nav bar */}
-        <Suspense fallback={<Loader />}>
+        <LazyRegion label="The navigation bar">
           <Box sx={{ position: "sticky", top: 0, left: 0, zIndex: 100 }}>
             <Navigation
               themeSwitcher={themeSwitcher}
@@ -998,7 +1016,7 @@ export default function App() {
               />
             </Box>
           </Box>
-        </Suspense>
+        </LazyRegion>
         {/* main grid */}
         <Paper sx={{ width: "100%", overflow: "hidden", position: "relative" }}>
           {token === null ? renderAuth() : renderMain()}

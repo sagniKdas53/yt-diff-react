@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import AppProviders from "./AppProviders.jsx";
 import App from "./components/App";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 import "./style.scss";
 
@@ -17,10 +18,14 @@ if (rootElement._reactRootContainer) {
   root = ReactDOM.createRoot(rootElement);
 }
 
+// Outside the providers on purpose: a throw while a context initialises is
+// exactly the case that would otherwise leave a blank <div id="root">.
 root.render(
   <React.StrictMode>
-    <AppProviders>
-      <App />
-    </AppProviders>
+    <ErrorBoundary>
+      <AppProviders>
+        <App />
+      </AppProviders>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
