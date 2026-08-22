@@ -107,8 +107,12 @@ describe("Login Component (Desktop)", () => {
     );
 
     await waitFor(() => {
+      // expiresAt is null when the server did not send one — an older backend,
+      // or a token with no exp claim. The renewal loop falls back to a fixed
+      // interval rather than guessing a lifetime.
       expect(contexts.auth.setToken).toHaveBeenCalledWith("mock_token", {
         persist: false,
+        expiresAt: null,
       });
     });
   });
@@ -121,7 +125,10 @@ describe("Login Component (Desktop)", () => {
 
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ token: "mock_token_remembered" }),
+      json: async () => ({
+        token: "mock_token_remembered",
+        expiresAt: 1893456000,
+      }),
     });
 
     renderLogin();
@@ -139,9 +146,11 @@ describe("Login Component (Desktop)", () => {
     fireEvent.click(loginButton);
 
     await waitFor(() => {
+      // The server's own exp claim is handed straight to AuthContext; the
+      // client never decodes the JWT to find it.
       expect(contexts.auth.setToken).toHaveBeenCalledWith(
         "mock_token_remembered",
-        { persist: true },
+        { persist: true, expiresAt: 1893456000 },
       );
     });
   });
