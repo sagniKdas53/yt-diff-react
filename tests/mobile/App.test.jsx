@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import App from "../../src/components/App.jsx";
+import AppProviders from "../../src/AppProviders.jsx";
 
 // Mock socket.io-client
 vi.mock("socket.io-client", () => {
@@ -49,7 +50,11 @@ describe("App Component (Mobile)", () => {
       json: async () => ({ registrationAllowed: true }),
     });
 
-    render(<App />);
+    render(
+      <AppProviders>
+        <App />
+      </AppProviders>,
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();

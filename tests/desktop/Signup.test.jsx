@@ -1,20 +1,23 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import Signup from "../../src/components/Signup.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Signup Component (Desktop)", () => {
-  const theme = createTheme();
   const defaultProps = {
-    backEnd: "http://localhost:8888/ytdiff",
-    setSnack: vi.fn(),
     height: "500px",
     toggleSignUpComponent: vi.fn(),
   };
 
+  let contexts;
+
+  const renderSignup = () =>
+    renderWithContexts(<Signup {...defaultProps} />, { contexts });
+
   beforeEach(() => {
     globalThis.fetch = vi.fn();
+    contexts = makeContexts({ auth: { token: null } });
   });
 
   afterEach(() => {
@@ -22,11 +25,7 @@ describe("Signup Component (Desktop)", () => {
   });
 
   test("renders sign up form elements", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Signup {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSignup();
 
     expect(screen.getByRole("heading", { name: "Sign Up" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Username")).toBeInTheDocument();
@@ -36,16 +35,12 @@ describe("Signup Component (Desktop)", () => {
   });
 
   test("shows error snack if username or password is empty on submit", async () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Signup {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSignup();
 
     const signUpButton = screen.getByRole("button", { name: "Sign Up" });
     fireEvent.click(signUpButton);
 
-    expect(defaultProps.setSnack).toHaveBeenCalledWith(
+    expect(contexts.notification.setSnack).toHaveBeenCalledWith(
       "Username or password is empty",
       "error"
     );
@@ -53,11 +48,7 @@ describe("Signup Component (Desktop)", () => {
   });
 
   test("toggles password visibility", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Signup {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSignup();
 
     const passwordInput = screen.getByPlaceholderText("Password");
     expect(passwordInput.type).toBe("password");
@@ -77,11 +68,7 @@ describe("Signup Component (Desktop)", () => {
       json: async () => ({ status: "success" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Signup {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSignup();
 
     const usernameInput = screen.getByPlaceholderText("Username");
     const passwordInput = screen.getByPlaceholderText("Password");
@@ -100,7 +87,7 @@ describe("Signup Component (Desktop)", () => {
     );
 
     await waitFor(() => {
-      expect(defaultProps.setSnack).toHaveBeenCalledWith(
+      expect(contexts.notification.setSnack).toHaveBeenCalledWith(
         "Account successfully created.",
         "success"
       );
@@ -114,11 +101,7 @@ describe("Signup Component (Desktop)", () => {
       json: async () => ({ message: "Username already exists" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Signup {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSignup();
 
     const usernameInput = screen.getByPlaceholderText("Username");
     const passwordInput = screen.getByPlaceholderText("Password");
@@ -129,7 +112,7 @@ describe("Signup Component (Desktop)", () => {
     fireEvent.click(signUpButton);
 
     await waitFor(() => {
-      expect(defaultProps.setSnack).toHaveBeenCalledWith(
+      expect(contexts.notification.setSnack).toHaveBeenCalledWith(
         "Username already exists",
         "error"
       );

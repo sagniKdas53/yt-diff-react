@@ -1,19 +1,15 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("VideoPlayer Component (Mobile)", () => {
-  const theme = createTheme();
-
   const defaultProps = {
     saveDirectory: "/downloads",
     fileName: "video.mp4",
     title: "Mobile Video Player",
     subTitleFile: null,
-    backEnd: "/ytdiff",
-    token: "mock_token",
     onClose: vi.fn(),
     items: [],
     itemCount: 0,
@@ -24,14 +20,17 @@ describe("VideoPlayer Component (Mobile)", () => {
     openPlayer: vi.fn(),
     playlistDirectory: "/downloads",
     thumbUrls: {},
-    activeDownloads: {},
-    queuedItems: {},
-    queueDownloads: vi.fn(),
     loadedPlayList: "playlist_1",
     rowsPerPage: 8,
   };
 
+  let contexts;
+
+  const renderPlayer = () =>
+    renderWithContexts(<VideoPlayer {...defaultProps} />, { contexts });
+
   beforeEach(() => {
+    contexts = makeContexts();
     globalThis.fetch = vi.fn().mockImplementation((url, options) => {
       const body = options?.body ? JSON.parse(options.body) : {};
       if (options?.method?.toLowerCase() === "post") {
@@ -55,11 +54,7 @@ describe("VideoPlayer Component (Mobile)", () => {
   });
 
   test("single click on volume button toggles mobile volume slider overlay", async () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderPlayer();
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
@@ -79,11 +74,7 @@ describe("VideoPlayer Component (Mobile)", () => {
   });
 
   test("double click on volume button toggles mute state", async () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderPlayer();
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();

@@ -25,8 +25,20 @@ import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
+import { NotificationContext } from "../contexts/NotificationContext";
+import { DownloadContext } from "../contexts/DownloadContext";
+import { useApi } from "../hooks/useApi.js";
+import { assetBase } from "../config.js";
 import TablePaginationActions from "./Pagination.jsx";
 import SubListItemCard from "./SubListItemCard.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
@@ -37,25 +49,22 @@ function SubList({
   subListIndex,
   setSubListIndex,
   downloadedItem,
-  backEnd,
   reFetch,
   setReFetch,
   tableContainerHeight,
   rowsPerPage,
   setRowsPerPage,
-  token,
-  setToken,
-  setSnack,
-  addNotification,
-  activeDownloads = {},
-  queuedItems = {},
-  queueDownloads,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
   onOpenAddDialog,
   activePlaylistTitle,
 }) {
+  const { setSnack, addNotification } = useContext(NotificationContext);
+  const { activeDownloads, queuedItems, queueDownloads } =
+    useContext(DownloadContext);
+  const apiFetch = useApi();
+
   // Query and sort state
   const [query, updateQuery] = useState("");
   const [sort, updateSort] = useState(false);
@@ -81,7 +90,6 @@ function SubList({
   const [currentPlayerSubTitleFile, setCurrentPlayerSubTitleFile] =
     useState(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
-  const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
   const thumbMetaRef = useRef({});
   const thumbRefreshTimerRef = useRef(null);
 
@@ -122,14 +130,8 @@ function SubList({
       }
 
       try {
-        const response = await fetch(backEnd + "/refreshfiles", {
+        const response = await apiFetch("/refreshfiles", {
           method: "post",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
           body: JSON.stringify({
             fileIds: dueEntries.map(([, entry]) => entry.fileId),
           }),
@@ -155,17 +157,15 @@ function SubList({
               }
             });
           }
-        } else if (response.status === 401) {
-          setSnack("Session expired. Please log in again.", "error");
-          setToken(null);
         }
+        // 401 is already reported and logged out by apiFetch.
       } catch (_error) {
         // Let the next bulk fetch recover if this refresh fails.
       }
 
       scheduleThumbnailRefresh();
     }, refreshTime);
-  }, [backEnd, clearThumbnailRefreshTimer, setSnack, setToken, token]);
+  }, [apiFetch, clearThumbnailRefreshTimer]);
   // const functions and normal functions
   const handleChangePage = useCallback(
     (_event, newPage) => {
@@ -274,23 +274,15 @@ function SubList({
         // perform the request and stream the response so we can report progress
         //console.log("Requesting file: ", { saveDirectory, fileName });
         setSnack(`Downloading: ${fileName}`, "info");
-        const response = await fetch(backEnd + "/getfile", {
+        const response = await apiFetch("/getfile", {
           method: "post",
-          headers: {
-            Accept: "application/octet-stream",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
+          headers: { Accept: "application/octet-stream" },
           body: JSON.stringify({ saveDirectory, fileName }),
         });
 
         if (!response.ok) {
-          if (response.status === 401) {
-            setSnack("Session expired. Please log in again.", "error");
-            addNotification("Session expired. Please log in again.", "error");
-            setToken(null);
-          } else {
+          // 401 is already reported and logged out by apiFetch.
+          if (response.status !== 401) {
             const text = await response.json().catch(() => response.statusText);
             setSnack(`Failed to download file: ${text.message}`, "error");
             addNotification(
@@ -305,9 +297,7 @@ function SubList({
         const data = await response.text();
         const json_data = JSON.parse(data);
         if (json_data.status === "success" && json_data.signedUrlId) {
-          // When on PROD use globalThis.location.origin else use ""
-          // the backEnd will have the correct path on dev
-          const downloadUrl = new URL(baseUrl + backEnd + "/getfile");
+          const downloadUrl = new URL(assetBase + "/getfile");
           downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
           //console.log("Opening download URL: ", downloadUrl.toString());
           // open in new tab
@@ -332,7 +322,7 @@ function SubList({
         );
       }
     },
-    [backEnd, token, setSnack, addNotification, setToken, baseUrl],
+    [apiFetch, setSnack, addNotification],
   );
 
   /**
@@ -355,14 +345,8 @@ function SubList({
     deleteVideosInDB,
   ) => {
     setSnack(`Deleting: ${videoUrl}`, "info");
-    const response = await fetch(backEnd + "/delsub", {
+    const response = await apiFetch("/delsub", {
       method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      mode: "cors",
       body: JSON.stringify({
         playListUrl: playListUrl,
         mappingIds: mappingId ? [mappingId] : [],
@@ -389,7 +373,6 @@ function SubList({
 
   useDependencyLogger(
     {
-      backEnd,
       start,
       stop,
       sort,
@@ -413,14 +396,8 @@ function SubList({
     //console.log("Fetching items with params: ", { start, stop, sort, query, url: loadedPlayList });
 
     try {
-      const response = await fetch(backEnd + "/getsub", {
+      const response = await apiFetch("/getsub", {
         method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        mode: "cors",
         signal: controller.signal,
         body: JSON.stringify({
           start,
@@ -441,10 +418,7 @@ function SubList({
         setPlaylistTitle(json_data["playlistTitle"] || "");
         setItemCount(parseInt(json_data["count"]));
       } else {
-        if (response.status === 401) {
-          setSnack("Session expired. Please log in again.", "error");
-          setToken(null);
-        }
+        // 401 is already reported and logged out by apiFetch.
         setItems([
           {
             positionInPlaylist: 1,
@@ -480,7 +454,7 @@ function SubList({
     fetchData(abortController);
     return () => abortController.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backEnd, start, stop, sort, query, loadedPlayList, reFetch]);
+  }, [apiFetch, start, stop, sort, query, loadedPlayList, reFetch]);
 
   // Responsive card media height using MUI breakpoints
   const theme = useTheme();
@@ -516,30 +490,21 @@ function SubList({
       setThumbUrls((prev) => ({ ...prev, ...newThumbUrls }));
 
       try {
-        const response = await fetch(backEnd + "/getfiles", {
+        const response = await apiFetch("/getfiles", {
           method: "post",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
           body: JSON.stringify({ files: filesToFetch }),
         });
 
         if (response.ok) {
           const data = await response.json();
           if (data.status === "success" && data.files) {
-            const baseUrl = import.meta.env.PROD
-              ? globalThis.location.origin
-              : "";
             const updates = {};
             Object.entries(data.files).forEach(([fileName, fileData]) => {
               if (fileData?.signedUrlId) {
                 Reflect.set(
                   updates,
                   fileName,
-                  baseUrl + backEnd + "/getfile?fileId=" + fileData.signedUrlId,
+                  assetBase + "/getfile?fileId=" + fileData.signedUrlId,
                 );
                 Reflect.set(thumbMetaRef.current, fileName, {
                   fileId: fileData.signedUrlId,
@@ -553,10 +518,8 @@ function SubList({
             setThumbUrls((prev) => ({ ...prev, ...updates }));
             scheduleThumbnailRefresh();
           }
-        } else if (response.status === 401) {
-          setSnack("Session expired. Please log in again.", "error");
-          setToken(null);
         }
+        // 401 is already reported and logged out by apiFetch.
       } catch (_error) {
         //console.error("Error fetching thumbnails:", error);
       }
@@ -564,7 +527,7 @@ function SubList({
 
     fetchThumbnails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, playlistDirectory, backEnd, token]);
+  }, [items, playlistDirectory, apiFetch]);
 
   useEffect(() => {
     if (downloadedItem.url !== null) {
@@ -880,7 +843,6 @@ function SubList({
                     index={index}
                     mediaHeight={mediaHeight}
                     thumbUrl={thumbUrls[thumb]}
-                    backEnd={backEnd}
                     playlistDirectory={playlistDirectory}
                     isQueued={isQueued}
                     queuePosition={queuePosition}
@@ -1029,8 +991,6 @@ function SubList({
             fileName={currentPlayerFileName}
             title={currentPlayerVideoTitle}
             subTitleFile={currentPlayerSubTitleFile}
-            backEnd={backEnd}
-            token={token}
             onClose={closePlayer}
             items={items}
             itemCount={itemCount}
@@ -1042,9 +1002,6 @@ function SubList({
             openPlayer={openPlayer}
             playlistDirectory={playlistDirectory}
             thumbUrls={thumbUrls}
-            activeDownloads={activeDownloads}
-            queuedItems={queuedItems}
-            queueDownloads={queueDownloads}
             loadedPlayList={loadedPlayList}
             rowsPerPage={rowsPerPage}
           />
@@ -1057,7 +1014,6 @@ function SubList({
 SubList.propTypes = {
   setPlayListUrl: PropTypes.func.isRequired,
   loadedPlayList: PropTypes.string,
-  backEnd: PropTypes.string.isRequired,
   subListIndex: PropTypes.number.isRequired,
   setSubListIndex: PropTypes.func.isRequired,
   downloadedItem: PropTypes.object.isRequired,
@@ -1066,13 +1022,6 @@ SubList.propTypes = {
   tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPage: PropTypes.number.isRequired,
   setRowsPerPage: PropTypes.func.isRequired,
-  token: PropTypes.string.isRequired,
-  setToken: PropTypes.func.isRequired,
-  setSnack: PropTypes.func.isRequired,
-  addNotification: PropTypes.func.isRequired,
-  activeDownloads: PropTypes.object,
-  queuedItems: PropTypes.object,
-  queueDownloads: PropTypes.func.isRequired,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,

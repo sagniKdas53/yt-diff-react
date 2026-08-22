@@ -9,14 +9,14 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Unstable_Grid2";
 import PropTypes from "prop-types";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { NotificationContext } from "../contexts/NotificationContext";
+import { useApi } from "../hooks/useApi.js";
 
-export default function Signup({
-  backEnd,
-  setSnack,
-  height,
-  toggleSignUpComponent,
-}) {
+export default function Signup({ height, toggleSignUpComponent }) {
+  const { setSnack } = useContext(NotificationContext);
+  const apiFetch = useApi();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,13 +40,8 @@ export default function Signup({
     }
     setLoading(true);
     try {
-      const response = await fetch(backEnd + "/register", {
+      const response = await apiFetch("/register", {
         method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
         body: JSON.stringify({
           username,
           password,
@@ -167,8 +162,6 @@ export default function Signup({
 }
 
 Signup.propTypes = {
-  backEnd: PropTypes.string.isRequired,
-  setSnack: PropTypes.func.isRequired,
   height: PropTypes.string.isRequired,
   toggleSignUpComponent: PropTypes.func.isRequired,
 };

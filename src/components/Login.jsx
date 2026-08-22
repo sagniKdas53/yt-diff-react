@@ -10,15 +10,16 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Unstable_Grid2";
 import PropTypes from "prop-types";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../contexts/AuthContext";
+import { NotificationContext } from "../contexts/NotificationContext";
+import { useApi } from "../hooks/useApi.js";
 
-export default function Login({
-  backEnd,
-  setToken,
-  setSnack,
-  height,
-  toggleSignUpComponent,
-}) {
+export default function Login({ height, toggleSignUpComponent }) {
+  const { setToken } = useContext(AuthContext);
+  const { setSnack } = useContext(NotificationContext);
+  const apiFetch = useApi();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -49,13 +50,8 @@ export default function Login({
     }
     setLoading(true);
     try {
-      const response = await fetch(backEnd + "/login", {
+      const response = await apiFetch("/login", {
         method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
         body: JSON.stringify({
           username,
           password,
@@ -66,11 +62,9 @@ export default function Login({
       const data = await response.json();
       // Propagate it to the main app
       if (response.ok) {
-        setToken(data.token);
-        // Store token in localStorage or sessionStorage
-        if (rememberMe) {
-          localStorage.setItem("ytdiff_token", data.token);
-        }
+        // AuthContext owns persistence; "remember me" decides whether the
+        // token outlives the tab.
+        setToken(data.token, { persist: rememberMe });
       } else {
         setSnack(`${data.message}`, "error");
       }
@@ -83,13 +77,8 @@ export default function Login({
 
   const regEnableCheck = async () => {
     try {
-      const response = await fetch(backEnd + "/isregallowed", {
+      const response = await apiFetch("/isregallowed", {
         method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
         body: JSON.stringify({
           sendStats: false,
         }),
@@ -227,9 +216,6 @@ export default function Login({
 }
 
 Login.propTypes = {
-  backEnd: PropTypes.string.isRequired,
-  setToken: PropTypes.func.isRequired,
-  setSnack: PropTypes.func.isRequired,
   height: PropTypes.string.isRequired,
   toggleSignUpComponent: PropTypes.func.isRequired,
 };

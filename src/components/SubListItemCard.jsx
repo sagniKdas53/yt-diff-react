@@ -21,14 +21,13 @@ import { DeleteForever as DeleteForeverIcon } from "@mui/icons-material";
 import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import { Queue as QueueIcon } from "@mui/icons-material";
 
-const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
+import { assetBase } from "../config.js";
 
 const SubListItemCard = memo(function SubListItemCard({
   element,
   index,
   mediaHeight,
   thumbUrl,
-  backEnd,
   playlistDirectory,
   isQueued,
   queuePosition,
@@ -92,13 +91,11 @@ const SubListItemCard = memo(function SubListItemCard({
               : meta.onlineThumbnail
                 ? meta.onlineThumbnail
                 : meta.downloadStatus
-                  ? baseUrl +
-                    backEnd +
+                  ? assetBase +
                     (theme.palette.mode === "light"
                       ? "/404-light.png"
                       : "/404.png")
-                  : baseUrl +
-                    backEnd +
+                  : assetBase +
                     (theme.palette.mode === "light"
                       ? "/204-light.png"
                       : "/204.png")
@@ -230,7 +227,6 @@ SubListItemCard.propTypes = {
   index: PropTypes.number.isRequired,
   mediaHeight: PropTypes.number.isRequired,
   thumbUrl: PropTypes.string,
-  backEnd: PropTypes.string.isRequired,
   playlistDirectory: PropTypes.string.isRequired,
   isQueued: PropTypes.bool.isRequired,
   queuePosition: PropTypes.number,

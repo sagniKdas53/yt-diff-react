@@ -1,42 +1,42 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import Navigation from "../../src/components/Nav.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Nav Component (Desktop)", () => {
-  const theme = createTheme();
-  
   const defaultProps = {
     themeSwitcher: vi.fn(),
     theme: false, // dark mode by default (theme matches dark = false, light = true in App.jsx logic)
-    connectionId: "socket_conn_1",
     setPlayListUrl: vi.fn(),
-    token: "mock_token",
-    setToken: vi.fn(),
-    setConnectionId: vi.fn(),
-    notifications: [
-      { id: "note_1", message: "Download completed successfully", type: "success" },
-      { id: "note_2", message: "Re-indexing failed", type: "error" },
-    ],
-    onDismissNotification: vi.fn(),
-    backEnd: "http://localhost:8888/ytdiff",
-    setSnack: vi.fn(),
-    addNotification: vi.fn(),
   };
+
+  let contexts;
+
+  const renderNav = () =>
+    renderWithContexts(<Navigation {...defaultProps} />, { contexts });
 
   beforeEach(() => {
     globalThis.fetch = vi.fn();
     localStorage.clear();
     vi.clearAllMocks();
+    contexts = makeContexts({
+      socket: { connectionId: "socket_conn_1" },
+      notification: {
+        notifications: [
+          {
+            id: "note_1",
+            message: "Download completed successfully",
+            type: "success",
+          },
+          { id: "note_2", message: "Re-indexing failed", type: "error" },
+        ],
+      },
+    });
   });
 
   test("renders desktop navigation buttons and connection status", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     expect(screen.getByText("yt-diff")).toBeInTheDocument();
     
@@ -49,11 +49,7 @@ describe("Nav Component (Desktop)", () => {
   });
 
   test("triggers setPlayListUrl when clicking Unlisted button", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     const unlistedBtn = screen.getByRole("button", { name: /Unlisted/i });
     fireEvent.click(unlistedBtn);
@@ -62,11 +58,7 @@ describe("Nav Component (Desktop)", () => {
   });
 
   test("toggles theme mode and saves in localStorage", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     const themeBtn = screen.getByRole("button", { name: /Light/i });
     fireEvent.click(themeBtn);
@@ -76,11 +68,7 @@ describe("Nav Component (Desktop)", () => {
   });
 
   test("opens logout confirmation dialog and handles logout", async () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     const logoutBtn = screen.getByRole("button", { name: /Logout/i });
     fireEvent.click(logoutBtn);
@@ -91,9 +79,9 @@ describe("Nav Component (Desktop)", () => {
     const confirmBtn = screen.getByRole("button", { name: "Logout" });
     fireEvent.click(confirmBtn);
 
-    expect(defaultProps.setToken).toHaveBeenCalledWith(null);
-    expect(defaultProps.setConnectionId).toHaveBeenCalledWith("");
-    expect(localStorage.getItem("ytdiff_token")).toBe("null");
+    expect(contexts.auth.logout).toHaveBeenCalled();
+    expect(contexts.socket.setConnectionId).toHaveBeenCalledWith("");
+    // Clearing the stored token is AuthContext's job now — see AuthContext.test.jsx.
   });
 
   test("opens batch re-index dialog and submits config settings", async () => {
@@ -102,11 +90,7 @@ describe("Nav Component (Desktop)", () => {
       json: async () => ({ message: "Batch re-index started successfully" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     const reindexBtn = screen.getByRole("button", { name: /Re-Index/i });
     fireEvent.click(reindexBtn);
@@ -139,11 +123,11 @@ describe("Nav Component (Desktop)", () => {
     );
 
     await waitFor(() => {
-      expect(defaultProps.setSnack).toHaveBeenCalledWith(
+      expect(contexts.notification.setSnack).toHaveBeenCalledWith(
         "Batch re-index started successfully",
         "success"
       );
-      expect(defaultProps.addNotification).toHaveBeenCalledWith(
+      expect(contexts.notification.addNotification).toHaveBeenCalledWith(
         "Batch re-index started successfully",
         "success"
       );

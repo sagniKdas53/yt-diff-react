@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useContext, useMemo, useCallback } from "react";
 import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -19,6 +19,9 @@ import { NavigateNext as NavigateNextIcon } from "@mui/icons-material";
 
 import { useTheme } from "@mui/material/styles";
 
+import { DownloadContext } from "../contexts/DownloadContext";
+import { assetBase } from "../config.js";
+
 export default function PlayerPlaylistDrawer({
   drawerOpen,
   setDrawerOpen,
@@ -31,14 +34,11 @@ export default function PlayerPlaylistDrawer({
   openPlayer,
   playlistDirectory,
   thumbUrls,
-  activeDownloads,
-  queuedItems,
-  queueDownloads,
   loadedPlayList,
-  backEnd,
-  baseUrl,
   rowsPerPage,
 }) {
+  const { activeDownloads, queuedItems, queueDownloads } =
+    useContext(DownloadContext);
   const theme = useTheme();
 
   const totalPages = Math.max(1, Math.ceil(itemCount / rowsPerPage));
@@ -59,8 +59,7 @@ export default function PlayerPlaylistDrawer({
   );
 
   const fallbackThumbURL =
-    baseUrl +
-    backEnd +
+    assetBase +
     (theme.palette.mode === "light" ? "/404-light.png" : "/404.png");
 
   const playlistItems = useMemo(() => {
@@ -308,11 +307,6 @@ PlayerPlaylistDrawer.propTypes = {
   openPlayer: PropTypes.func,
   playlistDirectory: PropTypes.string,
   thumbUrls: PropTypes.object,
-  activeDownloads: PropTypes.object,
-  queuedItems: PropTypes.object,
-  queueDownloads: PropTypes.func.isRequired,
   loadedPlayList: PropTypes.string,
-  backEnd: PropTypes.string.isRequired,
-  baseUrl: PropTypes.string,
   rowsPerPage: PropTypes.number,
 };

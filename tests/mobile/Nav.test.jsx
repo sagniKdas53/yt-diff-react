@@ -1,41 +1,37 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import Navigation from "../../src/components/Nav.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Nav Component (Mobile)", () => {
-  const theme = createTheme();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-  
   const defaultProps = {
     themeSwitcher: vi.fn(),
     theme: true, // light
-    connectionId: "socket_conn_1",
     setPlayListUrl: vi.fn(),
-    token: "mock_token",
-    setToken: vi.fn(),
-    setConnectionId: vi.fn(),
-    notifications: [
-      { id: "note_1", message: "Success Notification 1", type: "success" },
-      { id: "note_2", message: "Error Notification 2", type: "error" },
-      { id: "note_3", message: "Info Notification 3", type: "info" },
-    ],
-    onDismissNotification: vi.fn(),
-    backEnd: "http://localhost:8888/ytdiff",
-    setSnack: vi.fn(),
-    addNotification: vi.fn(),
   };
 
+  let contexts;
+
+  const renderNav = () =>
+    renderWithContexts(<Navigation {...defaultProps} />, { contexts });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    contexts = makeContexts({
+      socket: { connectionId: "socket_conn_1" },
+      notification: {
+        notifications: [
+          { id: "note_1", message: "Success Notification 1", type: "success" },
+          { id: "note_2", message: "Error Notification 2", type: "error" },
+          { id: "note_3", message: "Info Notification 3", type: "info" },
+        ],
+      },
+    });
+  });
+
   test("opens notifications drawer on mobile and displays notifications log", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     // Click on Connection status button to open notifications drawer
     // The button has the LeakAddIcon (connectionId is present)
@@ -54,11 +50,7 @@ describe("Nav Component (Mobile)", () => {
   });
 
   test("filters notifications inside the drawer", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     // Open drawer
     fireEvent.click(screen.getByRole("button", { name: /Connected/i }));
@@ -82,11 +74,7 @@ describe("Nav Component (Mobile)", () => {
   });
 
   test("dismisses individual notification when clicking delete", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     // Open drawer
     fireEvent.click(screen.getByRole("button", { name: /Connected/i }));
@@ -96,15 +84,11 @@ describe("Nav Component (Mobile)", () => {
     expect(deleteBtns.length).toBe(3);
 
     fireEvent.click(deleteBtns[0]);
-    expect(defaultProps.onDismissNotification).toHaveBeenCalledWith("note_1");
+    expect(contexts.notification.dismissNotification).toHaveBeenCalledWith("note_1");
   });
 
   test("dismisses all notifications when clicking clear all", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <Navigation {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderNav();
 
     // Open drawer
     fireEvent.click(screen.getByRole("button", { name: /Connected/i }));
@@ -113,9 +97,9 @@ describe("Nav Component (Mobile)", () => {
     fireEvent.click(clearAllBtn);
 
     // Should call onDismissNotification for each item
-    expect(defaultProps.onDismissNotification).toHaveBeenCalledTimes(3);
-    expect(defaultProps.onDismissNotification).toHaveBeenNthCalledWith(1, "note_1");
-    expect(defaultProps.onDismissNotification).toHaveBeenNthCalledWith(2, "note_2");
-    expect(defaultProps.onDismissNotification).toHaveBeenNthCalledWith(3, "note_3");
+    expect(contexts.notification.dismissNotification).toHaveBeenCalledTimes(3);
+    expect(contexts.notification.dismissNotification).toHaveBeenNthCalledWith(1, "note_1");
+    expect(contexts.notification.dismissNotification).toHaveBeenNthCalledWith(2, "note_2");
+    expect(contexts.notification.dismissNotification).toHaveBeenNthCalledWith(3, "note_3");
   });
 });

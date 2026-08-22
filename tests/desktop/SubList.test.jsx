@@ -1,12 +1,10 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import SubList from "../../src/components/SubList.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("SubList Component (Desktop)", () => {
-  const theme = createTheme();
-  
   const mockSubListResponse = {
     count: 3,
     saveDirectory: "/downloads/play_1",
@@ -43,23 +41,27 @@ describe("SubList Component (Desktop)", () => {
     subListIndex: 0,
     setSubListIndex: vi.fn(),
     downloadedItem: { url: null, title: null },
-    backEnd: "http://localhost:8888/ytdiff",
     reFetch: "init_refetch",
     setReFetch: vi.fn(),
     tableContainerHeight: "600px",
     rowsPerPage: 8,
     setRowsPerPage: vi.fn(),
-    token: "mock_token",
-    setToken: vi.fn(),
-    setSnack: vi.fn(),
-    addNotification: vi.fn(),
-    activeDownloads: {},
-    queuedItems: {},
-    queueDownloads: vi.fn().mockResolvedValue(["https://youtube.com/watch?v=2"]),
   };
+
+  let contexts;
+
+  const renderSubList = () =>
+    renderWithContexts(<SubList {...defaultProps} />, { contexts });
 
   beforeEach(() => {
     globalThis.fetch = vi.fn();
+    contexts = makeContexts({
+      download: {
+        queueDownloads: vi
+          .fn()
+          .mockResolvedValue(["https://youtube.com/watch?v=2"]),
+      },
+    });
     HTMLVideoElement.prototype.load = vi.fn();
     HTMLVideoElement.prototype.pause = vi.fn();
     HTMLVideoElement.prototype.play = vi.fn().mockResolvedValue();
@@ -75,11 +77,7 @@ describe("SubList Component (Desktop)", () => {
       text: async () => JSON.stringify(mockSubListResponse),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <SubList {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSubList();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "http://localhost:8888/ytdiff/getsub",
@@ -107,11 +105,7 @@ describe("SubList Component (Desktop)", () => {
       text: async () => JSON.stringify(mockSubListResponse),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <SubList {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderSubList();
 
     await waitFor(() => {
       expect(screen.getByText("Video Song Two")).toBeInTheDocument();
@@ -134,7 +128,7 @@ describe("SubList Component (Desktop)", () => {
       expect(checkboxes[2].checked).toBe(false);
     });
 
-    expect(defaultProps.queueDownloads).toHaveBeenCalledWith([
+    expect(contexts.download.queueDownloads).toHaveBeenCalledWith([
       {
         url: "https://youtube.com/watch?v=2",
         playlistUrl: "https://youtube.com/playlist?list=best",

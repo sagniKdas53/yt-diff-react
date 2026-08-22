@@ -1,12 +1,10 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, test, expect, vi } from "vitest";
+import { screen, fireEvent } from "@testing-library/react";
+import { describe, test, expect, vi, beforeEach } from "vitest";
 import PlayerPlaylistDrawer from "../../src/components/PlayerPlaylistDrawer.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("PlayerPlaylistDrawer Component (Desktop)", () => {
-  const theme = createTheme();
-  
   const mockItems = [
     {
       positionInPlaylist: 1,
@@ -62,25 +60,30 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
     openPlayer: vi.fn(),
     playlistDirectory: "/dir",
     thumbUrls: {},
-    activeDownloads: {
-      url_downloading: 45.0, // downloading at 45%
-    },
-    queuedItems: {
-      url_queued: { queuePosition: 3 }, // queued at #3
-    },
-    queueDownloads: vi.fn(),
     loadedPlayList: "playlist_url",
-    backEnd: "/ytdiff",
-    baseUrl: "http://localhost:8888",
     rowsPerPage: 2, // triggers pagination since itemCount is 4
   };
 
+  let contexts;
+
+  const renderDrawer = (props = defaultProps) =>
+    renderWithContexts(<PlayerPlaylistDrawer {...props} />, { contexts });
+
+  beforeEach(() => {
+    contexts = makeContexts({
+      download: {
+        activeDownloads: {
+          url_downloading: 45.0, // downloading at 45%
+        },
+        queuedItems: {
+          url_queued: { queuePosition: 3 }, // queued at #3
+        },
+      },
+    });
+  });
+
   test("renders all items in drawer list with correct states", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayerPlaylistDrawer {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderDrawer();
 
     expect(screen.getByText("Downloaded Video")).toBeInTheDocument();
     expect(screen.getByText("Queued Video")).toBeInTheDocument();
@@ -100,11 +103,7 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
   });
 
   test("calls openPlayer when clicking a downloaded item", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayerPlaylistDrawer {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderDrawer();
 
     const downloadedItem = screen.getByText("Downloaded Video");
     fireEvent.click(downloadedItem);
@@ -120,11 +119,7 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
 
   test("does not call openPlayer when clicking a non-downloaded item", () => {
     const openPlayer = vi.fn();
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayerPlaylistDrawer {...defaultProps} openPlayer={openPlayer} />
-      </ThemeProvider>
-    );
+    renderDrawer({ ...defaultProps, openPlayer });
 
     const queuedItem = screen.getByText("Queued Video");
     fireEvent.click(queuedItem);
@@ -133,11 +128,7 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
   });
 
   test("triggers queueDownloads when clicking the download button", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayerPlaylistDrawer {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderDrawer();
 
     const downloadButtons = screen.getAllByRole("button");
     // Find download button by looking for tooltip or clicking the icon button (it has DownloadIcon)
@@ -146,7 +137,7 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
     expect(btn).toBeInTheDocument();
 
     fireEvent.click(btn);
-    expect(defaultProps.queueDownloads).toHaveBeenCalledWith([
+    expect(contexts.download.queueDownloads).toHaveBeenCalledWith([
       {
         url: "url_ready",
         playlistUrl: "playlist_url",
@@ -156,11 +147,7 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
   });
 
   test("renders pagination controls and handles page navigation", () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayerPlaylistDrawer {...defaultProps} items={mockItems.slice(0, 2)} />
-      </ThemeProvider>
-    );
+    renderDrawer({ ...defaultProps, items: mockItems.slice(0, 2) });
 
     // Displays page 1 / 2
     expect(screen.getByText("1 / 2")).toBeInTheDocument();

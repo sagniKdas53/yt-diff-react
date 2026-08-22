@@ -32,8 +32,10 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
+import { NotificationContext } from "../contexts/NotificationContext";
+import { useApi } from "../hooks/useApi.js";
 import TablePaginationActions from "./Pagination.jsx";
 import PlayListItemRow from "./PlayListItemRow.jsx";
 
@@ -51,24 +53,22 @@ const options = [
 function PlayList({
   setPlayListUrl,
   playListUrl,
-  backEnd,
-  setSnack,
   reFetch,
   setReFetch,
   setSubListIndex,
   tableContainerHeight,
   rowsPerPageSubList,
   setRowsPerPageSubList,
-  token,
-  setToken,
   playListIndex,
   setPlayListIndex,
-  addNotification,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onMobileLoad,
   mobileAddDialogRef,
 }) {
+  const { setSnack, addNotification } = useContext(NotificationContext);
+  const apiFetch = useApi();
+
   const [query, updateQuery] = useState("");
   // "1" == ID [Default], "3" == lastUpdatedByScheduler
   const [sort, updateSort] = useState("1");
@@ -102,7 +102,6 @@ function PlayList({
 
   useDependencyLogger(
     {
-      backEnd,
       start,
       stop,
       sort,
@@ -186,14 +185,8 @@ function PlayList({
 
   const postUrlList = async (urlList) => {
     //console.log("Posting urlList: " + urlList);
-    const response = await fetch(backEnd + "/list", {
+    const response = await apiFetch("/list", {
       method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      mode: "cors",
       body: JSON.stringify({
         urlList: urlList,
         // This is to make sure that we can get the requested amount + 1 so that we can paginate properly
@@ -219,10 +212,8 @@ function PlayList({
       }
       return json_data;
     } else {
-      if (response.status === 401) {
-        setSnack("Session expired. Please log in again.", "error");
-        setToken(null);
-      } else if (response.status === 429) {
+      // 401 is already reported and logged out by apiFetch.
+      if (response.status === 429) {
         setSnack(
           "Too many requests. Please wait before queuing more.",
           "error",
@@ -249,14 +240,8 @@ function PlayList({
     cleanUp,
   ) => {
     setSnack("Deleting playlist…", "info");
-    const response = await fetch(backEnd + "/delplay", {
+    const response = await apiFetch("/delplay", {
       method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      mode: "cors",
       body: JSON.stringify({
         playListUrl: playListUrlToDelete,
         deleteAllVideosInPlaylist: deleteAllVideosInPlaylist,
@@ -303,14 +288,8 @@ function PlayList({
 
     const fetchPlaylists = async () => {
       try {
-        const response = await fetch(backEnd + "/getplay", {
+        const response = await apiFetch("/getplay", {
           method: "post",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
           body: JSON.stringify({
             start: start,
             stop: stop,
@@ -328,10 +307,7 @@ function PlayList({
             setTotalItems(json_data["count"]);
           }
         } else {
-          if (response.status === 401 && active) {
-            setSnack("Session expired. Please log in again.", "error");
-            setToken(null);
-          }
+          // 401 is already reported and logged out by apiFetch.
           if (active) {
             setItems([
               {
@@ -370,8 +346,7 @@ function PlayList({
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backEnd, start, stop, sort, order, query, reFetch]);
+  }, [apiFetch, start, stop, sort, order, query, reFetch]);
 
   const handleChangePage = useCallback(
     (_event, newPage) => {
@@ -414,8 +389,12 @@ function PlayList({
     debouncedQuery.cancel();
   };
 
+  // Pre-existing: this effect syncs the page to a playlist index pushed in
+  // from App, which means setting state from an effect. Untangling it belongs
+  // with the PlayList decomposition, not here.
   useEffect(() => {
     if (playListIndex === -1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       handleChangePage(null, 0); // Reset to the first page if playListIndex is -1
     } else {
       //console.log("playListIndex: ", playListIndex, "totalItems: ", totalItems);
@@ -430,14 +409,8 @@ function PlayList({
 
   const changeWatch = async (event, url) => {
     // add some error handling here for gods sake
-    const response = await fetch(backEnd + "/watch", {
+    const response = await apiFetch("/watch", {
       method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      mode: "cors",
       body: JSON.stringify({
         url: url,
         watch: event.target.value,
@@ -458,12 +431,8 @@ function PlayList({
         updatedItems[itemIndex] = updatedItem;
         setItems(updatedItems);
       }
-    } else {
-      if (response.status === 401) {
-        setSnack("Session expired. Please log in again.", "error");
-        setToken(null);
-      }
     }
+    // 401 is already reported and logged out by apiFetch.
   };
 
   const lastUpdateCalc = (lastStamp) => {
@@ -862,19 +831,14 @@ function PlayList({
 PlayList.propTypes = {
   setPlayListUrl: PropTypes.func.isRequired,
   playListUrl: PropTypes.string,
-  backEnd: PropTypes.string.isRequired,
-  setSnack: PropTypes.func.isRequired,
   reFetch: PropTypes.string.isRequired,
   setReFetch: PropTypes.func.isRequired,
   setSubListIndex: PropTypes.func.isRequired,
   tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPageSubList: PropTypes.number.isRequired,
   setRowsPerPageSubList: PropTypes.func.isRequired,
-  token: PropTypes.string.isRequired,
-  setToken: PropTypes.func.isRequired,
   playListIndex: PropTypes.number.isRequired,
   setPlayListIndex: PropTypes.func.isRequired,
-  addNotification: PropTypes.func.isRequired,
   // Mobile props
   isMobile: PropTypes.bool,
   onMobileLoad: PropTypes.func,

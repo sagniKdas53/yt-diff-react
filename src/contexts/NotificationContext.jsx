@@ -1,4 +1,10 @@
-import { createContext, useState, useCallback, useRef } from "react";
+import {
+  createContext,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import PropTypes from "prop-types";
 
 export const NotificationContext = createContext({
@@ -7,10 +13,21 @@ export const NotificationContext = createContext({
   showSnackbar: false,
   setSnackVisibility: () => {},
   notifications: [],
+  setSnack: () => {},
+  addNotification: () => {},
   notify: () => {},
   dismissNotification: () => {},
 });
 
+/**
+ * Owns both halves of user-facing messaging: the transient snackbar and the
+ * persistent notification log behind the bell icon.
+ *
+ * They are separate calls rather than one, because the two surfaces routinely
+ * want different text — the snackbar shows "Lofi Beats", the log shows
+ * "Successfully imported playlist: Lofi Beats". `notify` is the shorthand for
+ * the case where one message serves both.
+ */
 export const NotificationProvider = ({ children }) => {
   const [showSnackbar, setSnackVisibility] = useState(false);
   const [snackMsg, setSnackMsgTxt] = useState("");
@@ -18,13 +35,15 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const notificationRef = useRef(0);
 
-  const notify = useCallback((message, type = "info") => {
-    // Show snackbar
+  /** Transient toast only. */
+  const setSnack = useCallback((message, type = "info") => {
     setSnackMsgTxt(message);
     setSnackSeverity(type);
     setSnackVisibility(true);
+  }, []);
 
-    // Add to notifications log
+  /** Persistent log entry only. */
+  const addNotification = useCallback((message, type = "info") => {
     const newNotification = {
       id: Date.now() + "-" + notificationRef.current.toString(),
       message,
@@ -34,22 +53,45 @@ export const NotificationProvider = ({ children }) => {
     setNotifications((prev) => [...prev, newNotification]);
   }, []);
 
+  /** Both, with the same message. */
+  const notify = useCallback(
+    (message, type = "info") => {
+      setSnack(message, type);
+      addNotification(message, type);
+    },
+    [setSnack, addNotification],
+  );
+
   const dismissNotification = useCallback((id) => {
     setNotifications((prev) => prev.filter((note) => note.id !== id));
   }, []);
 
+  const value = useMemo(
+    () => ({
+      snackMsg,
+      snackSeverity,
+      showSnackbar,
+      setSnackVisibility,
+      notifications,
+      setSnack,
+      addNotification,
+      notify,
+      dismissNotification,
+    }),
+    [
+      snackMsg,
+      snackSeverity,
+      showSnackbar,
+      notifications,
+      setSnack,
+      addNotification,
+      notify,
+      dismissNotification,
+    ],
+  );
+
   return (
-    <NotificationContext.Provider
-      value={{
-        snackMsg,
-        snackSeverity,
-        showSnackbar,
-        setSnackVisibility,
-        notifications,
-        notify,
-        dismissNotification,
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
