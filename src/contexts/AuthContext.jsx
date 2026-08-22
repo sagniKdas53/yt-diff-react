@@ -11,13 +11,28 @@ export const AuthContext = createContext({
 const TOKEN_KEY = "ytdiff_token";
 const EXPIRY_KEY = "ytdiff_token_expires_at";
 
+/**
+ * Retires the sentinel builds before the provider refactor wrote.
+ *
+ * Those builds recorded an expired session as the *string* `"null"` rather
+ * than removing the key, so every reader had to know about it. Nothing writes
+ * it any more, but a browser that has not loaded a newer build since still
+ * holds one — so it is deleted here rather than guarded against on every read.
+ *
+ * Runs once per provider mount, which is the first moment storage is looked
+ * at. Once a browser has been through it there is nothing left to find, and
+ * the whole function can go.
+ */
+const clearLegacyTokenSentinel = () => {
+  if (localStorage.getItem(TOKEN_KEY) === "null") {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EXPIRY_KEY);
+  }
+};
+
 const getStoredToken = () => {
-  const stored = localStorage.getItem(TOKEN_KEY);
-  // The `"null"` guard is for tokens written by builds before the provider
-  // refactor, which stored the string instead of removing the key. Nothing
-  // writes it any more; this only has to outlive the browsers still holding
-  // one.
-  return stored && stored !== "null" ? stored : null;
+  clearLegacyTokenSentinel();
+  return localStorage.getItem(TOKEN_KEY) || null;
 };
 
 const getStoredExpiry = () => {

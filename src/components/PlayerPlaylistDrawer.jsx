@@ -112,6 +112,11 @@ export default function PlayerPlaylistDrawer({
               <Avatar
                 variant="rounded"
                 src={thumbImg}
+                // The drawer lists a whole playlist, so most of these are
+                // scrolled well past the viewport. Avatar renders its own
+                // <img>, which is the only element the attribute means
+                // anything on.
+                slotProps={{ img: { loading: "lazy" } }}
                 sx={{ width: 60, height: 45, mr: 1 }}
               />
             </ListItemAvatar>

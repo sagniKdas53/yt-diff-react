@@ -44,10 +44,17 @@ describe("AuthContext (Desktop)", () => {
     expect(screen.getByTestId("token")).toHaveTextContent("stored_token");
   });
 
-  test('treats the literal string "null" as no token', () => {
+  test('clears the legacy "null" sentinel instead of reading around it', () => {
+    // Builds before the provider refactor wrote the string on expiry. A
+    // browser still holding one must come up logged out -- and must not still
+    // be holding it afterwards, or every reader has to keep knowing about it.
     localStorage.setItem("ytdiff_token", "null");
+    localStorage.setItem("ytdiff_token_expires_at", "1893456000");
     renderProvider();
+
     expect(screen.getByTestId("token")).toHaveTextContent("none");
+    expect(localStorage.getItem("ytdiff_token")).toBeNull();
+    expect(localStorage.getItem("ytdiff_token_expires_at")).toBeNull();
   });
 
   test("persists the token by default", () => {
