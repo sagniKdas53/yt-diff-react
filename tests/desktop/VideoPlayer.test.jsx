@@ -1,19 +1,15 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("VideoPlayer Component (Desktop)", () => {
-  const theme = createTheme();
-  
   const defaultProps = {
     saveDirectory: "/downloads",
     fileName: "video.mp4",
     title: "Testing Video Player Title",
     subTitleFile: "video.vtt",
-    backEnd: "/ytdiff",
-    token: "mock_token",
     onClose: vi.fn(),
     items: [],
     itemCount: 0,
@@ -24,14 +20,17 @@ describe("VideoPlayer Component (Desktop)", () => {
     openPlayer: vi.fn(),
     playlistDirectory: "/downloads",
     thumbUrls: {},
-    activeDownloads: {},
-    queuedItems: {},
-    queueDownloads: vi.fn(),
     loadedPlayList: "playlist_1",
     rowsPerPage: 8,
   };
 
+  let contexts;
+
+  const renderPlayer = () =>
+    renderWithContexts(<VideoPlayer {...defaultProps} />, { contexts });
+
   beforeEach(() => {
+    contexts = makeContexts();
     globalThis.fetch = vi.fn().mockImplementation((url, options) => {
       const body = options?.body ? JSON.parse(options.body) : {};
       if (options?.method?.toLowerCase() === "post") {
@@ -69,15 +68,11 @@ describe("VideoPlayer Component (Desktop)", () => {
   });
 
   test("fetches signed url on mount and loads video", async () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderPlayer();
 
     // Should fetch video signed URL
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "/ytdiff/getfile",
+      "http://localhost:8888/ytdiff/getfile",
       expect.objectContaining({
         method: "post",
         body: JSON.stringify({ saveDirectory: "/downloads", fileName: "video.mp4" }),
@@ -98,11 +93,9 @@ describe("VideoPlayer Component (Desktop)", () => {
       json: async () => ({ message: "Unauthorized access" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} subTitleFile={null} />
-      </ThemeProvider>
-    );
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/Unauthorized access/i)).toBeInTheDocument();
@@ -115,11 +108,9 @@ describe("VideoPlayer Component (Desktop)", () => {
       json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} subTitleFile={null} />
-      </ThemeProvider>
-    );
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument(); // Loader hides
@@ -138,11 +129,9 @@ describe("VideoPlayer Component (Desktop)", () => {
       json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <VideoPlayer {...defaultProps} subTitleFile={null} />
-      </ThemeProvider>
-    );
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
 
     await waitFor(() => {
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();

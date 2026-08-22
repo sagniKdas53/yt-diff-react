@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
+import AppProviders from "./AppProviders.jsx";
 import App from "./components/App";
 
 import "./style.scss";
@@ -18,6 +19,8 @@ if (rootElement._reactRootContainer) {
 
 root.render(
   <React.StrictMode>
-    <App />
+    <AppProviders>
+      <App />
+    </AppProviders>
   </React.StrictMode>,
 );

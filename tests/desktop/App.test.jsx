@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import App from "../../src/components/App.jsx";
+import AppProviders from "../../src/AppProviders.jsx";
 
 // Mock socket.io-client
 vi.mock("socket.io-client", () => {
@@ -49,7 +50,11 @@ describe("App Component (Desktop)", () => {
       json: async () => ({ registrationAllowed: true }),
     });
 
-    render(<App />);
+    render(
+      <AppProviders>
+        <App />
+      </AppProviders>,
+    );
 
     // Renders the Login panel title
     await waitFor(() => {
@@ -71,7 +76,11 @@ describe("App Component (Desktop)", () => {
         json: async () => ({ count: 0, rows: [] }), // fetchPlaylists in PlayList.jsx
       });
 
-    render(<App />);
+    render(
+      <AppProviders>
+        <App />
+      </AppProviders>,
+    );
 
     // Renders the Navigation app header title
     await waitFor(() => {

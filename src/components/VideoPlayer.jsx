@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
+
+import { useApi } from "../hooks/useApi.js";
+import { assetBase } from "../config.js";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
@@ -112,8 +115,6 @@ export default function VideoPlayer({
   fileName,
   title,
   subTitleFile,
-  backEnd,
-  token,
   onClose,
   items = [],
   itemCount = 0,
@@ -124,12 +125,10 @@ export default function VideoPlayer({
   openPlayer,
   playlistDirectory,
   thumbUrls = {},
-  activeDownloads = {},
-  queuedItems = {},
-  queueDownloads,
   loadedPlayList,
   rowsPerPage = 8,
 }) {
+  const apiFetch = useApi();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [videoUrl, setVideoUrl] = useState(null);
@@ -185,7 +184,6 @@ export default function VideoPlayer({
   const isMountedRef = useRef(false);
   const playerSessionRef = useRef(0);
 
-  const baseUrl = import.meta.env.PROD ? globalThis.location.origin : "";
 
   const clearRefreshTimer = useCallback(() => {
     if (timerRef.current) {
@@ -299,14 +297,8 @@ export default function VideoPlayer({
           videoRef.current.pause();
         }
       }
-      const response = await fetch(backEnd + "/getfile", {
+      const response = await apiFetch("/getfile", {
         method: "post",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        mode: "cors",
         signal: controller.signal,
         body: JSON.stringify({ saveDirectory, fileName }),
       });
@@ -325,11 +317,7 @@ export default function VideoPlayer({
         expiryRef.current = data.expiry;
 
         const newUrl =
-          baseUrl +
-          backEnd +
-          "/getfile?fileId=" +
-          data.signedUrlId +
-          "&inline=true";
+          assetBase + "/getfile?fileId=" + data.signedUrlId + "&inline=true";
         setVideoUrl(newUrl);
         setErrorMsg(null);
         scheduleRefresh(data.signedUrlId, sessionId, data.expiry);
@@ -379,14 +367,8 @@ export default function VideoPlayer({
       if (!subtitleFileName) return;
 
       try {
-        const response = await fetch(backEnd + "/getfile", {
+        const response = await apiFetch("/getfile", {
           method: "post",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
           body: JSON.stringify({
             saveDirectory: subtitleSaveDirectory,
             fileName: subtitleFileName,
@@ -408,11 +390,7 @@ export default function VideoPlayer({
         }
 
         const signedSubtitleUrl =
-          baseUrl +
-          backEnd +
-          "/getfile?fileId=" +
-          data.signedUrlId +
-          "&inline=true";
+          assetBase + "/getfile?fileId=" + data.signedUrlId + "&inline=true";
 
         // Always fetch text content to parse cues for custom overlay
         const subtitleResponse = await fetch(signedSubtitleUrl);
@@ -437,7 +415,7 @@ export default function VideoPlayer({
         }
       }
     },
-    [backEnd, baseUrl, clearSubtitleObjectUrl, token],
+    [apiFetch, clearSubtitleObjectUrl],
   );
 
   const scheduleRefresh = useCallback(
@@ -462,14 +440,8 @@ export default function VideoPlayer({
           return;
         }
         try {
-          const res = await fetch(backEnd + "/refreshfile", {
+          const res = await apiFetch("/refreshfile", {
             method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            mode: "cors",
             body: JSON.stringify({ fileId: scheduledFileId }),
           });
 
@@ -495,7 +467,7 @@ export default function VideoPlayer({
         }
       }, refreshTime);
     },
-    [backEnd, clearRefreshTimer, token],
+    [apiFetch, clearRefreshTimer],
   );
 
   // Keep refs in sync so setTimeout callbacks always read latest values
@@ -1318,12 +1290,7 @@ export default function VideoPlayer({
         openPlayer={openPlayer}
         playlistDirectory={playlistDirectory}
         thumbUrls={thumbUrls}
-        activeDownloads={activeDownloads}
-        queuedItems={queuedItems}
-        queueDownloads={queueDownloads}
         loadedPlayList={loadedPlayList}
-        backEnd={backEnd}
-        baseUrl={baseUrl}
         rowsPerPage={rowsPerPage}
       />
     </Box>
@@ -1335,8 +1302,6 @@ VideoPlayer.propTypes = {
   fileName: PropTypes.string.isRequired,
   title: PropTypes.string,
   subTitleFile: PropTypes.string,
-  backEnd: PropTypes.string.isRequired,
-  token: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   items: PropTypes.array,
   itemCount: PropTypes.number,
@@ -1347,9 +1312,6 @@ VideoPlayer.propTypes = {
   openPlayer: PropTypes.func,
   playlistDirectory: PropTypes.string,
   thumbUrls: PropTypes.object,
-  activeDownloads: PropTypes.object,
-  queuedItems: PropTypes.object,
-  queueDownloads: PropTypes.func.isRequired,
   loadedPlayList: PropTypes.string,
   rowsPerPage: PropTypes.number,
 };

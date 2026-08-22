@@ -1,30 +1,38 @@
-import { createContext, useMemo, useContext } from "react";
+import { createContext, useMemo, useState, useContext } from "react";
 import { AuthContext } from "./AuthContext";
 import io from "socket.io-client";
 import PropTypes from "prop-types";
+import { socketPath } from "../config.js";
 
-export const SocketContext = createContext({ socket: null });
+export const SocketContext = createContext({
+  socket: null,
+  connectionId: "",
+  setConnectionId: () => {},
+});
 
 const base = import.meta.env.PROD ? "" : "http://localhost:8888";
-const path = import.meta.env.VITE_BASE_PATH || "/ytdiff";
 
 export const SocketProvider = ({ children }) => {
   const { token } = useContext(AuthContext);
+  // Assigned from the backend's "init" frame; the Nav shows it.
+  const [connectionId, setConnectionId] = useState("");
 
   const socket = useMemo(() => {
     if (!token) return null;
-    const sock = io(base, {
-      path: path + "/socket.io",
+    return io(base, {
+      path: socketPath,
       auth: { token },
       forceNew: true,
     });
-    return sock;
   }, [token]);
 
+  const value = useMemo(
+    () => ({ socket, connectionId, setConnectionId }),
+    [socket, connectionId],
+  );
+
   return (
-    <SocketContext.Provider value={{ socket }}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
   );
 };
 

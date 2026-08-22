@@ -16,24 +16,23 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
-
-import io from "socket.io-client";
+import { AuthContext } from "../contexts/AuthContext";
+import { SocketContext } from "../contexts/SocketContext";
+import { NotificationContext } from "../contexts/NotificationContext";
+import { DownloadContext } from "../contexts/DownloadContext";
 
 const Navigation = lazy(() => import("./Nav.jsx"));
 const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 const Signup = lazy(() => import("./Signup.jsx"));
-
-const base = import.meta.env.PROD ? "" : "http://localhost:8888";
-const path = import.meta.env.VITE_BASE_PATH || "/ytdiff";
-const backEnd = base + path;
 
 // How long per-playlist completions are collapsed before one playlist-list
 // re-fetch is issued during a batch re-index.
@@ -149,18 +148,33 @@ const Loader = () => (
 );
 
 export default function App() {
+  // Auth, transport, messaging and the download queue all live in providers
+  // above this component; App is the layout plus the socket event routing that
+  // ties them to the playlist views.
+  const { token, logout } = useContext(AuthContext);
+  const { socket, setConnectionId } = useContext(SocketContext);
+  const {
+    snackMsg,
+    snackSeverity,
+    showSnackbar,
+    setSnackVisibility,
+    setSnack,
+    addNotification,
+  } = useContext(NotificationContext);
+  const {
+    activeDownloads,
+    updateActiveDownloads,
+    removeActiveDownload,
+    removeFromQueueAndRenumber,
+    setQueuePosition,
+    clearDownloadState,
+    syncQueueFromBackend,
+  } = useContext(DownloadContext);
+
   // if it is not set in localStorage value is null, then !! will set as false
   const initialState = !!JSON.parse(localStorage.getItem("ytdiff_theme"));
   // If theme is unset it uses dark mode by default
   const [theme, themeSwitcher] = useState(initialState);
-
-  // get token from localStorage, handles string "null"
-  const getStoredToken = () => {
-    const stored = localStorage.getItem("ytdiff_token");
-    return stored && stored !== "null" ? stored : null;
-  };
-  // token state is managed here, persistence handled in Login component
-  const [token, setToken] = useState(getStoredToken);
 
   // signup related state
   const [showSignUp, setShowSignUp] = useState(false);
@@ -170,13 +184,7 @@ export default function App() {
   const [subListIndex, setSubListIndex] = useState(0);
   // this will be used to seek to the latest playlist
   const [playListIndex, setPlayListIndex] = useState(0);
-  const [connectionId, setConnectionId] = useState("");
   const [disableProgress, toggleProgress] = useState(false);
-
-  // snackbar state
-  const [showSnackbar, setSnackVisibility] = useState(false);
-  const [snackMsg, setSnackMsgTxt] = useState("");
-  const [snackSeverity, setSnackSeverity] = useState("success");
 
   // progress bar and re-fetch state
   const [activeListingCount, setActiveListingCount] = useState(0);
@@ -188,12 +196,6 @@ export default function App() {
   const [reFetchSubList, setReFetchSubList] = useState(Date.now().toString());
   // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
   const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
-  const [notifications, setNotifications] = useState([]);
-  const [activeDownloads, setActiveDownloads] = useState({});
-  // Download queue state — lives here so it persists across playlist switches
-  // Structure:
-  // { videoUrl: { playlistUrl, positionInPlaylist, queuePosition, requestId } }
-  const [queuedItems, setQueuedItems] = useState({});
 
   // Batch re-index progress. A batch fans out over every playlist, so the
   // per-playlist listing events it emits must not drive the same navigation /
@@ -212,24 +214,12 @@ export default function App() {
   const isTouchDevice = useMediaQuery("(hover: none) and (pointer: coarse)");
   const isMobile = isMobileViewport || isTouchDevice;
 
-  const notificationRef = useRef(0);
   const downloadedItem = useRef({
     url: null,
     title: null,
     fileName: null,
     saveDirectory: null,
   });
-
-  // socket setup
-  const socket = useMemo(() => {
-    if (!token) return null;
-    const sock = io(base, {
-      path: path + "/socket.io",
-      auth: { token },
-      forceNew: true,
-    });
-    return sock;
-  }, [token]);
 
   // 53px table top, 52 px table pagination, 48 px app bar
   // Table top is included in the table height so no need to subtract it
@@ -257,28 +247,9 @@ export default function App() {
     [],
   );
 
-  // stable callbacks
-  const setSnack = useCallback((msg, type) => {
-    setSnackMsgTxt(msg);
-    setSnackSeverity(type);
-    setSnackVisibility(true);
-  }, []);
-
-  const addNotification = useCallback((message, type = "info") => {
-    const newNotification = {
-      id: Date.now() + "-" + notificationRef.current.toString(),
-      message,
-      type,
-    };
-    notificationRef.current += 1;
-    setNotifications((prev) => [...prev, newNotification]);
-  }, []);
-
-  const dismissNotification = (id) => {
-    setNotifications((prev) => prev.filter((note) => note.id !== id));
-  };
-
   // --- Refs to avoid stale closures ---
+  // Only for values that actually change between renders; the callbacks the
+  // providers hand out are already stable.
   // Synced in render phase instead of useEffect to avoid delay
   const playListUrlRef = useRef(playListUrl);
   playListUrlRef.current = playListUrl;
@@ -288,14 +259,6 @@ export default function App() {
 
   const toggleProgressCallBackRef = useRef(toggleProgressCallBack);
   toggleProgressCallBackRef.current = toggleProgressCallBack;
-
-  const addNotificationRef = useRef(addNotification);
-  addNotificationRef.current = addNotification;
-
-  const setSnackRef = useRef(setSnack);
-  setSnackRef.current = setSnack;
-
-  const activeDownloadsRef = useRef(activeDownloads);
 
   // Mobile ref — so socket handlers can check mobile state without stale closures
   const isMobileRef = useRef(isMobile);
@@ -346,185 +309,6 @@ export default function App() {
     }
   };
 
-  // Wrapper: updates both state and ref synchronously so hasActiveDownloads() is never stale
-  const updateActiveDownloads = (updater) => {
-    setActiveDownloads((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      activeDownloadsRef.current = next;
-      return next;
-    });
-  };
-
-  // Queue management helpers
-  const removeFromQueueAndRenumber = useCallback((url) => {
-    setQueuedItems((prev) => {
-      if (!Reflect.has(prev, url)) return prev;
-      const removedPosition = prev[url].queuePosition;
-      const next = {};
-
-      Object.entries(prev).forEach(([itemUrl, data]) => {
-        if (itemUrl === url) return;
-        Reflect.set(
-          next,
-          itemUrl,
-          data.queuePosition > removedPosition
-            ? { ...data, queuePosition: data.queuePosition - 1 }
-            : data,
-        );
-      });
-
-      return next;
-    });
-  }, []);
-
-  const removeFromQueueRef = useRef(removeFromQueueAndRenumber);
-  useEffect(() => {
-    removeFromQueueRef.current = removeFromQueueAndRenumber;
-  }, [removeFromQueueAndRenumber]);
-
-  const addToDownloadQueue = useCallback((entries, requestId) => {
-    setQueuedItems((prev) => {
-      const next = { ...prev };
-      let counter = Object.keys(prev).length;
-      let changed = false;
-
-      entries.forEach((entry) => {
-        if (!Reflect.has(next, entry.url)) {
-          counter++;
-          changed = true;
-          Reflect.set(next, entry.url, {
-            playlistUrl: entry.playlistUrl,
-            positionInPlaylist: entry.positionInPlaylist,
-            queuePosition: entry.queuePosition ?? counter,
-            requestId,
-          });
-        } else if (
-          entry.queuePosition &&
-          next[entry.url].queuePosition !== entry.queuePosition
-        ) {
-          changed = true;
-          Reflect.set(next, entry.url, {
-            ...next[entry.url],
-            queuePosition: entry.queuePosition,
-          });
-        }
-      });
-
-      return changed ? next : prev;
-    });
-  }, []);
-
-  const rollbackDownloadQueueRequest = useCallback(
-    (requestId, acceptedUrls) => {
-      const accepted = new Set(acceptedUrls);
-
-      setQueuedItems((prev) => {
-        const rejectedUrls = Object.entries(prev)
-          .filter(
-            ([url, data]) => data.requestId === requestId && !accepted.has(url),
-          )
-          .map(([url]) => url);
-
-        if (rejectedUrls.length === 0) return prev;
-
-        const rejected = new Set(rejectedUrls);
-        const remaining = Object.entries(prev)
-          .filter(([url]) => !rejected.has(url))
-          .sort(([, a], [, b]) => a.queuePosition - b.queuePosition);
-        const next = {};
-
-        remaining.forEach(([url, data], index) => {
-          const queuePosition = index + 1;
-          Reflect.set(
-            next,
-            url,
-            data.queuePosition === queuePosition
-              ? data
-              : { ...data, queuePosition },
-          );
-        });
-
-        return next;
-      });
-    },
-    [],
-  );
-
-  const queueDownloads = useCallback(
-    async (entries) => {
-      if (entries.length === 0) return [];
-
-      const requestId =
-        globalThis.crypto?.randomUUID?.() ??
-        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const urls = entries.map((entry) => entry.url);
-
-      // Queue first so a fast socket completion cannot arrive before the item exists.
-      addToDownloadQueue(entries, requestId);
-
-      try {
-        const response = await fetch(backEnd + "/download", {
-          method: "post",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          mode: "cors",
-          body: JSON.stringify({
-            urlList: urls,
-            playListUrl: entries[0].playlistUrl,
-          }),
-        });
-
-        if (response.ok) {
-          try {
-            const result = await response.json();
-            const acceptedUrls = (result.items || []).map((item) => item.url);
-            rollbackDownloadQueueRequest(requestId, acceptedUrls);
-            setSnack("Initiated download…", "success");
-            return acceptedUrls;
-          } catch (_error) {
-            rollbackDownloadQueueRequest(requestId, []);
-            setSnack("Could not confirm the download queue.", "error");
-            return [];
-          }
-        }
-
-        rollbackDownloadQueueRequest(requestId, []);
-
-        if (response.status === 401) {
-          setSnack("Session expired. Please log in again.", "error");
-          addNotification("Session expired. Please log in again.", "error");
-          setToken(null);
-        } else if (response.status === 429) {
-          setSnack("Too many downloads requested. Please wait.", "error");
-          addNotification(
-            "Too many downloads requested. Please wait.",
-            "error",
-          );
-        } else {
-          const message = `Failed to queue downloads: ${response.status} ${response.statusText}`;
-          setSnack(message, "error");
-          addNotification(message, "error");
-        }
-      } catch (error) {
-        rollbackDownloadQueueRequest(requestId, []);
-        setSnack(`Failed to queue downloads: ${error.message}`, "error");
-        addNotification(`Failed to queue downloads: ${error.message}`, "error");
-      }
-
-      return [];
-    },
-    [
-      addNotification,
-      addToDownloadQueue,
-      rollbackDownloadQueueRequest,
-      setSnack,
-      token,
-    ],
-  );
-
   const activeListingCountRef = useRef(0);
   const incrementListings = () => {
     setActiveListingCount((prev) => {
@@ -541,69 +325,9 @@ export default function App() {
     });
   };
 
-  const syncQueueFromBackend = useCallback(async () => {
-    if (!token) return;
-    try {
-      const response = await fetch(backEnd + "/queuestatus", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        mode: "cors",
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-
-        // Batch queue items and active downloads from the snapshot
-        const newActiveDownloads = {};
-        const newQueuedItems = {};
-
-        result.queue.forEach((item) => {
-          if (item.status === "downloading" || item.status === "running") {
-            newActiveDownloads[item.url] = item.percentage ?? 0;
-          }
-          newQueuedItems[item.url] = {
-            playlistUrl: "", // Unknown from snapshot alone, but sufficient for queue UI
-            positionInPlaylist: null,
-            queuePosition: item.queuePosition,
-            requestId: "backend-sync",
-          };
-        });
-
-        updateActiveDownloads(newActiveDownloads);
-        setQueuedItems(newQueuedItems);
-        if (result.generation) {
-          connectionGenerationRef.current = result.generation;
-        }
-      }
-    } catch (_e) {
-      // Failed to sync
-    }
-  }, [token]);
-
-  const syncQueueFromBackendRef = useRef(syncQueueFromBackend);
-  syncQueueFromBackendRef.current = syncQueueFromBackend;
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        syncQueueFromBackendRef.current();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-
   useDependencyLogger(
     {
       socket,
-      backEnd,
       reFetchPlaylist,
       reFetchSubList,
       token,
@@ -620,95 +344,69 @@ export default function App() {
     // helpers
     const nowTag = () => Date.now().toString();
 
-    // Handlers (use refs for any "current" state / callbacks)
+    /** Pulls the backend snapshot and records the generation it reports. */
+    const syncQueue = async () => {
+      const generation = await syncQueueFromBackend();
+      if (generation) {
+        connectionGenerationRef.current = generation;
+      }
+    };
+
+    // Handlers (use refs for any "current" state)
     const onInit = (data) => {
       setConnectionId(data.id);
 
       const isReconnect = connectionGenerationRef.current === data.generation;
       connectionGenerationRef.current = data.generation;
 
-      if (isReconnect) {
-        // Just reconnect to same backend -> sync queue
-        syncQueueFromBackendRef.current();
-      } else {
-        // Backend restarted or first connect -> clear local state, then sync to get any items that might exist
-        updateActiveDownloads((prev) => (Object.keys(prev).length ? {} : prev));
+      if (!isReconnect) {
+        // Backend restarted or first connect -> clear local state, then sync to
+        // get any items that might exist
+        clearDownloadState();
         setActiveListingCount((prev) => {
           activeListingCountRef.current = 0;
           return prev !== 0 ? 0 : prev;
         });
-        setQueuedItems((prev) => (Object.keys(prev).length ? {} : prev));
         // A batch cannot survive a backend restart, and leaving it "active"
         // would pin the progress bar forever.
         flushBatchPlaylistRefetch();
         if (batchReindexRef.current.active) {
           setBatchReindexState(emptyBatchReindex());
         }
-
-        // Calling sync just in case backend has existing downloads running
-        syncQueueFromBackendRef.current();
       }
 
-      // call latest callback
-      toggleProgressCallBackRef.current &&
-        toggleProgressCallBackRef.current(false);
-      setSnackRef.current &&
-        setSnackRef.current("Connected to Backend", "success");
+      // Either way the backend's queue is the truth.
+      syncQueue();
+
+      toggleProgressCallBackRef.current(false);
+      setSnack("Connected to Backend", "success");
       socket.emit("acknowledge", { data: "Connected", id: data.id });
     };
 
     const onError = (data) => {
-      setSnackRef.current && setSnackRef.current(`${data.message}`, "error");
+      setSnack(`${data.message}`, "error");
     };
 
     const onTokenExpired = () => {
-      setSnackRef.current &&
-        setSnackRef.current("Your session has expired.", "error");
-      setToken(null);
-      localStorage.setItem("ytdiff_token", "null");
+      setSnack("Your session has expired.", "error");
+      logout();
     };
 
     const onConnectionError = () =>
-      setSnackRef.current &&
-      setSnackRef.current("Server is currently at maximum capacity.", "error");
-
-    const removeActiveDownload = (url) => {
-      updateActiveDownloads((prev) => {
-        const next = { ...prev };
-        Reflect.deleteProperty(next, url);
-        return next;
-      });
-    };
+      setSnack("Server is currently at maximum capacity.", "error");
 
     const onDownloadStarted = (data) => {
-      //console.log("[Socket] download-started", data);
       const url = data.url || "unknown";
       const percent = isNaN(+data.percentage) ? 0 : +data.percentage;
       updateActiveDownloads((prev) => ({ ...prev, [url]: percent }));
+      setQueuePosition(url, data.queuePosition);
 
-      // Update queue position if provided
-      if (data.queuePosition) {
-        setQueuedItems((prev) => {
-          if (!prev[url] || prev[url].queuePosition === data.queuePosition)
-            return prev;
-          return {
-            ...prev,
-            [url]: {
-              ...prev[url],
-              queuePosition: data.queuePosition,
-            },
-          };
-        });
-      }
-
-      toggleProgressCallBackRef.current &&
-        toggleProgressCallBackRef.current(false);
+      toggleProgressCallBackRef.current(false);
     };
 
     const onDownloadDone = (data) => {
-      //console.log("[Socket] download-done", data);
       removeActiveDownload(data.url);
-      removeFromQueueRef.current && removeFromQueueRef.current(data.url);
+      removeFromQueueAndRenumber(data.url);
       downloadedItem.current = {
         url: data.url,
         title: data.title,
@@ -720,22 +418,18 @@ export default function App() {
         subTitleFile: data.subTitleFile || null,
         descriptionFile: data.descriptionFile || null,
       };
-      setSnackRef.current && setSnackRef.current(`${data.title}`, "success");
-      addNotificationRef.current &&
-        addNotificationRef.current(`Downloaded: ${data.title}`, "success");
+      setSnack(`${data.title}`, "success");
+      addNotification(`Downloaded: ${data.title}`, "success");
     };
 
     const onDownloadFailed = (data) => {
-      //console.log("[Socket] download-failed", data);
       removeActiveDownload(data.url);
-      removeFromQueueRef.current && removeFromQueueRef.current(data.url);
-      setSnackRef.current && setSnackRef.current(`${data.title}`, "error");
-      addNotificationRef.current &&
-        addNotificationRef.current(`Download Failed: ${data.title}`, "error");
+      removeFromQueueAndRenumber(data.url);
+      setSnack(`${data.title}`, "error");
+      addNotification(`Download Failed: ${data.title}`, "error");
     };
 
     const onDownloadingPercentUpdate = (data) => {
-      //console.log("Downloading percent update", { url: data.url, percent: data.percentage });
       const url = data.url || "unknown";
       const percent = parseFloat(data.percentage);
 
@@ -743,8 +437,7 @@ export default function App() {
 
       if (percent >= 99) {
         updateActiveDownloads((prev) => ({ ...prev, [url]: 100 }));
-        toggleProgressCallBackRef.current &&
-          toggleProgressCallBackRef.current(true);
+        toggleProgressCallBackRef.current(true);
       } else if (!disableProgressRef.current) {
         updateActiveDownloads((prev) => {
           if (prev[url] >= 100 && prev[url] !== 101) return prev;
@@ -753,28 +446,21 @@ export default function App() {
       }
     };
 
-    const onListingStarted = () =>
-      //data
-      {
-        //console.log("Listing started: ", data);
-        incrementListings();
-        toggleProgressCallBackRef.current &&
-          toggleProgressCallBackRef.current(false);
-      };
+    const onListingStarted = () => {
+      incrementListings();
+      toggleProgressCallBackRef.current(false);
+    };
 
     const onListingPlaylistComplete = (data) => {
-      //console.log("Listing playlist done: ", data);
       decrementListings();
 
       const batch = batchReindexRef.current;
       if (batch.active) {
         const next = bumpBatchReindex("completed");
         const done = next.completed + next.failed;
-        const message =
-          `${data.playlistTitle} re-indexed — ${done}/${next.total}`;
-        setSnackRef.current && setSnackRef.current(message, "success");
-        addNotificationRef.current &&
-          addNotificationRef.current(message, "success");
+        const message = `${data.playlistTitle} re-indexed — ${done}/${next.total}`;
+        setSnack(message, "success");
+        addNotification(message, "success");
 
         const batchTag =
           "reindex-playlist-complete-" + data.url + "-" + nowTag();
@@ -789,8 +475,7 @@ export default function App() {
         return;
       }
 
-      setSnackRef.current &&
-        setSnackRef.current(`${data.playlistTitle}`, "success");
+      setSnack(`${data.playlistTitle}`, "success");
       const tag =
         "listing-playlist-complete-" +
         data.url +
@@ -816,24 +501,19 @@ export default function App() {
         setPlayListIndex(data.seekPlaylistListTo);
       }
 
-      addNotificationRef.current &&
-        addNotificationRef.current(
-          `Successfully imported playlist: ${data.playlistTitle}`,
-          "success",
-        );
+      addNotification(
+        `Successfully imported playlist: ${data.playlistTitle}`,
+        "success",
+      );
     };
 
     const onPlaylistSkipped = (data) => {
       decrementListings();
-      setSnackRef.current && setSnackRef.current(`${data.message}`, "info");
-      addNotificationRef.current &&
-        addNotificationRef.current(`${data.message}`, "info");
+      setSnack(`${data.message}`, "info");
+      addNotification(`${data.message}`, "info");
     };
 
     const onListingPlaylistChunkComplete = (data) => {
-      //console.log("Listing chunk complete: ", data);
-      //console.log("Current playlist url (ref): ", playListUrlRef.current, " data url: ", data.url, " processed chunks: ", data.processedChunks);
-
       const current = playListUrlRef.current;
       const tag =
         "listing-playlist-chunk-complete-" +
@@ -848,7 +528,6 @@ export default function App() {
 
       // If the current url is init (i.e. No playlist is loaded) and the processed chunks is 1, then it is the first chunk so load it
       if (current === "init" && data.processedChunks === 1) {
-        //setIndeterminate(false);
         setPlayListUrl(data.url);
         setPlayListIndex(data.seekPlaylistListTo);
         triggerMobileSlideIfNeeded(data.playlistTitle || "");
@@ -872,9 +551,8 @@ export default function App() {
         const done = next.completed + next.failed;
         const label = data.itemLabel || data.title || data.url;
         const message = `${label} re-indexed — ${done}/${next.total}`;
-        setSnackRef.current && setSnackRef.current(message, "success");
-        addNotificationRef.current &&
-          addNotificationRef.current(message, "success");
+        setSnack(message, "success");
+        addNotification(message, "success");
         return;
       }
 
@@ -903,9 +581,8 @@ export default function App() {
           data.duplicateScope === "none"
             ? `${itemLabel} is already in None at position ${data.seekSubListTo}.`
             : `Duplicate video encountered and navigated to ${data.title}.`;
-        setSnackRef.current && setSnackRef.current(duplicateMessage, "error");
-        addNotificationRef.current &&
-          addNotificationRef.current(duplicateMessage, "error");
+        setSnack(duplicateMessage, "error");
+        addNotification(duplicateMessage, "error");
       } else if (data.addedFromDownloaded) {
         const sourcePosition =
           typeof firstExistingPlaylist?.positionInPlaylist === "number"
@@ -915,16 +592,11 @@ export default function App() {
           sourcePosition !== null && firstExistingPlaylist?.title
             ? `Added ${data.title} to None. Already downloaded in ${firstExistingPlaylist.title} at position ${sourcePosition}.`
             : `Added ${data.title} to None.${playlistNote}`;
-        setSnackRef.current && setSnackRef.current(loadedMessage, "success");
-        addNotificationRef.current &&
-          addNotificationRef.current(loadedMessage, "success");
+        setSnack(loadedMessage, "success");
+        addNotification(loadedMessage, "success");
       } else {
-        setSnackRef.current && setSnackRef.current(`${data.title}`, "success");
-        addNotificationRef.current &&
-          addNotificationRef.current(
-            `Successfully loaded video: ${data.title}`,
-            "success",
-          );
+        setSnack(`${data.title}`, "success");
+        addNotification(`Successfully loaded video: ${data.title}`, "success");
       }
     };
 
@@ -935,17 +607,14 @@ export default function App() {
       if (batch.active) {
         const next = bumpBatchReindex("failed");
         const done = next.completed + next.failed;
-        const message =
-          `Failed re-indexing ${data.url} — ${done}/${next.total}`;
-        setSnackRef.current && setSnackRef.current(message, "error");
-        addNotificationRef.current &&
-          addNotificationRef.current(message, "error");
+        const message = `Failed re-indexing ${data.url} — ${done}/${next.total}`;
+        setSnack(message, "error");
+        addNotification(message, "error");
         return;
       }
 
-      setSnackRef.current && setSnackRef.current(`${data.url}`, "error");
-      addNotificationRef.current &&
-        addNotificationRef.current(`Failed Listing: ${data.url}`, "error");
+      setSnack(`${data.url}`, "error");
+      addNotification(`Failed Listing: ${data.url}`, "error");
     };
 
     const onListingVideoSkippedBecauseDownloaded = (data) => {
@@ -954,8 +623,8 @@ export default function App() {
         ? ` Files: ${data.downloadLocation}.`
         : "";
       const message = `${data.message}${locationNote}`;
-      setSnackRef.current && setSnackRef.current(message, "info");
-      addNotificationRef.current && addNotificationRef.current(message, "info");
+      setSnack(message, "info");
+      addNotification(message, "info");
     };
 
     const onReindexBatchStarted = (data) => {
@@ -968,9 +637,8 @@ export default function App() {
         failed: 0,
       });
       const message = `Batch re-index started — ${queued} playlist(s)`;
-      setSnackRef.current && setSnackRef.current(message, "info");
-      addNotificationRef.current &&
-        addNotificationRef.current(message, "info");
+      setSnack(message, "info");
+      addNotification(message, "info");
     };
 
     // Ignore lifecycle events from a batch other than the one being tracked,
@@ -986,13 +654,13 @@ export default function App() {
       setBatchReindexState(emptyBatchReindex());
 
       const failed = data.failed ?? 0;
-      const message = failed > 0
-        ? `Batch re-index complete — ${data.completed}/${data.total} (${failed} failed)`
-        : `Batch re-index complete — ${data.completed}/${data.total}`;
+      const message =
+        failed > 0
+          ? `Batch re-index complete — ${data.completed}/${data.total} (${failed} failed)`
+          : `Batch re-index complete — ${data.completed}/${data.total}`;
       const severity = failed > 0 ? "warning" : "success";
-      setSnackRef.current && setSnackRef.current(message, severity);
-      addNotificationRef.current &&
-        addNotificationRef.current(message, severity);
+      setSnack(message, severity);
+      addNotification(message, severity);
 
       // One final refresh so the list reflects every playlist the coalescer
       // may have skipped.
@@ -1005,9 +673,8 @@ export default function App() {
       setBatchReindexState(emptyBatchReindex());
 
       const message = `Batch re-index failed: ${data.error}`;
-      setSnackRef.current && setSnackRef.current(message, "error");
-      addNotificationRef.current &&
-        addNotificationRef.current(message, "error");
+      setSnack(message, "error");
+      addNotification(message, "error");
       setReFetchPlaylist("reindex-batch-failed-" + nowTag());
     };
 
@@ -1078,11 +745,13 @@ export default function App() {
         socket.off("reindex-batch-failed", onReindexBatchFailed);
       } catch (_e) {
         // socket might already be closed; ignore
-        //console.warn("Error removing socket listeners", _e);
       }
       flushBatchPlaylistRefetch();
     };
-  }, [socket]); // only recreate if socket reference changes
+    // Every context callback below is stable for the life of a socket, so the
+    // listener set is registered once per connection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket]);
 
   // Derive average progress and indeterminate state from active downloads and listings
   const { calculatedProgress, isActuallyIndeterminate } = useMemo(() => {
@@ -1152,19 +821,11 @@ export default function App() {
         <Suspense fallback={<Loader />}>
           {showSignUp ? (
             <Signup
-              backEnd={backEnd}
-              setSnack={setSnack}
               height={fullHeight}
               toggleSignUpComponent={setShowSignUp}
             />
           ) : (
-            <Login
-              backEnd={backEnd}
-              setToken={setToken}
-              setSnack={setSnack}
-              height={fullHeight}
-              toggleSignUpComponent={setShowSignUp}
-            />
+            <Login height={fullHeight} toggleSignUpComponent={setShowSignUp} />
           )}
         </Suspense>
       </Grid>
@@ -1186,16 +847,13 @@ export default function App() {
   );
 
   // Mobile navigation handlers
-  const handleMobileLoadPlaylist = useCallback(
-    (url, title) => {
-      setPlayListUrl(url);
-      setSubListIndex(0);
-      setActivePlaylistTitle(title || "");
-      setSlideDirection("in");
-      setMobileView("videos");
-    },
-    [setPlayListUrl, setSubListIndex],
-  );
+  const handleMobileLoadPlaylist = useCallback((url, title) => {
+    setPlayListUrl(url);
+    setSubListIndex(0);
+    setActivePlaylistTitle(title || "");
+    setSlideDirection("in");
+    setMobileView("videos");
+  }, []);
 
   const handleMobileBack = useCallback(() => {
     setSlideDirection("out");
@@ -1221,34 +879,26 @@ export default function App() {
         setPlayListUrl(url);
       }
     },
-    [isMobile, handleMobileLoadPlaylist, setPlayListUrl],
+    [isMobile, handleMobileLoadPlaylist],
   );
 
-  // Shared PlayList component props
   const playListProps = {
     playListUrl,
     setPlayListUrl,
-    backEnd,
     playListIndex,
     setPlayListIndex,
     disableButtons: false,
-    setSnack,
     reFetch: reFetchPlaylist,
     setReFetch: setReFetchPlaylist,
     setSubListIndex,
     tableContainerHeight: `${tableContainerHeight}px`,
     rowsPerPageSubList,
     setRowsPerPageSubList,
-    token,
-    setToken,
-    addNotification,
   };
 
-  // Shared SubList component props
   const subListProps = {
     loadedPlayList: playListUrl,
     setPlayListUrl,
-    backEnd,
     subListIndex,
     setSubListIndex,
     downloadedItem: downloadedItem.current,
@@ -1257,13 +907,6 @@ export default function App() {
     tableContainerHeight: `${tableContainerHeight}px`,
     rowsPerPage: rowsPerPageSubList,
     setRowsPerPage: setRowsPerPageSubList,
-    token,
-    setToken,
-    setSnack,
-    addNotification,
-    activeDownloads,
-    queuedItems,
-    queueDownloads,
   };
 
   // renders mobile main with slide navigation
@@ -1276,22 +919,7 @@ export default function App() {
       >
         <Suspense fallback={<Loader />}>
           <PlayList
-            playListUrl={playListProps.playListUrl}
-            setPlayListUrl={playListProps.setPlayListUrl}
-            backEnd={playListProps.backEnd}
-            playListIndex={playListProps.playListIndex}
-            setPlayListIndex={playListProps.setPlayListIndex}
-            disableButtons={playListProps.disableButtons}
-            setSnack={playListProps.setSnack}
-            reFetch={playListProps.reFetch}
-            setReFetch={playListProps.setReFetch}
-            setSubListIndex={playListProps.setSubListIndex}
-            tableContainerHeight={playListProps.tableContainerHeight}
-            rowsPerPageSubList={playListProps.rowsPerPageSubList}
-            setRowsPerPageSubList={playListProps.setRowsPerPageSubList}
-            token={playListProps.token}
-            setToken={playListProps.setToken}
-            addNotification={playListProps.addNotification}
+            {...playListProps}
             isMobile
             onMobileLoad={handleMobileLoadPlaylist}
             mobileAddDialogRef={mobileAddDialogRef}
@@ -1311,27 +939,7 @@ export default function App() {
         >
           <Suspense fallback={<Loader />}>
             <SubList
-              loadedPlayList={subListProps.loadedPlayList}
-              setPlayListUrl={subListProps.setPlayListUrl}
-              backEnd={subListProps.backEnd}
-              subListIndex={subListProps.subListIndex}
-              setSubListIndex={subListProps.setSubListIndex}
-              downloadedItem={subListProps.downloadedItem}
-              reFetch={subListProps.reFetch}
-              setReFetch={subListProps.setReFetch}
-              tableContainerHeight={subListProps.tableContainerHeight}
-              rowsPerPage={subListProps.rowsPerPage}
-              setRowsPerPage={subListProps.setRowsPerPage}
-              token={subListProps.token}
-              setToken={subListProps.setToken}
-              setSnack={subListProps.setSnack}
-              addNotification={subListProps.addNotification}
-              activeDownloads={subListProps.activeDownloads}
-              queuedItems={subListProps.queuedItems}
-              queueDownloads={subListProps.queueDownloads}
-              rollbackDownloadQueueRequest={
-                subListProps.rollbackDownloadQueueRequest
-              }
+              {...subListProps}
               isMobile
               onBack={handleMobileBack}
               onOpenAddDialog={handleMobileOpenAddDialog}
@@ -1350,51 +958,12 @@ export default function App() {
       <Grid container spacing={0}>
         <Grid xl={4} lg={4} md={6} sm={12} xs={12} sx={{ height: fullHeight }}>
           <Suspense fallback={<Loader />}>
-            <PlayList
-              playListUrl={playListProps.playListUrl}
-              setPlayListUrl={playListProps.setPlayListUrl}
-              backEnd={playListProps.backEnd}
-              playListIndex={playListProps.playListIndex}
-              setPlayListIndex={playListProps.setPlayListIndex}
-              disableButtons={playListProps.disableButtons}
-              setSnack={playListProps.setSnack}
-              reFetch={playListProps.reFetch}
-              setReFetch={playListProps.setReFetch}
-              setSubListIndex={playListProps.setSubListIndex}
-              tableContainerHeight={playListProps.tableContainerHeight}
-              rowsPerPageSubList={playListProps.rowsPerPageSubList}
-              setRowsPerPageSubList={playListProps.setRowsPerPageSubList}
-              token={playListProps.token}
-              setToken={playListProps.setToken}
-              addNotification={playListProps.addNotification}
-            />
+            <PlayList {...playListProps} />
           </Suspense>
         </Grid>
         <Grid xl={8} lg={8} md={6} sm={12} xs={12} sx={{ height: fullHeight }}>
           <Suspense fallback={<Loader />}>
-            <SubList
-              loadedPlayList={subListProps.loadedPlayList}
-              setPlayListUrl={subListProps.setPlayListUrl}
-              backEnd={subListProps.backEnd}
-              subListIndex={subListProps.subListIndex}
-              setSubListIndex={subListProps.setSubListIndex}
-              downloadedItem={subListProps.downloadedItem}
-              reFetch={subListProps.reFetch}
-              setReFetch={subListProps.setReFetch}
-              tableContainerHeight={subListProps.tableContainerHeight}
-              rowsPerPage={subListProps.rowsPerPage}
-              setRowsPerPage={subListProps.setRowsPerPage}
-              token={subListProps.token}
-              setToken={subListProps.setToken}
-              setSnack={subListProps.setSnack}
-              addNotification={subListProps.addNotification}
-              activeDownloads={subListProps.activeDownloads}
-              queuedItems={subListProps.queuedItems}
-              queueDownloads={subListProps.queueDownloads}
-              rollbackDownloadQueueRequest={
-                subListProps.rollbackDownloadQueueRequest
-              }
-            />
+            <SubList {...subListProps} />
           </Suspense>
         </Grid>
       </Grid>
@@ -1419,16 +988,7 @@ export default function App() {
             <Navigation
               themeSwitcher={themeSwitcher}
               theme={theme}
-              connectionId={connectionId}
               setPlayListUrl={handleNavSetPlayListUrl}
-              token={token}
-              setToken={setToken}
-              setConnectionId={setConnectionId}
-              notifications={notifications}
-              onDismissNotification={dismissNotification}
-              backEnd={backEnd}
-              setSnack={setSnack}
-              addNotification={addNotification}
             />
             <Box sx={{ width: "100%", height: progressBarHeight + "px" }}>
               <LinearProgress

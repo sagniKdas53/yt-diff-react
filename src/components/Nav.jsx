@@ -36,22 +36,18 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import PropTypes from "prop-types";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { AuthContext } from "../contexts/AuthContext";
+import { SocketContext } from "../contexts/SocketContext";
+import { NotificationContext } from "../contexts/NotificationContext";
+import { useApi } from "../hooks/useApi.js";
 
-export default function Navigation({
-  themeSwitcher,
-  theme,
-  connectionId,
-  setPlayListUrl,
-  token,
-  setToken,
-  setConnectionId,
-  notifications,
-  onDismissNotification,
-  backEnd,
-  setSnack,
-  addNotification,
-}) {
+export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
+  const { token, setToken, logout } = useContext(AuthContext);
+  const { connectionId, setConnectionId } = useContext(SocketContext);
+  const { setSnack, addNotification } = useContext(NotificationContext);
+  const apiFetch = useApi();
+
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const [reindexOpen, setReindexOpen] = useState(false);
@@ -72,9 +68,8 @@ export default function Navigation({
   // };
 
   const confirmLogout = () => {
-    setToken(null);
+    logout();
     setConnectionId("");
-    localStorage.setItem("ytdiff_token", "null");
     setLogoutConfirmOpen(false);
   };
 
@@ -100,13 +95,8 @@ export default function Navigation({
 
       setReindexOpen(false);
 
-      const response = await fetch(backEnd + "/reindexall", {
+      const response = await apiFetch("/reindexall", {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(body),
       });
 
@@ -184,8 +174,6 @@ export default function Navigation({
           <NotificationDrawer
             connectionId={connectionId}
             badgeColor={theme ? "success" : "secondary"}
-            notifications={notifications}
-            onDismissNotification={onDismissNotification}
           />
           <Button
             onClick={() => {
@@ -310,30 +298,13 @@ export default function Navigation({
 Navigation.propTypes = {
   themeSwitcher: PropTypes.func.isRequired,
   theme: PropTypes.bool.isRequired,
-  connectionId: PropTypes.string.isRequired,
   setPlayListUrl: PropTypes.func.isRequired,
-  token: PropTypes.string,
-  setToken: PropTypes.func.isRequired,
-  setConnectionId: PropTypes.func.isRequired,
-  notifications: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      message: PropTypes.string.isRequired,
-      type: PropTypes.string,
-    }),
-  ).isRequired,
-  onDismissNotification: PropTypes.func.isRequired,
-  backEnd: PropTypes.string,
-  setSnack: PropTypes.func,
-  addNotification: PropTypes.func,
 };
 
-function NotificationDrawer({
-  connectionId,
-  badgeColor,
-  notifications,
-  onDismissNotification,
-}) {
+function NotificationDrawer({ connectionId, badgeColor }) {
+  const { notifications, dismissNotification } = useContext(
+    NotificationContext,
+  );
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
 
@@ -420,7 +391,7 @@ function NotificationDrawer({
                   aria-label="clear all"
                   onClick={() =>
                     notifications.forEach((note) =>
-                      onDismissNotification(note.id),
+                      dismissNotification(note.id),
                     )
                   }
                   sx={{ p: 0 }}
@@ -474,7 +445,7 @@ function NotificationDrawer({
                     divider
                     secondaryAction={
                       <IconButton
-                        onClick={() => onDismissNotification(note.id)}
+                        onClick={() => dismissNotification(note.id)}
                         size="small"
                         edge="end"
                         aria-label="delete"
@@ -507,12 +478,4 @@ function NotificationDrawer({
 NotificationDrawer.propTypes = {
   badgeColor: PropTypes.string.isRequired,
   connectionId: PropTypes.string.isRequired,
-  notifications: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      message: PropTypes.string.isRequired,
-      type: PropTypes.string,
-    }),
-  ).isRequired,
-  onDismissNotification: PropTypes.func.isRequired,
 };

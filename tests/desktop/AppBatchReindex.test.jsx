@@ -1,6 +1,9 @@
+import { useContext } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "../../src/components/App.jsx";
+import AppProviders from "../../src/AppProviders.jsx";
+import { NotificationContext } from "../../src/contexts/NotificationContext";
 
 // Hoisted so the socket.io mock factory (which vitest lifts above imports) can
 // close over the same object the tests inspect.
@@ -14,17 +17,21 @@ vi.mock("socket.io-client", () => ({
 }));
 
 // Nav renders the notification log so assertions can read it from the DOM.
+// It reads it from the context the real Nav reads it from.
 vi.mock("../../src/components/Nav.jsx", () => ({
-  default: ({ notifications = [] }) => (
-    <div data-testid="mock-nav">
-      yt-diff
-      <ul data-testid="notifications">
-        {notifications.map((n) => (
-          <li key={n.id}>{n.message}</li>
-        ))}
-      </ul>
-    </div>
-  ),
+  default: () => {
+    const { notifications } = useContext(NotificationContext);
+    return (
+      <div data-testid="mock-nav">
+        yt-diff
+        <ul data-testid="notifications">
+          {notifications.map((n) => (
+            <li key={n.id}>{n.message}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  },
 }));
 // PlayList surfaces the currently loaded playlist so the tests can prove the
 // batch never auto-navigates.
@@ -77,7 +84,11 @@ const renderApp = async () => {
     text: async () => JSON.stringify({ count: 0, rows: [] }),
   });
 
-  render(<App />);
+  render(
+    <AppProviders>
+      <App />
+    </AppProviders>,
+  );
   await waitFor(() => {
     expect(screen.getByText("yt-diff")).toBeInTheDocument();
   });

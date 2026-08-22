@@ -1,11 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import PlayList from "../../src/components/PlayList.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("PlayList Component (Desktop)", () => {
-  const theme = createTheme();
-
   const mockPlaylists = {
     count: 2,
     rows: [
@@ -29,23 +27,24 @@ describe("PlayList Component (Desktop)", () => {
   const defaultProps = {
     setPlayListUrl: vi.fn(),
     playListUrl: "url_1",
-    backEnd: "http://localhost:8888/ytdiff",
-    setSnack: vi.fn(),
     reFetch: "init_refetch",
     setReFetch: vi.fn(),
     setSubListIndex: vi.fn(),
     tableContainerHeight: "500px",
     rowsPerPageSubList: 8,
     setRowsPerPageSubList: vi.fn(),
-    token: "mock_token",
-    setToken: vi.fn(),
     playListIndex: 0,
     setPlayListIndex: vi.fn(),
-    addNotification: vi.fn(),
   };
+
+  let contexts;
+
+  const renderPlayList = (props = defaultProps) =>
+    renderWithContexts(<PlayList {...props} />, { contexts });
 
   beforeEach(() => {
     globalThis.fetch = vi.fn();
+    contexts = makeContexts();
   });
 
   afterEach(() => {
@@ -58,11 +57,7 @@ describe("PlayList Component (Desktop)", () => {
       text: async () => JSON.stringify(mockPlaylists),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayList {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderPlayList();
 
     // Should fetch playlists
     expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -94,11 +89,7 @@ describe("PlayList Component (Desktop)", () => {
       text: async () => JSON.stringify({ status: "success" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayList {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderPlayList();
 
     await waitFor(() => {
       expect(screen.getByText("Awesome Playlist 1")).toBeInTheDocument();
@@ -148,11 +139,7 @@ describe("PlayList Component (Desktop)", () => {
           JSON.stringify({ status: "success", queueDepthBefore }),
       });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <PlayList {...props} />
-      </ThemeProvider>
-    );
+    renderPlayList(props);
 
     await waitFor(() => {
       expect(screen.getByText("Awesome Playlist 1")).toBeInTheDocument();
@@ -172,30 +159,27 @@ describe("PlayList Component (Desktop)", () => {
 
   test("warns about the listing backlog when items are already queued ahead", async () => {
     // Mirrors "submitted 10, 3 finished, submit more": 7 are still pending.
-    const props = { ...defaultProps, setSnack: vi.fn() };
-    await submitWithQueueDepth(7, props);
+    await submitWithQueueDepth(7, defaultProps);
 
-    expect(props.setSnack).toHaveBeenCalledWith(
+    expect(contexts.notification.setSnack).toHaveBeenCalledWith(
       "Added to listing queue — 7 ahead",
       "info"
     );
   });
 
   test("stays quiet when the listing queue is shallow", async () => {
-    const props = { ...defaultProps, setSnack: vi.fn() };
-    await submitWithQueueDepth(3, props);
+    await submitWithQueueDepth(3, defaultProps);
 
-    expect(props.setSnack).not.toHaveBeenCalledWith(
+    expect(contexts.notification.setSnack).not.toHaveBeenCalledWith(
       expect.stringContaining("ahead"),
       expect.anything()
     );
   });
 
   test("stays quiet when the backend reports no backlog field", async () => {
-    const props = { ...defaultProps, setSnack: vi.fn() };
-    await submitWithQueueDepth(undefined, props);
+    await submitWithQueueDepth(undefined, defaultProps);
 
-    expect(props.setSnack).not.toHaveBeenCalledWith(
+    expect(contexts.notification.setSnack).not.toHaveBeenCalledWith(
       expect.stringContaining("ahead"),
       expect.anything()
     );

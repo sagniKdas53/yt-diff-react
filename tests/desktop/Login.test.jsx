@@ -1,22 +1,26 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import Login from "../../src/components/Login.jsx";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Login Component (Desktop)", () => {
-  const theme = createTheme();
   const defaultProps = {
-    backEnd: "http://localhost:8888/ytdiff",
-    setToken: vi.fn(),
-    setSnack: vi.fn(),
     height: "500px",
     toggleSignUpComponent: vi.fn(),
   };
 
+  let contexts;
+
+  // Logging in happens with no token, which is also what tells apiFetch that a
+  // 401 is a bad password rather than an expired session.
+  const renderLogin = () =>
+    renderWithContexts(<Login {...defaultProps} />, { contexts });
+
   beforeEach(() => {
     globalThis.fetch = vi.fn();
     localStorage.clear();
+    contexts = makeContexts({ auth: { token: null } });
   });
 
   afterEach(() => {
@@ -29,11 +33,7 @@ describe("Login Component (Desktop)", () => {
       json: async () => ({ registrationAllowed: true }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Login {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderLogin();
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "http://localhost:8888/ytdiff/isregallowed",
@@ -50,11 +50,7 @@ describe("Login Component (Desktop)", () => {
       json: async () => ({ registrationAllowed: false }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Login {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderLogin();
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Sign Up" })).not.toBeInTheDocument();
@@ -68,22 +64,18 @@ describe("Login Component (Desktop)", () => {
       json: async () => ({ registrationAllowed: true }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Login {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderLogin();
 
     const loginButton = screen.getByRole("button", { name: "Login" });
     fireEvent.click(loginButton);
 
-    expect(defaultProps.setSnack).toHaveBeenCalledWith(
+    expect(contexts.notification.setSnack).toHaveBeenCalledWith(
       "Username or password is empty",
       "error"
     );
   });
 
-  test("submits login and saves token without rememberMe by default", async () => {
+  test("submits login and does not persist the token without rememberMe", async () => {
     // 1st fetch: reg check on mount
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
@@ -96,11 +88,7 @@ describe("Login Component (Desktop)", () => {
       json: async () => ({ token: "mock_token" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Login {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderLogin();
 
     const usernameInput = screen.getByPlaceholderText("Username");
     const passwordInput = screen.getByPlaceholderText("Password");
@@ -119,12 +107,13 @@ describe("Login Component (Desktop)", () => {
     );
 
     await waitFor(() => {
-      expect(defaultProps.setToken).toHaveBeenCalledWith("mock_token");
-      expect(localStorage.getItem("ytdiff_token")).toBeNull();
+      expect(contexts.auth.setToken).toHaveBeenCalledWith("mock_token", {
+        persist: false,
+      });
     });
   });
 
-  test("saves token in localstorage if rememberMe is checked", async () => {
+  test("asks for the token to be persisted if rememberMe is checked", async () => {
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ registrationAllowed: true }),
@@ -135,11 +124,7 @@ describe("Login Component (Desktop)", () => {
       json: async () => ({ token: "mock_token_remembered" }),
     });
 
-    render(
-      <ThemeProvider theme={theme}>
-        <Login {...defaultProps} />
-      </ThemeProvider>
-    );
+    renderLogin();
 
     const usernameInput = screen.getByPlaceholderText("Username");
     const passwordInput = screen.getByPlaceholderText("Password");
@@ -154,8 +139,10 @@ describe("Login Component (Desktop)", () => {
     fireEvent.click(loginButton);
 
     await waitFor(() => {
-      expect(defaultProps.setToken).toHaveBeenCalledWith("mock_token_remembered");
-      expect(localStorage.getItem("ytdiff_token")).toBe("mock_token_remembered");
+      expect(contexts.auth.setToken).toHaveBeenCalledWith(
+        "mock_token_remembered",
+        { persist: true },
+      );
     });
   });
 });
