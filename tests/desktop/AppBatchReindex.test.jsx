@@ -9,7 +9,14 @@ import { mockResponse } from "../contextHarness.jsx";
 // Hoisted so the socket.io mock factory (which vitest lifts above imports) can
 // close over the same object the tests inspect.
 const { mockSocket } = vi.hoisted(() => ({
-  mockSocket: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+  // `disconnect` is part of the surface now: the provider closes the
+  // connection on token change and on unmount.
+  mockSocket: {
+    on: vi.fn(),
+    off: vi.fn(),
+    emit: vi.fn(),
+    disconnect: vi.fn(),
+  },
 }));
 
 vi.mock("socket.io-client", () => ({

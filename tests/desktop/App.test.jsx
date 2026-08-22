@@ -11,6 +11,8 @@ vi.mock("socket.io-client", () => {
     on: vi.fn(),
     off: vi.fn(),
     emit: vi.fn(),
+    // The provider tears the connection down on token change and unmount.
+    disconnect: vi.fn(),
   };
   return {
     default: vi.fn(() => mockSocket),
