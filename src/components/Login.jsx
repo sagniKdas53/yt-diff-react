@@ -13,12 +13,13 @@ import PropTypes from "prop-types";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { NotificationContext } from "../contexts/NotificationContext";
-import { useApi } from "../hooks/useApi.js";
+import { ApiError } from "../api/client.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 
 export default function Login({ height, toggleSignUpComponent }) {
   const { setToken } = useContext(AuthContext);
   const { setSnack } = useContext(NotificationContext);
-  const apiFetch = useApi();
+  const api = useApiClient();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -50,30 +51,25 @@ export default function Login({ height, toggleSignUpComponent }) {
     }
     setLoading(true);
     try {
-      const response = await apiFetch("/login", {
-        method: "post",
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      });
+      const data = await api.post("/login", { username, password });
 
-      // Handle response (e.g., store token)
-      const data = await response.json();
-      // Propagate it to the main app
-      if (response.ok) {
-        // AuthContext owns persistence; "remember me" decides whether the
-        // token outlives the tab. `expiresAt` is the server's own `exp` claim
-        // — the renewal loop schedules off it rather than decoding the JWT.
-        setToken(data.token, {
-          persist: rememberMe,
-          expiresAt: data.expiresAt ?? null,
-        });
-      } else {
-        setSnack(`${data.message}`, "error");
-      }
-    } catch (_error) {
-      setSnack("Login failed. Please check your credentials.", "error");
+      // AuthContext owns persistence; "remember me" decides whether the
+      // token outlives the tab. `expiresAt` is the server's own `exp` claim
+      // — the renewal loop schedules off it rather than decoding the JWT.
+      setToken(data.token, {
+        persist: rememberMe,
+        expiresAt: data.expiresAt ?? null,
+      });
+    } catch (error) {
+      // A refusal carries the server's own message -- and a 401 here is a
+      // wrong password, not a dead session, so it is reported like any other.
+      // Anything that is not an ApiError never reached the server.
+      setSnack(
+        error instanceof ApiError
+          ? error.message
+          : "Login failed. Please check your credentials.",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -81,21 +77,15 @@ export default function Login({ height, toggleSignUpComponent }) {
 
   const regEnableCheck = async () => {
     try {
-      const response = await apiFetch("/isregallowed", {
-        method: "post",
-        body: JSON.stringify({
-          sendStats: false,
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setIsSignUpEnabled(data.registrationAllowed);
-      } else {
-        setSnack(`${data.message}`, "error");
-      }
-    } catch (_error) {
-      setSnack("Error in checking signup availability", "error");
+      const data = await api.post("/isregallowed", { sendStats: false });
+      setIsSignUpEnabled(data.registrationAllowed);
+    } catch (error) {
+      setSnack(
+        error instanceof ApiError
+          ? error.message
+          : "Error in checking signup availability",
+        "error",
+      );
     }
   };
 

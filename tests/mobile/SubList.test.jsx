@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import SubList from "../../src/components/SubList.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("SubList Component (Mobile)", () => {
   const mockSubListResponse = {
@@ -59,10 +59,7 @@ describe("SubList Component (Mobile)", () => {
   });
 
   test("triggers onBack callback when back button is clicked on mobile", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(mockSubListResponse),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(mockSubListResponse));
 
     renderSubList();
 

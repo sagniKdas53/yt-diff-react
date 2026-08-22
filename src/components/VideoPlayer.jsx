@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 
-import { useApi } from "../hooks/useApi.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 import { assetBase } from "../config.js";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -128,7 +128,7 @@ export default function VideoPlayer({
   loadedPlayList,
   rowsPerPage = 8,
 }) {
-  const apiFetch = useApi();
+  const api = useApiClient();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [videoUrl, setVideoUrl] = useState(null);
@@ -183,7 +183,6 @@ export default function VideoPlayer({
   const abortControllerRef = useRef(null);
   const isMountedRef = useRef(false);
   const playerSessionRef = useRef(0);
-
 
   const clearRefreshTimer = useCallback(() => {
     if (timerRef.current) {
@@ -297,18 +296,14 @@ export default function VideoPlayer({
           videoRef.current.pause();
         }
       }
-      const response = await apiFetch("/getfile", {
-        method: "post",
-        signal: controller.signal,
-        body: JSON.stringify({ saveDirectory, fileName }),
-      });
+      // A refusal throws with the server's own message, which is what the
+      // player surfaces to the viewer.
+      const data = await api.post(
+        "/getfile",
+        { saveDirectory, fileName },
+        { signal: controller.signal },
+      );
 
-      if (!response.ok) {
-        const text = await response.json().catch(() => response.statusText);
-        throw new Error(text?.message || response.statusText);
-      }
-
-      const data = await response.json();
       if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
         return;
       }
@@ -367,19 +362,11 @@ export default function VideoPlayer({
       if (!subtitleFileName) return;
 
       try {
-        const response = await apiFetch("/getfile", {
-          method: "post",
-          body: JSON.stringify({
-            saveDirectory: subtitleSaveDirectory,
-            fileName: subtitleFileName,
-          }),
+        const data = await api.post("/getfile", {
+          saveDirectory: subtitleSaveDirectory,
+          fileName: subtitleFileName,
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to get subtitle URL");
-        }
-
-        const data = await response.json();
         if (
           !isMountedRef.current ||
           playerSessionRef.current !== sessionId ||
@@ -415,7 +402,7 @@ export default function VideoPlayer({
         }
       }
     },
-    [apiFetch, clearSubtitleObjectUrl],
+    [api, clearSubtitleObjectUrl],
   );
 
   const scheduleRefresh = useCallback(
@@ -440,22 +427,18 @@ export default function VideoPlayer({
           return;
         }
         try {
-          const res = await apiFetch("/refreshfile", {
-            method: "POST",
-            body: JSON.stringify({ fileId: scheduledFileId }),
+          const data = await api.post("/refreshfile", {
+            fileId: scheduledFileId,
           });
 
-          if (res.ok) {
-            const data = await res.json();
-            if (
-              data.status === "success" &&
-              isMountedRef.current &&
-              playerSessionRef.current === scheduledSessionId &&
-              fileIdRef.current === scheduledFileId
-            ) {
-              expiryRef.current = data.expiry;
-              scheduleRefresh(scheduledFileId, scheduledSessionId, data.expiry);
-            }
+          if (
+            data.status === "success" &&
+            isMountedRef.current &&
+            playerSessionRef.current === scheduledSessionId &&
+            fileIdRef.current === scheduledFileId
+          ) {
+            expiryRef.current = data.expiry;
+            scheduleRefresh(scheduledFileId, scheduledSessionId, data.expiry);
           }
         } catch (err) {
           if (
@@ -467,7 +450,7 @@ export default function VideoPlayer({
         }
       }, refreshTime);
     },
-    [apiFetch, clearRefreshTimer],
+    [api, clearRefreshTimer],
   );
 
   // Keep refs in sync so setTimeout callbacks always read latest values
@@ -1190,7 +1173,9 @@ export default function VideoPlayer({
               size="small"
               onClick={handleVolumeButtonClick}
               sx={{ color: "white" }}
-              aria-label={isMuted || volume === 0 ? "unmute volume" : "mute volume"}
+              aria-label={
+                isMuted || volume === 0 ? "unmute volume" : "mute volume"
+              }
             >
               {isMuted || volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />}
             </IconButton>
@@ -1224,7 +1209,9 @@ export default function VideoPlayer({
                 size="small"
                 onClick={toggleSubtitles}
                 disabled={!subtitleUrl}
-                aria-label={subtitlesEnabled ? "disable subtitles" : "enable subtitles"}
+                aria-label={
+                  subtitlesEnabled ? "disable subtitles" : "enable subtitles"
+                }
                 sx={{
                   color: !subtitleUrl
                     ? "rgba(255,255,255,0.2)"

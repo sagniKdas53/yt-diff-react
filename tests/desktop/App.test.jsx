@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import App from "../../src/components/App.jsx";
 import AppProviders from "../../src/AppProviders.jsx";
+import { mockResponse } from "../contextHarness.jsx";
 
 // Mock socket.io-client
 vi.mock("socket.io-client", () => {
@@ -45,10 +46,9 @@ describe("App Component (Desktop)", () => {
   });
 
   test("renders Login screen if no token is stored", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: true }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse({ registrationAllowed: true }),
+    );
 
     render(
       <AppProviders>
@@ -67,14 +67,10 @@ describe("App Component (Desktop)", () => {
     
     // Mount fetch checks
     globalThis.fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ queue: [], generation: "gen_1" }), // syncQueueFromBackend
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ count: 0, rows: [] }), // fetchPlaylists in PlayList.jsx
-      });
+      // syncQueueFromBackend
+      .mockResolvedValueOnce(mockResponse({ queue: [], generation: "gen_1" }))
+      // fetchPlaylists in PlayList.jsx
+      .mockResolvedValueOnce(mockResponse({ count: 0, rows: [] }));
 
     render(
       <AppProviders>

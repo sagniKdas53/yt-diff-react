@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import Signup from "../../src/components/Signup.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("Signup Component (Desktop)", () => {
   const defaultProps = {
@@ -63,10 +63,7 @@ describe("Signup Component (Desktop)", () => {
   });
 
   test("submits form and toggles component on successful signup", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success" }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success" })));
 
     renderSignup();
 
@@ -96,10 +93,7 @@ describe("Signup Component (Desktop)", () => {
   });
 
   test("displays server error message on failed registration", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ message: "Username already exists" }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ message: "Username already exists" }), { ok: false }));
 
     renderSignup();
 

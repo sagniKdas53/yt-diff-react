@@ -8,7 +8,7 @@ import {
   useContext,
 } from "react";
 import PropTypes from "prop-types";
-import { useApi } from "../hooks/useApi.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 import { AuthContext } from "./AuthContext";
 import { NotificationContext } from "./NotificationContext";
 
@@ -40,7 +40,7 @@ export const DownloadContext = createContext({
 export const DownloadProvider = ({ children }) => {
   const [activeDownloads, setActiveDownloads] = useState({});
   const [queuedItems, setQueuedItems] = useState({});
-  const apiFetch = useApi();
+  const api = useApiClient();
   const { token } = useContext(AuthContext);
   const { setSnack, notify } = useContext(NotificationContext);
 
@@ -175,14 +175,7 @@ export const DownloadProvider = ({ children }) => {
   const syncQueueFromBackend = useCallback(async () => {
     if (!token) return null;
     try {
-      const response = await apiFetch("/queuestatus", {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) return null;
-
-      const result = await response.json();
+      const result = await api.post("/queuestatus", {});
       const newActiveDownloads = {};
       const newQueuedItems = {};
 
@@ -206,7 +199,7 @@ export const DownloadProvider = ({ children }) => {
       // Nothing to recover: the next sync or socket frame will correct us.
       return null;
     }
-  }, [apiFetch, token]);
+  }, [api, token]);
 
   // A backgrounded tab misses socket frames, so re-read the snapshot whenever
   // it comes back. Held in a ref so the listener is registered once.
@@ -244,53 +237,31 @@ export const DownloadProvider = ({ children }) => {
       addToDownloadQueue(entries, requestId);
 
       try {
-        const response = await apiFetch("/download", {
-          method: "post",
-          body: JSON.stringify({
-            urlList: urls,
-            playListUrl: entries[0].playlistUrl,
-          }),
+        const result = await api.post("/download", {
+          urlList: urls,
+          playListUrl: entries[0].playlistUrl,
         });
 
-        if (response.ok) {
-          try {
-            const result = await response.json();
-            const acceptedUrls = (result.items || []).map((item) => item.url);
-            rollbackDownloadQueueRequest(requestId, acceptedUrls);
-            setSnack("Initiated download…", "success");
-            return acceptedUrls;
-          } catch (_error) {
-            rollbackDownloadQueueRequest(requestId, []);
-            setSnack("Could not confirm the download queue.", "error");
-            return [];
-          }
-        }
-
-        rollbackDownloadQueueRequest(requestId, []);
-
-        // 401 is already reported and logged out by apiFetch.
-        if (response.status === 429) {
-          notify("Too many downloads requested. Please wait.", "error");
-        } else if (response.status !== 401) {
-          notify(
-            `Failed to queue downloads: ${response.status} ${response.statusText}`,
-            "error",
-          );
-        }
+        const acceptedUrls = (result.items || []).map((item) => item.url);
+        rollbackDownloadQueueRequest(requestId, acceptedUrls);
+        setSnack("Initiated download…", "success");
+        return acceptedUrls;
       } catch (error) {
+        // The optimistic queue entries have to come back off whatever went
+        // wrong -- a refusal, a dead session, or the network.
         rollbackDownloadQueueRequest(requestId, []);
-        notify(`Failed to queue downloads: ${error.message}`, "error");
+
+        if (error.status === 429) {
+          notify("Too many downloads requested. Please wait.", "error");
+        } else if (!error.sessionExpired) {
+          // A dead session has already been reported once, by apiFetch.
+          notify(`Failed to queue downloads: ${error.message}`, "error");
+        }
       }
 
       return [];
     },
-    [
-      apiFetch,
-      addToDownloadQueue,
-      rollbackDownloadQueueRequest,
-      setSnack,
-      notify,
-    ],
+    [api, addToDownloadQueue, rollbackDownloadQueueRequest, setSnack, notify],
   );
 
   const value = useMemo(

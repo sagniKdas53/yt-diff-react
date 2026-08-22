@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import App from "../../src/components/App.jsx";
 import AppProviders from "../../src/AppProviders.jsx";
+import { mockResponse } from "../contextHarness.jsx";
 
 // Mock socket.io-client
 vi.mock("socket.io-client", () => {
@@ -45,10 +46,7 @@ describe("App Component (Mobile)", () => {
   });
 
   test("renders Login page on mobile by default when not authenticated", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ registrationAllowed: true }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ registrationAllowed: true })));
 
     render(
       <AppProviders>

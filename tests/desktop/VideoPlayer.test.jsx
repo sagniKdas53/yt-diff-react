@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("VideoPlayer Component (Desktop)", () => {
   const defaultProps = {
@@ -35,23 +35,14 @@ describe("VideoPlayer Component (Desktop)", () => {
       const body = options?.body ? JSON.parse(options.body) : {};
       if (options?.method?.toLowerCase() === "post") {
         if (body.fileName === "video.mp4") {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
-          });
+          return Promise.resolve(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
         }
         if (body.fileName === "video.vtt") {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({ status: "success", signedUrlId: "subtitle_url_123" }),
-          });
+          return Promise.resolve(mockResponse(({ status: "success", signedUrlId: "subtitle_url_123" })));
         }
       } else {
         if (url.includes("subtitle_url_123")) {
-          return Promise.resolve({
-            ok: true,
-            text: async () => "WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\nHello World",
-          });
+          return Promise.resolve(mockResponse("WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\nHello World"));
         }
       }
       return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
@@ -87,11 +78,7 @@ describe("VideoPlayer Component (Desktop)", () => {
   });
 
   test("displays error message if fetching signed URL fails", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      statusText: "Forbidden",
-      json: async () => ({ message: "Unauthorized access" }),
-    });
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(({ message: "Unauthorized access" }), { ok: false, statusText: "Forbidden" }));
 
     renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
       contexts,
@@ -103,10 +90,7 @@ describe("VideoPlayer Component (Desktop)", () => {
   });
 
   test("toggles play/pause states on user trigger", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 
     renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
       contexts,
@@ -124,10 +108,7 @@ describe("VideoPlayer Component (Desktop)", () => {
   });
 
   test("toggles mute setting and saves in localStorage", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 }),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 
     renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
       contexts,

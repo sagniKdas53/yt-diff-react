@@ -23,6 +23,7 @@ import {
   useState,
 } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
+import { useLatest } from "../hooks/useLatest.js";
 import { AuthContext } from "../contexts/AuthContext";
 import { SocketContext } from "../contexts/SocketContext";
 import { NotificationContext } from "../contexts/NotificationContext";
@@ -248,21 +249,17 @@ export default function App() {
   );
 
   // --- Refs to avoid stale closures ---
+  // The socket effect below registers its handlers once and must not
+  // re-subscribe, so anything they read has to reach them through a box rather
+  // than through the closure they were registered in. `useLatest` is that box;
+  // see its own note for why it writes during render.
+  //
   // Only for values that actually change between renders; the callbacks the
   // providers hand out are already stable.
-  // Synced in render phase instead of useEffect to avoid delay
-  const playListUrlRef = useRef(playListUrl);
-  playListUrlRef.current = playListUrl;
-
-  const disableProgressRef = useRef(disableProgress);
-  disableProgressRef.current = disableProgress;
-
-  const toggleProgressCallBackRef = useRef(toggleProgressCallBack);
-  toggleProgressCallBackRef.current = toggleProgressCallBack;
-
-  // Mobile ref — so socket handlers can check mobile state without stale closures
-  const isMobileRef = useRef(isMobile);
-  isMobileRef.current = isMobile;
+  const playListUrlRef = useLatest(playListUrl);
+  const disableProgressRef = useLatest(disableProgress);
+  const toggleProgressCallBackRef = useLatest(toggleProgressCallBack);
+  const isMobileRef = useLatest(isMobile);
 
   const connectionGenerationRef = useRef(null);
 

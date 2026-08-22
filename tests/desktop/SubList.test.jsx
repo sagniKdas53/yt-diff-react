@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import SubList from "../../src/components/SubList.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("SubList Component (Desktop)", () => {
   const mockSubListResponse = {
@@ -72,10 +72,7 @@ describe("SubList Component (Desktop)", () => {
   });
 
   test("fetches and renders sublist items on mount", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(mockSubListResponse),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(mockSubListResponse));
 
     renderSubList();
 
@@ -100,10 +97,7 @@ describe("SubList Component (Desktop)", () => {
   });
 
   test("allows selecting items and triggers bulk queue downloads", async () => {
-    globalThis.fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(mockSubListResponse),
-    });
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(mockSubListResponse));
 
     renderSubList();
 

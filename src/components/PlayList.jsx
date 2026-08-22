@@ -32,10 +32,18 @@ import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
-import { memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { NotificationContext } from "../contexts/NotificationContext";
-import { useApi } from "../hooks/useApi.js";
+import { ApiError } from "../api/client.js";
+import { useApiClient } from "../hooks/useApiClient.js";
 import TablePaginationActions from "./Pagination.jsx";
 import PlayListItemRow from "./PlayListItemRow.jsx";
 
@@ -67,7 +75,7 @@ function PlayList({
   mobileAddDialogRef,
 }) {
   const { setSnack, addNotification } = useContext(NotificationContext);
-  const apiFetch = useApi();
+  const api = useApiClient();
 
   const [query, updateQuery] = useState("");
   // "1" == ID [Default], "3" == lastUpdatedByScheduler
@@ -184,41 +192,32 @@ function PlayList({
   };
 
   const postUrlList = async (urlList) => {
-    //console.log("Posting urlList: " + urlList);
-    const response = await apiFetch("/list", {
-      method: "post",
-      body: JSON.stringify({
+    try {
+      const json_data = await api.post("/list", {
         urlList: urlList,
         // This is to make sure that we can get the requested amount + 1 so that we can paginate properly
         chunkSize: rowsPerPageSubList + 1,
         monitoringType: watch,
         sleep: true,
-      }),
-    });
-    if (response.ok) {
-      const data = await response.text();
-      const json_data = JSON.parse(data);
-      //console.log("postUrl response: ", json_data);
+      });
+
       // queueDepthBefore counts what was already pending when this submission
       // landed — the user's own items are not included. Worth mentioning only
       // when there is a real backlog (a batch re-index, typically); submitting
       // a handful into an empty queue needs no explanation.
       const queuedAhead = json_data.queueDepthBefore ?? 0;
       if (queuedAhead > QUEUE_DEPTH_NOTICE_THRESHOLD) {
-        setSnack(
-          `Added to listing queue — ${queuedAhead} ahead`,
-          "info",
-        );
+        setSnack(`Added to listing queue — ${queuedAhead} ahead`, "info");
       }
       return json_data;
-    } else {
-      // 401 is already reported and logged out by apiFetch.
-      if (response.status === 429) {
+    } catch (error) {
+      if (error.status === 429) {
         setSnack(
           "Too many requests. Please wait before queuing more.",
           "error",
         );
       }
+      // A dead session has already been reported once, by apiFetch.
       return {};
     }
   };
@@ -240,19 +239,14 @@ function PlayList({
     cleanUp,
   ) => {
     setSnack("Deleting playlist…", "info");
-    const response = await apiFetch("/delplay", {
-      method: "post",
-      body: JSON.stringify({
+    try {
+      const json_data = await api.post("/delplay", {
         playListUrl: playListUrlToDelete,
         deleteAllVideosInPlaylist: deleteAllVideosInPlaylist,
         deletePlaylist: deletePlaylist,
         cleanUp: cleanUp,
-      }),
-    });
-    if (response.ok) {
-      const data = await response.text();
-      const json_data = JSON.parse(data);
-      //console.log("deletePlaylist response: ", json_data);
+      });
+
       setSnack("Playlist deleted successfully.", "success");
       addNotification(
         `Deleted ${title ? title : playListUrlToDelete}. Details: ${json_data.message}`,
@@ -273,8 +267,7 @@ function PlayList({
       if (playListUrlToDelete === playListUrl) {
         setPlayListUrl("init");
       }
-    }
-    if (!response.ok) {
+    } catch (_error) {
       setSnack("Failed to delete playlist.", "error");
       addNotification(
         `Failed to delete playlist: ${title ? title : playListUrlToDelete}`,
@@ -288,47 +281,31 @@ function PlayList({
 
     const fetchPlaylists = async () => {
       try {
-        const response = await apiFetch("/getplay", {
-          method: "post",
-          body: JSON.stringify({
-            start: start,
-            stop: stop,
-            sort: sort,
-            order: order,
-            query: query,
-          }),
+        const json_data = await api.post("/getplay", {
+          start: start,
+          stop: stop,
+          sort: sort,
+          order: order,
+          query: query,
         });
 
-        if (response.ok) {
-          const data = await response.text();
-          if (active) {
-            const json_data = JSON.parse(data);
-            setItems(json_data["rows"]);
-            setTotalItems(json_data["count"]);
-          }
-        } else {
-          // 401 is already reported and logged out by apiFetch.
-          if (active) {
-            setItems([
-              {
-                playlistUrl: "",
-                title: `Error in fetching playlists: ${response.status} ${response.statusText}`,
-                sortOrder: 0,
-                monitoringType: "N/A",
-                saveDirectory: "",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            ]);
-            setTotalItems(1);
-          }
+        if (active) {
+          setItems(json_data["rows"]);
+          setTotalItems(json_data["count"]);
         }
       } catch (error) {
         if (active) {
+          // The list itself is the only place there is to say this, so the
+          // failure is rendered as the one row the table can show. A refusal
+          // carries the server's message; anything else never reached it.
+          const title =
+            error instanceof ApiError
+              ? `Error in fetching playlists: ${error.status} ${error.message}`
+              : `Network error: ${error.message}`;
           setItems([
             {
               playlistUrl: "",
-              title: `Network error: ${error.message}`,
+              title,
               sortOrder: 0,
               monitoringType: "N/A",
               saveDirectory: "",
@@ -346,7 +323,7 @@ function PlayList({
     return () => {
       active = false;
     };
-  }, [apiFetch, start, stop, sort, order, query, reFetch]);
+  }, [api, start, stop, sort, order, query, reFetch]);
 
   const handleChangePage = useCallback(
     (_event, newPage) => {
@@ -408,31 +385,30 @@ function PlayList({
   }, [playListIndex, handleChangePage, rowsPerPage, totalItems]);
 
   const changeWatch = async (event, url) => {
-    // add some error handling here for gods sake
-    const response = await apiFetch("/watch", {
-      method: "post",
-      body: JSON.stringify({
+    try {
+      const json_data = await api.post("/watch", {
         url: url,
         watch: event.target.value,
-      }),
-    });
-    if (response.ok) {
-      const data = await response.text();
-      const json_data = JSON.parse(data);
-      if (json_data["status"] === "success") {
-        const updatedItems = [...items];
-        const itemIndex = updatedItems.findIndex(
-          (item) => item.playlistUrl === url,
-        );
-        const updatedItem = {
-          ...updatedItems[itemIndex],
-          monitoringType: event.target.value,
-        };
-        updatedItems[itemIndex] = updatedItem;
-        setItems(updatedItems);
+      });
+      if (json_data["status"] !== "success") return;
+
+      const updatedItems = [...items];
+      const itemIndex = updatedItems.findIndex(
+        (item) => item.playlistUrl === url,
+      );
+      const updatedItem = {
+        ...updatedItems[itemIndex],
+        monitoringType: event.target.value,
+      };
+      updatedItems[itemIndex] = updatedItem;
+      setItems(updatedItems);
+    } catch (error) {
+      // The select keeps showing the old value, which is the truth. A dead
+      // session has already been reported once, by apiFetch.
+      if (!error.sessionExpired) {
+        setSnack(`Failed to change monitoring type: ${error.message}`, "error");
       }
     }
-    // 401 is already reported and logged out by apiFetch.
   };
 
   const lastUpdateCalc = (lastStamp) => {
