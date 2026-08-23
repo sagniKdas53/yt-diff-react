@@ -24,6 +24,7 @@ import {
 } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { useLatest } from "../hooks/useLatest.js";
+import { useSocketEvents } from "../hooks/useSocketEvents.js";
 import { AuthContext } from "../contexts/AuthContext";
 import { SocketContext } from "../contexts/SocketContext";
 import { NotificationContext } from "../contexts/NotificationContext";
@@ -35,18 +36,6 @@ const PlayList = lazy(() => import("./PlayList.jsx"));
 const SubList = lazy(() => import("./SubList.jsx"));
 const Login = lazy(() => import("./Login.jsx"));
 const Signup = lazy(() => import("./Signup.jsx"));
-
-// How long per-playlist completions are collapsed before one playlist-list
-// re-fetch is issued during a batch re-index.
-const BATCH_REFETCH_COALESCE_MS = 3000;
-
-const emptyBatchReindex = () => ({
-  active: false,
-  batchId: null,
-  total: 0,
-  completed: 0,
-  failed: 0,
-});
 
 const themeObj = (theme) =>
   createTheme({
@@ -209,7 +198,6 @@ export default function App() {
   const [disableProgress, toggleProgress] = useState(false);
 
   // progress bar and re-fetch state
-  const [activeListingCount, setActiveListingCount] = useState(0);
   // so the basic idea of reFetch is to use the socket to trigger a re-fetch of the playlist
   // and sub-list when an event needs to let the user know that something has changed
   // this is a bit of a hack, but it works, without it the app would need to poll
@@ -218,11 +206,6 @@ export default function App() {
   const [reFetchSubList, setReFetchSubList] = useState(Date.now().toString());
   // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
   const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
-
-  // Batch re-index progress. A batch fans out over every playlist, so the
-  // per-playlist listing events it emits must not drive the same navigation /
-  // re-fetch side effects a single interactive listing does.
-  const [batchReindex, setBatchReindex] = useState(emptyBatchReindex);
 
   // Mobile slide navigation state
   const [mobileView, setMobileView] = useState("playlists"); // "playlists" | "videos"
@@ -235,13 +218,6 @@ export default function App() {
   const isMobileViewport = useMediaQuery(appliedTheme.breakpoints.down("md"));
   const isTouchDevice = useMediaQuery("(hover: none) and (pointer: coarse)");
   const isMobile = isMobileViewport || isTouchDevice;
-
-  const downloadedItem = useRef({
-    url: null,
-    title: null,
-    fileName: null,
-    saveDirectory: null,
-  });
 
   // 53px table top, 52 px table pagination, 48 px app bar
   // Table top is included in the table height so no need to subtract it
@@ -270,7 +246,7 @@ export default function App() {
   );
 
   // --- Refs to avoid stale closures ---
-  // The socket effect below registers its handlers once and must not
+  // The socket handlers register once per connection and must not
   // re-subscribe, so anything they read has to reach them through a box rather
   // than through the closure they were registered in. `useLatest` is that box;
   // see its own note for why it writes during render.
@@ -282,66 +258,40 @@ export default function App() {
   const toggleProgressCallBackRef = useLatest(toggleProgressCallBack);
   const isMobileRef = useLatest(isMobile);
 
-  const connectionGenerationRef = useRef(null);
-
-  // Mirrors batchReindex so socket handlers read a value that is current within
-  // the same tick, even when React batches the state updates.
-  const batchReindexRef = useRef(emptyBatchReindex());
-  const setBatchReindexState = (next) => {
-    batchReindexRef.current = next;
-    setBatchReindex(next);
-  };
-  /** Increments "completed" or "failed"; no-op (returns null) outside a batch. */
-  const bumpBatchReindex = (field) => {
-    const prev = batchReindexRef.current;
-    if (!prev.active) return null;
-    const next = { ...prev, [field]: prev[field] + 1 };
-    batchReindexRef.current = next;
-    setBatchReindex(next);
-    return next;
+  // Helper for socket handlers to trigger mobile slide-in. The mobile check
+  // itself lives in the hook — this is just what sliding in means.
+  const slideInMobileVideosPanel = (title) => {
+    setActivePlaylistTitle(title || "");
+    setSlideDirection("in");
+    setMobileView("videos");
   };
 
-  // A batch can finish hundreds of playlists; refetching the playlist list on
-  // each one is a request storm. Collapse them onto a trailing-edge timer.
-  const batchRefetchTimerRef = useRef(null);
-  const flushBatchPlaylistRefetch = () => {
-    if (batchRefetchTimerRef.current) {
-      clearTimeout(batchRefetchTimerRef.current);
-      batchRefetchTimerRef.current = null;
-    }
-  };
-  const scheduleBatchPlaylistRefetch = (tag) => {
-    if (batchRefetchTimerRef.current) return;
-    batchRefetchTimerRef.current = setTimeout(() => {
-      batchRefetchTimerRef.current = null;
-      setReFetchPlaylist(tag + "-coalesced-" + Date.now());
-    }, BATCH_REFETCH_COALESCE_MS);
-  };
-
-  // Helper for socket handlers to trigger mobile slide-in
-  const triggerMobileSlideIfNeeded = (title) => {
-    if (isMobileRef.current) {
-      setActivePlaylistTitle(title || "");
-      setSlideDirection("in");
-      setMobileView("videos");
-    }
-  };
-
-  const activeListingCountRef = useRef(0);
-  const incrementListings = () => {
-    setActiveListingCount((prev) => {
-      const next = prev + 1;
-      activeListingCountRef.current = next;
-      return next;
-    });
-  };
-  const decrementListings = () => {
-    setActiveListingCount((prev) => {
-      const next = Math.max(0, prev - 1);
-      activeListingCountRef.current = next;
-      return next;
-    });
-  };
+  // Every socket event the app reacts to, and the state they own: the listing
+  // counter and batch-reindex tracker that drive the progress bar, and the
+  // last-downloaded item the sublist patches itself with.
+  const { activeListingCount, batchReindex, downloadedItem } = useSocketEvents({
+    socket,
+    setConnectionId,
+    logout,
+    setSnack,
+    addNotification,
+    updateActiveDownloads,
+    removeActiveDownload,
+    removeFromQueueAndRenumber,
+    clearDownloadState,
+    setQueuePosition,
+    syncQueueFromBackend,
+    playListUrlRef,
+    setPlayListUrl,
+    setPlayListIndex,
+    setSubListIndex,
+    setReFetchPlaylist,
+    setReFetchSubList,
+    toggleProgressCallBackRef,
+    disableProgressRef,
+    isMobileRef,
+    onMobileSlideNeeded: slideInMobileVideosPanel,
+  });
 
   useDependencyLogger(
     {
@@ -355,421 +305,6 @@ export default function App() {
     },
     "App",
   );
-
-  useEffect(() => {
-    if (!socket) return; // guard
-
-    // helpers
-    const nowTag = () => Date.now().toString();
-
-    /** Pulls the backend snapshot and records the generation it reports. */
-    const syncQueue = async () => {
-      const generation = await syncQueueFromBackend();
-      if (generation) {
-        connectionGenerationRef.current = generation;
-      }
-    };
-
-    // Handlers (use refs for any "current" state)
-    const onInit = (data) => {
-      setConnectionId(data.id);
-
-      const isReconnect = connectionGenerationRef.current === data.generation;
-      connectionGenerationRef.current = data.generation;
-
-      if (!isReconnect) {
-        // Backend restarted or first connect -> clear local state, then sync to
-        // get any items that might exist
-        clearDownloadState();
-        setActiveListingCount((prev) => {
-          activeListingCountRef.current = 0;
-          return prev !== 0 ? 0 : prev;
-        });
-        // A batch cannot survive a backend restart, and leaving it "active"
-        // would pin the progress bar forever.
-        flushBatchPlaylistRefetch();
-        if (batchReindexRef.current.active) {
-          setBatchReindexState(emptyBatchReindex());
-        }
-      }
-
-      // Either way the backend's queue is the truth.
-      syncQueue();
-
-      toggleProgressCallBackRef.current(false);
-      setSnack("Connected to Backend", "success");
-      socket.emit("acknowledge", { data: "Connected", id: data.id });
-    };
-
-    const onError = (data) => {
-      setSnack(`${data.message}`, "error");
-    };
-
-    const onTokenExpired = () => {
-      setSnack("Your session has expired.", "error");
-      logout();
-    };
-
-    const onConnectionError = () =>
-      setSnack("Server is currently at maximum capacity.", "error");
-
-    const onDownloadStarted = (data) => {
-      const url = data.url || "unknown";
-      const percent = isNaN(+data.percentage) ? 0 : +data.percentage;
-      updateActiveDownloads((prev) => ({ ...prev, [url]: percent }));
-      setQueuePosition(url, data.queuePosition);
-
-      toggleProgressCallBackRef.current(false);
-    };
-
-    const onDownloadDone = (data) => {
-      removeActiveDownload(data.url);
-      removeFromQueueAndRenumber(data.url);
-      downloadedItem.current = {
-        url: data.url,
-        title: data.title,
-        fileName: data.fileName || null,
-        saveDirectory: data.saveDirectory || null,
-        isMetaDataSynced: data.isMetaDataSynced || null,
-        thumbNailFile: data.thumbNailFile || null,
-        onlineThumbnail: data.onlineThumbnail || null,
-        subTitleFile: data.subTitleFile || null,
-        descriptionFile: data.descriptionFile || null,
-      };
-      setSnack(`${data.title}`, "success");
-      addNotification(`Downloaded: ${data.title}`, "success");
-    };
-
-    const onDownloadFailed = (data) => {
-      removeActiveDownload(data.url);
-      removeFromQueueAndRenumber(data.url);
-      setSnack(`${data.title}`, "error");
-      addNotification(`Download Failed: ${data.title}`, "error");
-    };
-
-    const onDownloadingPercentUpdate = (data) => {
-      const url = data.url || "unknown";
-      const percent = parseFloat(data.percentage);
-
-      if (isNaN(percent)) return;
-
-      if (percent >= 99) {
-        updateActiveDownloads((prev) => ({ ...prev, [url]: 100 }));
-        toggleProgressCallBackRef.current(true);
-      } else if (!disableProgressRef.current) {
-        updateActiveDownloads((prev) => {
-          if (prev[url] >= 100 && prev[url] !== 101) return prev;
-          return { ...prev, [url]: percent };
-        });
-      }
-    };
-
-    const onListingStarted = () => {
-      incrementListings();
-      toggleProgressCallBackRef.current(false);
-    };
-
-    const onListingPlaylistComplete = (data) => {
-      decrementListings();
-
-      const batch = batchReindexRef.current;
-      if (batch.active) {
-        const next = bumpBatchReindex("completed");
-        const done = next.completed + next.failed;
-        const message = `${data.playlistTitle} re-indexed — ${done}/${next.total}`;
-        setSnack(message, "success");
-        addNotification(message, "success");
-
-        const batchTag =
-          "reindex-playlist-complete-" + data.url + "-" + nowTag();
-        // Playlist list is refreshed on a timer; the open sublist is refreshed
-        // immediately since we already know it just changed.
-        scheduleBatchPlaylistRefetch(batchTag);
-        if (playListUrlRef.current === data.url) {
-          setReFetchSubList(batchTag);
-        }
-        // Deliberately no auto-load / mobile slide: a batch must not yank the
-        // user to whichever playlist happened to finish first.
-        return;
-      }
-
-      setSnack(`${data.playlistTitle}`, "success");
-      const tag =
-        "listing-playlist-complete-" +
-        data.url +
-        "-" +
-        data.processedChunks +
-        "-" +
-        nowTag();
-      const current = playListUrlRef.current;
-
-      // Always re-fetch the playlist list to show final status
-      setReFetchPlaylist(tag);
-
-      if (current === "init") {
-        // Load the playlist if none is loaded
-        setPlayListUrl(data.url);
-        setPlayListIndex(data.seekPlaylistListTo);
-        triggerMobileSlideIfNeeded(data.playlistTitle);
-      } else if (current === data.url) {
-        // If viewing the completed playlist, refresh the sublist
-        setReFetchSubList(tag);
-      } else {
-        // Just update the index
-        setPlayListIndex(data.seekPlaylistListTo);
-      }
-
-      addNotification(
-        `Successfully imported playlist: ${data.playlistTitle}`,
-        "success",
-      );
-    };
-
-    const onPlaylistSkipped = (data) => {
-      decrementListings();
-      setSnack(`${data.message}`, "info");
-      addNotification(`${data.message}`, "info");
-    };
-
-    const onListingPlaylistChunkComplete = (data) => {
-      const current = playListUrlRef.current;
-      const tag =
-        "listing-playlist-chunk-complete-" +
-        data.url +
-        "-" +
-        data.processedChunks +
-        "-" +
-        nowTag();
-
-      // Always re-fetch the playlist list to show updated status/counts
-      setReFetchPlaylist(tag);
-
-      // If the current url is init (i.e. No playlist is loaded) and the processed chunks is 1, then it is the first chunk so load it
-      if (current === "init" && data.processedChunks === 1) {
-        setPlayListUrl(data.url);
-        setPlayListIndex(data.seekPlaylistListTo);
-        triggerMobileSlideIfNeeded(data.playlistTitle || "");
-      }
-      // If the current url is the same as the data url, it means we are viewing the playlist being processed
-      else if (current === data.url) {
-        // Re-fetch the sublist to show new videos
-        setReFetchSubList(tag);
-        setPlayListIndex(data.seekPlaylistListTo);
-      }
-    };
-
-    const onListingSingleItemComplete = (data) => {
-      decrementListings();
-
-      // A batch item normally completes as a playlist, but an entry the
-      // pipeline reclassifies as a single item (x.com URLs) lands here. Count
-      // it toward the batch and keep the no-navigation rule intact.
-      if (batchReindexRef.current.active) {
-        const next = bumpBatchReindex("completed");
-        const done = next.completed + next.failed;
-        const label = data.itemLabel || data.title || data.url;
-        const message = `${label} re-indexed — ${done}/${next.total}`;
-        setSnack(message, "success");
-        addNotification(message, "success");
-        return;
-      }
-
-      setReFetchSubList(
-        "listing-single-item-complete-" + data.url + "-" + nowTag(),
-      );
-
-      const current = playListUrlRef.current;
-      if (current === "init" || current === "None") {
-        setPlayListUrl("None");
-        setSubListIndex(data.seekSubListTo);
-        triggerMobileSlideIfNeeded("Unlisted");
-      }
-
-      const existingPlaylists = Array.isArray(data.existingPlaylists)
-        ? data.existingPlaylists
-        : [];
-      const firstExistingPlaylist = data.sourcePlaylist || existingPlaylists[0];
-      const playlistNote = firstExistingPlaylist
-        ? ` Already exists in playlist: ${firstExistingPlaylist.title}.`
-        : "";
-      const itemLabel = data.itemLabel || data.title || "video";
-
-      if (data.alreadyExisted) {
-        const duplicateMessage =
-          data.duplicateScope === "none"
-            ? `${itemLabel} is already in None at position ${data.seekSubListTo}.`
-            : `Duplicate video encountered and navigated to ${data.title}.`;
-        setSnack(duplicateMessage, "error");
-        addNotification(duplicateMessage, "error");
-      } else if (data.addedFromDownloaded) {
-        const sourcePosition =
-          typeof firstExistingPlaylist?.positionInPlaylist === "number"
-            ? firstExistingPlaylist.positionInPlaylist + 1
-            : null;
-        const loadedMessage =
-          sourcePosition !== null && firstExistingPlaylist?.title
-            ? `Added ${data.title} to None. Already downloaded in ${firstExistingPlaylist.title} at position ${sourcePosition}.`
-            : `Added ${data.title} to None.${playlistNote}`;
-        setSnack(loadedMessage, "success");
-        addNotification(loadedMessage, "success");
-      } else {
-        setSnack(`${data.title}`, "success");
-        addNotification(`Successfully loaded video: ${data.title}`, "success");
-      }
-    };
-
-    const onListingError = (data) => {
-      decrementListings();
-
-      const batch = batchReindexRef.current;
-      if (batch.active) {
-        const next = bumpBatchReindex("failed");
-        const done = next.completed + next.failed;
-        const message = `Failed re-indexing ${data.url} — ${done}/${next.total}`;
-        setSnack(message, "error");
-        addNotification(message, "error");
-        return;
-      }
-
-      setSnack(`${data.url}`, "error");
-      addNotification(`Failed Listing: ${data.url}`, "error");
-    };
-
-    const onListingVideoSkippedBecauseDownloaded = (data) => {
-      decrementListings();
-      const locationNote = data.downloadLocation
-        ? ` Files: ${data.downloadLocation}.`
-        : "";
-      const message = `${data.message}${locationNote}`;
-      setSnack(message, "info");
-      addNotification(message, "info");
-    };
-
-    const onReindexBatchStarted = (data) => {
-      const queued = data.queued ?? 0;
-      setBatchReindexState({
-        active: true,
-        batchId: data.batchId ?? null,
-        total: queued,
-        completed: 0,
-        failed: 0,
-      });
-      const message = `Batch re-index started — ${queued} playlist(s)`;
-      setSnack(message, "info");
-      addNotification(message, "info");
-    };
-
-    // Ignore lifecycle events from a batch other than the one being tracked,
-    // e.g. a late arrival after the tab reconnected to a restarted backend.
-    const isStaleBatch = (data) => {
-      const tracked = batchReindexRef.current.batchId;
-      return Boolean(tracked && data.batchId && tracked !== data.batchId);
-    };
-
-    const onReindexBatchComplete = (data) => {
-      if (isStaleBatch(data)) return;
-      flushBatchPlaylistRefetch();
-      setBatchReindexState(emptyBatchReindex());
-
-      const failed = data.failed ?? 0;
-      const message =
-        failed > 0
-          ? `Batch re-index complete — ${data.completed}/${data.total} (${failed} failed)`
-          : `Batch re-index complete — ${data.completed}/${data.total}`;
-      const severity = failed > 0 ? "warning" : "success";
-      setSnack(message, severity);
-      addNotification(message, severity);
-
-      // One final refresh so the list reflects every playlist the coalescer
-      // may have skipped.
-      setReFetchPlaylist("reindex-batch-complete-" + nowTag());
-    };
-
-    const onReindexBatchFailed = (data) => {
-      if (isStaleBatch(data)) return;
-      flushBatchPlaylistRefetch();
-      setBatchReindexState(emptyBatchReindex());
-
-      const message = `Batch re-index failed: ${data.error}`;
-      setSnack(message, "error");
-      addNotification(message, "error");
-      setReFetchPlaylist("reindex-batch-failed-" + nowTag());
-    };
-
-    // Register listeners
-    socket.on("init", onInit);
-    socket.on("error", onError);
-    socket.on("token-expired", onTokenExpired);
-    socket.on("connection-error", onConnectionError);
-
-    socket.on("download-started", onDownloadStarted);
-    socket.on("download-done", onDownloadDone);
-    socket.on("download-failed", onDownloadFailed);
-    socket.on("downloading-percent-update", onDownloadingPercentUpdate);
-
-    socket.on("listing-started", onListingStarted);
-    socket.on("listing-playlist-complete", onListingPlaylistComplete);
-    socket.on(
-      "listing-playlist-chunk-complete",
-      onListingPlaylistChunkComplete,
-    );
-    socket.on("listing-single-item-complete", onListingSingleItemComplete);
-    socket.on("listing-error", onListingError);
-    socket.on(
-      "listing-playlist-skipped-because-same-monitoring",
-      onPlaylistSkipped,
-    );
-    socket.on(
-      "listing-video-skipped-because-downloaded",
-      onListingVideoSkippedBecauseDownloaded,
-    );
-
-    socket.on("reindex-batch-started", onReindexBatchStarted);
-    socket.on("reindex-batch-complete", onReindexBatchComplete);
-    socket.on("reindex-batch-failed", onReindexBatchFailed);
-
-    // Cleanup on unmount or when socket changes
-    return () => {
-      try {
-        socket.off("init", onInit);
-        socket.off("error", onError);
-        socket.off("token-expired", onTokenExpired);
-        socket.off("connection-error", onConnectionError);
-
-        socket.off("download-started", onDownloadStarted);
-        socket.off("download-done", onDownloadDone);
-        socket.off("download-failed", onDownloadFailed);
-        socket.off("downloading-percent-update", onDownloadingPercentUpdate);
-
-        socket.off("listing-started", onListingStarted);
-        socket.off("listing-playlist-complete", onListingPlaylistComplete);
-        socket.off(
-          "listing-playlist-chunk-complete",
-          onListingPlaylistChunkComplete,
-        );
-        socket.off("listing-single-item-complete", onListingSingleItemComplete);
-        socket.off("listing-error", onListingError);
-        socket.off(
-          "listing-playlist-skipped-because-same-monitoring",
-          onPlaylistSkipped,
-        );
-        socket.off(
-          "listing-video-skipped-because-downloaded",
-          onListingVideoSkippedBecauseDownloaded,
-        );
-
-        socket.off("reindex-batch-started", onReindexBatchStarted);
-        socket.off("reindex-batch-complete", onReindexBatchComplete);
-        socket.off("reindex-batch-failed", onReindexBatchFailed);
-      } catch (_e) {
-        // socket might already be closed; ignore
-      }
-      flushBatchPlaylistRefetch();
-    };
-    // Every context callback below is stable for the life of a socket, so the
-    // listener set is registered once per connection.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket]);
 
   // Derive average progress and indeterminate state from active downloads and listings
   const { calculatedProgress, isActuallyIndeterminate } = useMemo(() => {
