@@ -5,7 +5,7 @@ import { useApiClient } from "./useApiClient.js";
 /**
  * The largest delay `setTimeout` accepts — its argument is a signed 32-bit
  * int, and anything past this fires immediately instead of never. The same
- * clamp appears in `useSignedUrlRefresh` here and in the backend's socket
+ * clamp appears in the signed-URL refresh timers and in the backend's socket
  * expiry timer.
  */
 const MAX_TIMEOUT = 2147483647;
