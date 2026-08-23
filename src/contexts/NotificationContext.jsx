@@ -7,7 +7,28 @@ import {
 } from "react";
 import PropTypes from "prop-types";
 
-export const NotificationContext = createContext({
+/**
+ * The shape `useContext(NotificationContext)` returns.
+ *
+ * Declared for the default value so the signatures the provider actually
+ * installs are what every consumer's call is checked against — without this,
+ * each zero-arg arrow below inferred itself into a dozen call sites.
+ *
+ * @typedef {Object} NotificationContextValue
+ * @property {string} snackMsg - Current snackbar text.
+ * @property {string} snackSeverity - Current snackbar severity.
+ * @property {boolean} showSnackbar - Whether the snackbar is showing.
+ * @property {(visible: boolean) => void} setSnackVisibility
+ * @property {(message: string, type?: string) => void} setSnack - Snackbar only.
+ * @property {(message: string, type?: string) => void} addNotification - Log only.
+ * @property {(message: string, type?: string) => void} notify - Both at once.
+ * @property {Array<{id: string, message: string, type: string}>} notifications
+ *   The persistent log behind the bell icon.
+ * @property {(id: string) => void} dismissNotification - Removes one log entry.
+ */
+
+/** @type {NotificationContextValue} */
+const defaultValue = {
   snackMsg: "",
   snackSeverity: "success",
   showSnackbar: false,
@@ -17,7 +38,9 @@ export const NotificationContext = createContext({
   addNotification: () => {},
   notify: () => {},
   dismissNotification: () => {},
-});
+};
+
+export const NotificationContext = createContext(defaultValue);
 
 /**
  * Owns both halves of user-facing messaging: the transient snackbar and the

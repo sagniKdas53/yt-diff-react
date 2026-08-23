@@ -7,6 +7,7 @@
     "dev": "vite --host",
     "build": "vite build --base=/ytdiff/ --outDir=../dist/ --emptyOutDir",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.checkjs.json",
     "fmt": "prettier --write \"src/**/*.{js,jsx}\"",
     "preview": "vite preview",
     "test": "vitest run",
@@ -42,6 +43,7 @@
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.4",
+    "typescript": "^5.9.2",
     "vite": "^8.1.4",
     "vitest": "^4.1.10"
   }

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    // Deliberately loose: this gate exists for the API boundary — the
+    // generated contract in src/api/generated plus the call sites it types.
+    // Strictness here would demand annotating every component prop before
+    // the first real check could run; tighten per-file instead as files are
+    // migrated.
+    "strict": false,
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": [
+    "src/api/**/*.js",
+    "src/hooks/useApiClient.js",
+    "src/config.js"
+  ]
+}
