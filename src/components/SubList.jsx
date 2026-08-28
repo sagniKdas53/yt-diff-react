@@ -45,6 +45,12 @@ import VideoPlayer from "./VideoPlayer.jsx";
  * The default `setPlayerVideoUrl`. A module constant rather than an inline
  * arrow so the default does not change identity every render and churn the
  * effects that depend on it.
+ *
+ * Annotated rather than left to inference: the prop's type comes from this
+ * default, and `() => {}` on its own makes it a zero-argument function — which
+ * turns every call site that passes the replace flag into a type error.
+ *
+ * @type {(videoUrl: ?string, options?: {replace?: boolean}) => void}
  */
 const NO_ROUTER = () => {};
 
