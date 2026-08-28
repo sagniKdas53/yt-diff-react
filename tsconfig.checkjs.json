@@ -25,6 +25,8 @@
     "src/hooks/**/*.js",
     "src/components/**/*.jsx",
     "src/contexts/**/*.jsx",
+    "src/router/**/*.js",
+    "src/router/**/*.jsx",
     "src/config.js"
   ]
 }

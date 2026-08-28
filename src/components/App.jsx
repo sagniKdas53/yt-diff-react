@@ -25,6 +25,8 @@ import {
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { useLatest } from "../hooks/useLatest.js";
 import { useSocketEvents } from "../hooks/useSocketEvents.js";
+import { useNavigate, useRoute } from "../router/RouterProvider.jsx";
+import { NO_PLAYLIST, UNLISTED } from "../router/routes.js";
 import { AuthContext } from "../contexts/AuthContext";
 import { SocketContext } from "../contexts/SocketContext";
 import { NotificationContext } from "../contexts/NotificationContext";
@@ -224,7 +226,37 @@ export default function App() {
   const [showSignUp, setShowSignUp] = useState(false);
 
   // playlist related states
-  const [playListUrl, setPlayListUrl] = useState("init");
+  //
+  // Which playlist is open is a location, not component state: it is the one
+  // thing a link, a bookmark or the Back button has to be able to name. It is
+  // read from the router and written through it, so the URL and the view
+  // cannot disagree — there is only the one value.
+  const { playlistUrl: playListUrl, videoUrl: routeVideoUrl } = useRoute();
+  const navigate = useNavigate();
+
+  /** A person clicked something: leave an entry for Back to return to. */
+  const setPlayListUrl = useCallback(
+    (url) => navigate({ playlistUrl: url, videoUrl: null }),
+    [navigate],
+  );
+
+  /**
+   * The app moved itself. A background listing finishing and pulling the view
+   * to its playlist is not a place the user asked to be, so it must not become
+   * an entry they have to press Back through to leave.
+   */
+  const replacePlayListUrl = useCallback(
+    (url) => navigate({ playlistUrl: url, videoUrl: null }, { replace: true }),
+    [navigate],
+  );
+
+  /** Opens or closes the player, within whatever list is currently open. */
+  const setRouteVideoUrl = useCallback(
+    (videoUrl, { replace = false } = {}) =>
+      navigate({ playlistUrl: playListUrl, videoUrl }, { replace }),
+    [navigate, playListUrl],
+  );
+
   const [subListIndex, setSubListIndex] = useState(0);
   // this will be used to seek to the latest playlist
   const [playListIndex, setPlayListIndex] = useState(0);
@@ -240,8 +272,16 @@ export default function App() {
   // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
   const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
 
-  // Mobile slide navigation state
-  const [mobileView, setMobileView] = useState("playlists"); // "playlists" | "videos"
+  // Mobile slide navigation state.
+  //
+  // Which panel is showing follows from the route — a playlist is selected, or
+  // it is not — so this is not a second source of truth for it. It lags the
+  // route by exactly one slide animation, which is the only reason it is state
+  // at all: a panel that is on its way out still has to be rendered.
+  const routeShowsVideos = playListUrl !== NO_PLAYLIST;
+  const [mobileView, setMobileView] = useState(
+    routeShowsVideos ? "videos" : "playlists",
+  ); // "playlists" | "videos"
   const [slideDirection, setSlideDirection] = useState("none"); // "in" | "out" | "none"
   const [activePlaylistTitle, setActivePlaylistTitle] = useState("");
   const mobileAddDialogRef = useRef(null); // ref to trigger PlayList's add dialog from SubList
@@ -291,13 +331,12 @@ export default function App() {
   const toggleProgressCallBackRef = useLatest(toggleProgressCallBack);
   const isMobileRef = useLatest(isMobile);
 
-  // Helper for socket handlers to trigger mobile slide-in. The mobile check
-  // itself lives in the hook — this is just what sliding in means.
-  const slideInMobileVideosPanel = (title) => {
+  // The socket handlers used to switch the mobile panel themselves. They no
+  // longer have to: they set the playlist, the playlist is the route, and the
+  // effect below slides whichever panel that implies. What is left for them to
+  // say is the title, which the route does not carry.
+  const slideInMobileVideosPanel = (title) =>
     setActivePlaylistTitle(title || "");
-    setSlideDirection("in");
-    setMobileView("videos");
-  };
 
   // Every socket event the app reacts to, and the state they own: the listing
   // counter and batch-reindex tracker that drive the progress bar, and the
@@ -315,7 +354,9 @@ export default function App() {
     setQueuePosition,
     syncQueueFromBackend,
     playListUrlRef,
-    setPlayListUrl,
+    // Replaces: see `replacePlayListUrl`. Nothing in here is a navigation the
+    // user asked for.
+    setPlayListUrl: replacePlayListUrl,
     setPlayListIndex,
     setSubListIndex,
     setReFetchPlaylist,
@@ -429,23 +470,53 @@ export default function App() {
     </Grid>
   );
 
-  // Mobile navigation handlers
-  const handleMobileLoadPlaylist = useCallback((url, title) => {
-    setPlayListUrl(url);
-    setSubListIndex(0);
-    setActivePlaylistTitle(title || "");
-    setSlideDirection("in");
-    setMobileView("videos");
-  }, []);
+  /**
+   * Plays the slide the route implies.
+   *
+   * Driving the animation from the route rather than from the tap is what
+   * makes the browser's own Back gesture work on mobile: it arrives here as an
+   * ordinary route change and slides out exactly as the in-app arrow does.
+   * Sliding out is the asymmetric half — the outgoing panel has to stay
+   * mounted until its animation finishes, which is why `mobileView` trails the
+   * route instead of being read straight off it.
+   */
+  useEffect(() => {
+    if (!isMobile) return undefined;
 
+    if (routeShowsVideos && mobileView !== "videos") {
+      setSlideDirection("in");
+      setMobileView("videos");
+      return undefined;
+    }
+
+    if (!routeShowsVideos && mobileView === "videos") {
+      setSlideDirection("out");
+      const timer = setTimeout(() => {
+        setMobileView("playlists");
+        setSlideDirection("none");
+      }, 220);
+      return () => clearTimeout(timer);
+    }
+
+    return undefined;
+  }, [isMobile, routeShowsVideos, mobileView]);
+
+  // Mobile navigation handlers
+  const handleMobileLoadPlaylist = useCallback(
+    (url, title) => {
+      setSubListIndex(0);
+      setActivePlaylistTitle(title || "");
+      setPlayListUrl(url);
+    },
+    [setPlayListUrl],
+  );
+
+  // Back is "no playlist selected", which is a location like any other — so
+  // the in-app arrow and the browser's own Back button end up in the same
+  // place by the same route change.
   const handleMobileBack = useCallback(() => {
-    setSlideDirection("out");
-    // After the slide-out animation finishes, switch view
-    setTimeout(() => {
-      setMobileView("playlists");
-      setSlideDirection("none");
-    }, 220);
-  }, []);
+    setPlayListUrl(NO_PLAYLIST);
+  }, [setPlayListUrl]);
 
   const handleMobileOpenAddDialog = useCallback(() => {
     if (mobileAddDialogRef.current) {
@@ -453,16 +524,17 @@ export default function App() {
     }
   }, []);
 
-  // Wrapper for Nav's setPlayListUrl — triggers mobile slide on Unlisted
+  // Nav's setter. The mobile branch it used to carry is gone — sliding follows
+  // the route now — leaving only the title, which the route cannot supply.
   const handleNavSetPlayListUrl = useCallback(
     (url) => {
       if (isMobile) {
-        handleMobileLoadPlaylist(url, url === "None" ? "Unlisted" : "");
+        handleMobileLoadPlaylist(url, url === UNLISTED ? "Unlisted" : "");
       } else {
         setPlayListUrl(url);
       }
     },
-    [isMobile, handleMobileLoadPlaylist],
+    [isMobile, handleMobileLoadPlaylist, setPlayListUrl],
   );
 
   const playListProps = {
@@ -490,6 +562,8 @@ export default function App() {
     tableContainerHeight: `${tableContainerHeight}px`,
     rowsPerPage: rowsPerPageSubList,
     setRowsPerPage: setRowsPerPageSubList,
+    playerVideoUrl: routeVideoUrl,
+    setPlayerVideoUrl: setRouteVideoUrl,
   };
 
   // renders mobile main with slide navigation

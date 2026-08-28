@@ -25,11 +25,11 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   memo,
 } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
+import { useLatest } from "../hooks/useLatest.js";
 import { NotificationContext } from "../contexts/NotificationContext";
 import { DownloadContext } from "../contexts/DownloadContext";
 import { useApiClient } from "../hooks/useApiClient.js";
@@ -40,6 +40,19 @@ import TablePaginationActions from "./Pagination.jsx";
 import SubListItemCard from "./SubListItemCard.jsx";
 import SubListDeleteDialog from "./SubListDeleteDialog.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
+
+/**
+ * The default `setPlayerVideoUrl`. A module constant rather than an inline
+ * arrow so the default does not change identity every render and churn the
+ * effects that depend on it.
+ *
+ * Annotated rather than left to inference: the prop's type comes from this
+ * default, and `() => {}` on its own makes it a zero-argument function — which
+ * turns every call site that passes the replace flag into a type error.
+ *
+ * @type {(videoUrl: ?string, options?: {replace?: boolean}) => void}
+ */
+const NO_ROUTER = () => {};
 
 function SubList({
   setPlayListUrl,
@@ -52,6 +65,10 @@ function SubList({
   tableContainerHeight,
   rowsPerPage,
   setRowsPerPage,
+  // The player half of the route. Optional: a SubList rendered without a
+  // router still plays videos, it just does not put them in the address bar.
+  playerVideoUrl = null,
+  setPlayerVideoUrl = NO_ROUTER,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -92,6 +109,11 @@ function SubList({
   const [currentPlayerSubTitleFile, setCurrentPlayerSubTitleFile] =
     useState(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
+  // Which video the player is on, as the location names it. Kept beside the
+  // fields the player renders from so the effect below can tell "the location
+  // already matches what is on screen" from "the location is asking for
+  // something else".
+  const [currentPlayerVideoUrl, setCurrentPlayerVideoUrl] = useState(null);
 
   // Signed thumbnails for the visible rows, kept alive across expiries.
   const { thumbUrls } = useThumbnailUrls({
@@ -113,10 +135,14 @@ function SubList({
     );
   }, [items, selectedItems]);
 
-  const itemsRef = useRef(items);
-  useEffect(() => {
-    itemsRef.current = items;
-  }, [items]);
+  // Written during render rather than after paint: `openPlayer` reads the row
+  // at an index the caller just computed from these same rows, and a mirror
+  // that commits a tick later would hand it the previous page's row. This is
+  // what `useLatest` is for.
+  const itemsRef = useLatest(items);
+  // Read at call time only, to decide whether opening the player is a new
+  // history entry or a move within the one it already has.
+  const playerOpenRef = useLatest(playerOpen);
 
   // const functions and normal functions
   const handleChangePage = useCallback(
@@ -165,22 +191,112 @@ function SubList({
     }
   };
 
-  const openPlayer = (saveDir, fileName, title, index, subTitleFile = null) => {
-    setCurrentPlayerSaveDir(saveDir);
-    setCurrentPlayerFileName(fileName);
-    setCurrentPlayerVideoTitle(title);
-    setCurrentPlayerSubTitleFile(subTitleFile);
-    setCurrentPlayerIndex(index);
-    setPlayerOpen(true);
-  };
+  /** Puts the player on screen. Says nothing about the location. */
+  const showPlayer = useCallback(
+    (saveDir, fileName, title, index, subTitleFile, videoUrl) => {
+      setCurrentPlayerSaveDir(saveDir);
+      setCurrentPlayerFileName(fileName);
+      setCurrentPlayerVideoTitle(title);
+      setCurrentPlayerSubTitleFile(subTitleFile);
+      setCurrentPlayerIndex(index);
+      setCurrentPlayerVideoUrl(videoUrl);
+      setPlayerOpen(true);
+    },
+    [],
+  );
 
-  const closePlayer = () => {
+  /** Takes it off screen. Also says nothing about the location. */
+  const hidePlayer = useCallback(() => {
     setPlayerOpen(false);
     setCurrentPlayerSaveDir("");
     setCurrentPlayerFileName("");
     setCurrentPlayerSubTitleFile(null);
     setCurrentPlayerIndex(-1);
-  };
+    setCurrentPlayerVideoUrl(null);
+  }, []);
+
+  /**
+   * Opens the player and records it in the location.
+   *
+   * Stable across renders — the rows and the open flag are read through refs
+   * at call time — because `handlePlay` is memoized on top of it and reaches
+   * every row through a memoized component.
+   */
+  const openPlayer = useCallback(
+    (saveDir, fileName, title, index, subTitleFile = null) => {
+      const videoUrl =
+        itemsRef.current.at(index)?.video_metadatum?.videoUrl ?? null;
+      showPlayer(saveDir, fileName, title, index, subTitleFile, videoUrl);
+      if (!videoUrl) return;
+      // Opening from closed pushes, so Back closes the player. Moving between
+      // videos while it is already open replaces, so Back stays "close the
+      // player" rather than walking back through everything that was watched.
+      setPlayerVideoUrl(videoUrl, { replace: playerOpenRef.current });
+    },
+    [itemsRef, playerOpenRef, setPlayerVideoUrl, showPlayer],
+  );
+
+  const closePlayer = useCallback(() => {
+    hidePlayer();
+    // Replace: closing must not leave an entry that Back steps straight back
+    // into the player through.
+    setPlayerVideoUrl(null, { replace: true });
+  }, [hidePlayer, setPlayerVideoUrl]);
+
+  /**
+   * Puts the player where the location says it should be.
+   *
+   * This is the half that makes Back work and a link openable: Back, Forward
+   * and a pasted URL all arrive as a change to `playerVideoUrl` and are acted
+   * on here, by the same path a click takes.
+   *
+   * A video can only be opened from a row that is loaded, so a link to one on
+   * a page that is not showing — or to one that was never downloaded — cannot
+   * be honoured. Rather than leave the location pointing at something the app
+   * is not showing, the parameter is dropped once the rows have arrived and
+   * it is clear the video is not among them.
+   */
+  useEffect(() => {
+    if (!playerVideoUrl) {
+      // Only close what the location was driving. A player opened from a row
+      // with no URL to name it is not the location's to close.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the address bar is the external system this effect exists to follow; reacting to it is the subscription, not a derived value
+      if (playerOpen && currentPlayerVideoUrl) hidePlayer();
+      return;
+    }
+
+    if (playerOpen && currentPlayerVideoUrl === playerVideoUrl) return;
+
+    const index = items.findIndex(
+      (row) => row.video_metadatum?.videoUrl === playerVideoUrl,
+    );
+    const meta = index === -1 ? null : items.at(index).video_metadatum;
+
+    if (!meta?.downloadStatus) {
+      // No rows yet means "still loading", which is not yet an answer. Rows
+      // without this video in them is an answer.
+      if (items.length > 0) setPlayerVideoUrl(null, { replace: true });
+      return;
+    }
+
+    showPlayer(
+      meta.saveDirectory ?? playlistDirectory,
+      meta.fileName,
+      meta.title,
+      index,
+      meta.subTitleFile || null,
+      playerVideoUrl,
+    );
+  }, [
+    playerVideoUrl,
+    items,
+    playerOpen,
+    currentPlayerVideoUrl,
+    playlistDirectory,
+    setPlayerVideoUrl,
+    showPlayer,
+    hidePlayer,
+  ]);
 
   async function downloadFunc() {
     // Scoped to the rows on screen: a selection left over from a previous
@@ -407,7 +523,7 @@ function SubList({
         ...overrides,
       };
     },
-    [loadedPlayList],
+    [itemsRef, loadedPlayList],
   );
 
   const openDeleteDialog = useCallback(
@@ -463,7 +579,7 @@ function SubList({
         meta.subTitleFile || null,
       );
     },
-    [playlistDirectory],
+    [itemsRef, openPlayer, playlistDirectory],
   );
 
   return (
@@ -717,6 +833,8 @@ SubList.propTypes = {
   tableContainerHeight: PropTypes.string.isRequired,
   rowsPerPage: PropTypes.number.isRequired,
   setRowsPerPage: PropTypes.func.isRequired,
+  playerVideoUrl: PropTypes.string,
+  setPlayerVideoUrl: PropTypes.func,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,
