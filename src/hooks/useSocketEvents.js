@@ -51,12 +51,31 @@ const emptyBatchReindex = () => ({
  * @returns {{
  *   activeListingCount: number,
  *   batchReindex: {active: boolean, batchId: ?string, total: number, completed: number, failed: number},
- *   downloadedItem: {current: {url: ?string, title: ?string, fileName: ?string, saveDirectory: ?string}},
+ *   downloadedItem: {current: DownloadedItem},
  * }} The state socket events own, for the progress bar and the sublist's
  *   last-downloaded patch. `downloadedItem` is a ref: it changes without a
  *   render by design, and the snackbar each completion fires provides the
  *   render that carries its new value down.
  */
+/**
+ * The last completed download, as the sublist patches it into its row.
+ *
+ * Every field the `download-done` frame carries, because `SubList` reads every
+ * one of them — the initializer named four of the nine, so the ref's declared
+ * shape and its assigned shape disagreed from the first render.
+ *
+ * @typedef {Object} DownloadedItem
+ * @property {?string} url
+ * @property {?string} title
+ * @property {?string} fileName
+ * @property {?string} saveDirectory
+ * @property {?boolean} isMetaDataSynced
+ * @property {?string} thumbNailFile
+ * @property {?string} onlineThumbnail
+ * @property {?string} subTitleFile
+ * @property {?string} descriptionFile
+ */
+
 export function useSocketEvents({
   socket,
   setConnectionId,
@@ -132,11 +151,17 @@ export function useSocketEvents({
     }, BATCH_REFETCH_COALESCE_MS);
   };
 
+  /** @type {import("react").MutableRefObject<DownloadedItem>} */
   const downloadedItem = useRef({
     url: null,
     title: null,
     fileName: null,
     saveDirectory: null,
+    isMetaDataSynced: null,
+    thumbNailFile: null,
+    onlineThumbnail: null,
+    subTitleFile: null,
+    descriptionFile: null,
   });
 
   const connectionGenerationRef = useRef(null);
@@ -489,6 +514,7 @@ export function useSocketEvents({
     };
 
     // Register listeners
+    /** @type {Array<[string, (data: any) => void]>} */
     const listeners = [
       ["init", onInit],
       ["error", onError],

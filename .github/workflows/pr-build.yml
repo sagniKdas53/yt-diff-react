@@ -25,6 +25,13 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      # checkJs over the API boundary and everything that consumes it. The
+      # generated contract in src/api/generated is only worth anything if the
+      # call sites are checked against it, so this covers hooks, components and
+      # contexts too -- not just the client module.
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Build project
         run: npm run build
 

@@ -12,7 +12,53 @@ import { useApiClient } from "../hooks/useApiClient.js";
 import { AuthContext } from "./AuthContext";
 import { NotificationContext } from "./NotificationContext";
 
-export const DownloadContext = createContext({
+/**
+ * One entry waiting in the download queue, keyed by its video URL.
+ *
+ * @typedef {Object} QueuedItem
+ * @property {string} playlistUrl - Empty for an entry recovered from the
+ *   backend's snapshot, which does not carry it.
+ * @property {?number} positionInPlaylist
+ * @property {number} queuePosition
+ * @property {string} requestId - Groups the entries one request queued, so a
+ *   refused request can roll back exactly its own.
+ */
+
+/**
+ * What a caller asks to be queued.
+ *
+ * @typedef {Object} QueueRequestEntry
+ * @property {string} url
+ * @property {string} [playlistUrl]
+ * @property {number} [positionInPlaylist]
+ * @property {number} [queuePosition]
+ */
+
+/**
+ * The shape `useContext(DownloadContext)` returns.
+ *
+ * Declared for the same reason `NotificationContext` and `AuthContext` declare
+ * theirs: the zero-arg arrows below are otherwise what every consumer's call is
+ * checked against, so `queueDownloads(entries)` reads as passing an argument to
+ * a function that takes none.
+ *
+ * @typedef {Object} DownloadContextValue
+ * @property {Record<string, number>} activeDownloads - URL to percent complete.
+ * @property {Record<string, QueuedItem>} queuedItems
+ * @property {(entries: QueueRequestEntry[]) => Promise<string[]>} queueDownloads
+ *   Queues the entries and returns the URLs the backend accepted.
+ * @property {(entries: QueueRequestEntry[], requestId: string) => void} addToDownloadQueue
+ * @property {(requestId: string, acceptedUrls: string[]) => void} rollbackDownloadQueueRequest
+ * @property {(url: string) => void} removeFromQueueAndRenumber
+ * @property {(url: string, queuePosition: number) => void} setQueuePosition
+ * @property {(updater: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void} updateActiveDownloads
+ * @property {(url: string) => void} removeActiveDownload
+ * @property {() => void} clearDownloadState
+ * @property {() => Promise<unknown>} syncQueueFromBackend
+ */
+
+/** @type {DownloadContextValue} */
+const defaultValue = {
   activeDownloads: {},
   queuedItems: {},
   queueDownloads: async () => [],
@@ -24,7 +70,9 @@ export const DownloadContext = createContext({
   removeActiveDownload: () => {},
   clearDownloadState: () => {},
   syncQueueFromBackend: async () => null,
-});
+};
+
+export const DownloadContext = createContext(defaultValue);
 
 /**
  * Owns the download queue: what the backend is working on, what is waiting,
@@ -181,7 +229,12 @@ export const DownloadProvider = ({ children }) => {
 
       result.queue.forEach((item) => {
         if (item.status === "downloading" || item.status === "running") {
-          newActiveDownloads[item.url] = item.percentage ?? 0;
+          // The snapshot carries no percentage — `getQueueSnapshot` returns
+          // url, title, status and position, nothing more. This read was
+          // `item.percentage ?? 0`, which looked like it recovered progress
+          // across a reload and always yielded 0. The bar starts empty and the
+          // next `downloading-percent-update` frame fills it in.
+          newActiveDownloads[item.url] = 0;
         }
         newQueuedItems[item.url] = {
           // Unknown from the snapshot alone, but sufficient for the queue UI.

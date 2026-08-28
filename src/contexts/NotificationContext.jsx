@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import { createContext, useState, useCallback, useMemo, useRef } from "react";
 import PropTypes from "prop-types";
 
 /**
@@ -16,12 +10,14 @@ import PropTypes from "prop-types";
  *
  * @typedef {Object} NotificationContextValue
  * @property {string} snackMsg - Current snackbar text.
- * @property {string} snackSeverity - Current snackbar severity.
+ * @property {import("@mui/material").AlertColor} snackSeverity - Current
+ *   snackbar severity. Narrowed to what its only consumer, MUI's `Alert`,
+ *   accepts: every call site passes "success", "error" or "info".
  * @property {boolean} showSnackbar - Whether the snackbar is showing.
  * @property {(visible: boolean) => void} setSnackVisibility
- * @property {(message: string, type?: string) => void} setSnack - Snackbar only.
- * @property {(message: string, type?: string) => void} addNotification - Log only.
- * @property {(message: string, type?: string) => void} notify - Both at once.
+ * @property {(message: string, type?: import("@mui/material").AlertColor) => void} setSnack - Snackbar only.
+ * @property {(message: string, type?: import("@mui/material").AlertColor) => void} addNotification - Log only.
+ * @property {(message: string, type?: import("@mui/material").AlertColor) => void} notify - Both at once.
  * @property {Array<{id: string, message: string, type: string}>} notifications
  *   The persistent log behind the bell icon.
  * @property {(id: string) => void} dismissNotification - Removes one log entry.
@@ -54,30 +50,42 @@ export const NotificationContext = createContext(defaultValue);
 export const NotificationProvider = ({ children }) => {
   const [showSnackbar, setSnackVisibility] = useState(false);
   const [snackMsg, setSnackMsgTxt] = useState("");
-  const [snackSeverity, setSnackSeverity] = useState("success");
+  /** @type {[import("@mui/material").AlertColor, import("react").Dispatch<import("react").SetStateAction<import("@mui/material").AlertColor>>]} */
+  const [snackSeverity, setSnackSeverity] = useState(
+    /** @type {import("@mui/material").AlertColor} */ ("success"),
+  );
   const [notifications, setNotifications] = useState([]);
   const notificationRef = useRef(0);
 
   /** Transient toast only. */
-  const setSnack = useCallback((message, type = "info") => {
-    setSnackMsgTxt(message);
-    setSnackSeverity(type);
-    setSnackVisibility(true);
-  }, []);
+  const setSnack = useCallback(
+    /** @param {string} message @param {import("@mui/material").AlertColor} [type] */
+    (message, type = "info") => {
+      setSnackMsgTxt(message);
+      setSnackSeverity(type);
+      setSnackVisibility(true);
+    },
+    [],
+  );
 
   /** Persistent log entry only. */
-  const addNotification = useCallback((message, type = "info") => {
-    const newNotification = {
-      id: Date.now() + "-" + notificationRef.current.toString(),
-      message,
-      type,
-    };
-    notificationRef.current += 1;
-    setNotifications((prev) => [...prev, newNotification]);
-  }, []);
+  const addNotification = useCallback(
+    /** @param {string} message @param {import("@mui/material").AlertColor} [type] */
+    (message, type = "info") => {
+      const newNotification = {
+        id: Date.now() + "-" + notificationRef.current.toString(),
+        message,
+        type,
+      };
+      notificationRef.current += 1;
+      setNotifications((prev) => [...prev, newNotification]);
+    },
+    [],
+  );
 
   /** Both, with the same message. */
   const notify = useCallback(
+    /** @param {string} message @param {import("@mui/material").AlertColor} [type] */
     (message, type = "info") => {
       setSnack(message, type);
       addNotification(message, type);

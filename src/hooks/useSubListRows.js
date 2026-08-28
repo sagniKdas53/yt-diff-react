@@ -75,7 +75,9 @@ export function useSubListRows({
         setItems(json_data["rows"]);
         setPlaylistDirectory(json_data["saveDirectory"]);
         setPlaylistTitle(json_data["playlistTitle"] || "");
-        setItemCount(parseInt(json_data["count"]));
+        // `count` is a number in the contract; the parseInt here was guarding
+        // against a string nobody had checked for.
+        setItemCount(json_data["count"]);
       } catch (error) {
         if (error instanceof ApiError && !abortController.signal.aborted) {
           // The table is the only place there is to say this, so the refusal

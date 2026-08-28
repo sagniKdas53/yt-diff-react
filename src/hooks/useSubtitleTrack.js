@@ -21,6 +21,9 @@ import { assetBase } from "../config.js";
  * @returns {{
  *   subtitleUrl: string | null,
  *   activeCues: Array<{start: number, end: number, text: string}>,
+ *   subtitlesEnabled: boolean,
+ *   toggleSubtitles: () => void,
+ *   reportTime: (seconds: number) => void,
  * }}
  */
 export function useSubtitleTrack({ api, saveDirectory, subTitleFile }) {
@@ -37,7 +40,7 @@ export function useSubtitleTrack({ api, saveDirectory, subTitleFile }) {
   const toggleSubtitles = useCallback(() => {
     setSubtitlesEnabled((prev) => {
       const newVal = !prev;
-      localStorage.setItem("ytdiff_player_subtitles", newVal);
+      localStorage.setItem("ytdiff_player_subtitles", String(newVal));
       return newVal;
     });
   }, []);

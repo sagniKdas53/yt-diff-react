@@ -52,8 +52,12 @@ export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const [reindexOpen, setReindexOpen] = useState(false);
-  const [reindexStart, setReindexStart] = useState(0);
-  const [reindexStop, setReindexStop] = useState(10);
+  // Strings, because that is what the TextField hands back on every change and
+  // what `handleBatchReindex` compares against "" to decide whether the bound
+  // was set at all. They started as numbers, so the first render disagreed with
+  // every render after it. "0"/"10" render and parse exactly as 0/10 did.
+  const [reindexStart, setReindexStart] = useState("0");
+  const [reindexStop, setReindexStop] = useState("10");
   const [reindexSiteFilter, setReindexSiteFilter] = useState("");
   const [reindexChunkSize, setReindexChunkSize] = useState(8);
 
@@ -263,7 +267,9 @@ export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
                 labelId="reindex-chunk-size-label"
                 value={reindexChunkSize}
                 label="Chunk Size"
-                onChange={(e) => setReindexChunkSize(e.target.value)}
+                // The Select's values are numbers, but MUI types the event's
+                // value as `string | number` because a Select can carry either.
+                onChange={(e) => setReindexChunkSize(Number(e.target.value))}
               >
                 <MenuItem value={1}>1</MenuItem>
                 <MenuItem value={8}>8</MenuItem>

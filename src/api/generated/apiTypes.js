@@ -320,6 +320,10 @@
  */
 
 /**
+ * @typedef {Record<string, never>} RefreshRequest
+ */
+
+/**
  * @typedef {{
   "status": "success",
   "token": string,
@@ -385,31 +389,33 @@
 /** @typedef {{path: "/dedup-unlisted", request: DedupUnlistedRequest, response: DedupUnlistedResponse}} DedupUnlistedRoute */
 /** @typedef {{path: "/dedup-playlists", request: DedupPlaylistsRequest, response: DedupPlaylistsResponse}} DedupPlaylistsRoute */
 /** @typedef {{path: "/queuestatus", request: QueuestatusRequest, response: QueuestatusResponse}} QueuestatusRoute */
-/** @typedef {{path: "/refresh", request?: undefined, response: RefreshResponse}} RefreshRoute */
+/** @typedef {{path: "/refresh", request: RefreshRequest, response: RefreshResponse}} RefreshRoute */
 /** @typedef {{path: "/register", request: RegisterRequest, response: RegisterResponse}} RegisterRoute */
 /** @typedef {{path: "/login", request: LoginRequest, response: LoginResponse}} LoginRoute */
 /** @typedef {{path: "/isregallowed", request: IsregallowedRequest, response: IsregallowedResponse}} IsregallowedRoute */
 
-/** @typedef {
- * | ListRoute
- * | DownloadRoute
- * | WatchRoute
- * | GetplayRoute
- * | DelplayRoute
- * | GetsubRoute
- * | DelsubRoute
- * | GetfileRoute
- * | RefreshfileRoute
- * | RefreshfilesRoute
- * | GetfilesRoute
- * | ReindexallRoute
- * | DedupUnlistedRoute
- * | DedupPlaylistsRoute
- * | QueuestatusRoute
- * | RefreshRoute
- * | RegisterRoute
- * | LoginRoute
- * | IsregallowedRoute
- * } ApiRoute */
+/**
+ * Every route, as a discriminated union on `path`.
+ *
+ * @typedef {ListRoute
+ *   | DownloadRoute
+ *   | WatchRoute
+ *   | GetplayRoute
+ *   | DelplayRoute
+ *   | GetsubRoute
+ *   | DelsubRoute
+ *   | GetfileRoute
+ *   | RefreshfileRoute
+ *   | RefreshfilesRoute
+ *   | GetfilesRoute
+ *   | ReindexallRoute
+ *   | DedupUnlistedRoute
+ *   | DedupPlaylistsRoute
+ *   | QueuestatusRoute
+ *   | RefreshRoute
+ *   | RegisterRoute
+ *   | LoginRoute
+ *   | IsregallowedRoute} ApiRoute
+ */
 
 export {};

@@ -108,3 +108,15 @@ export function createApiClient(apiFetch, hadToken = false) {
 
   return { post };
 }
+
+/**
+ * The client `useApiClient` hands out.
+ *
+ * Named here so the hooks and components that take it as a parameter can say
+ * so in JSDoc — `@param {import("../api/client.js").ApiClient} api` — and get
+ * the typed `post` rather than an implicit `any`. Derived from
+ * `createApiClient` rather than restated, so it cannot describe a client the
+ * factory does not return.
+ *
+ * @typedef {ReturnType<typeof createApiClient>} ApiClient
+ */

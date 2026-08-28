@@ -693,7 +693,6 @@ function SubList({
             page={page}
             start={start}
             currentPlayerIndex={currentPlayerIndex}
-            setCurrentPlayerIndex={setCurrentPlayerIndex}
             setPage={(newPage) => handleChangePage(null, newPage)}
             openPlayer={openPlayer}
             playlistDirectory={playlistDirectory}

@@ -20,8 +20,11 @@
     "isolatedModules": true
   },
   "include": [
+    "src/types/**/*.d.ts",
     "src/api/**/*.js",
-    "src/hooks/useApiClient.js",
+    "src/hooks/**/*.js",
+    "src/components/**/*.jsx",
+    "src/contexts/**/*.jsx",
     "src/config.js"
   ]
 }

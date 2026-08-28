@@ -106,23 +106,47 @@ const themeObj = (theme) =>
     },
   });
 
-const Alert = forwardRef(function Alert(
-  { severity, sx, onClose, children },
-  ref,
-) {
-  return (
-    <MuiAlert
-      elevation={6}
-      ref={ref}
-      variant="filled"
-      severity={severity}
-      sx={sx}
-      onClose={onClose}
-    >
-      {children}
-    </MuiAlert>
-  );
-});
+/**
+ * The snackbar's filled alert.
+ *
+ * `forwardRef` infers nothing about props from the destructure, so the
+ * component's own props are named here — otherwise every one of them is an
+ * error where it is read, and passing them from the JSX is another.
+ *
+ * @typedef {Object} AlertProps
+ * @property {import("@mui/material").AlertColor} [severity]
+ * @property {import("@mui/material").SxProps} [sx]
+ * @property {() => void} [onClose]
+ * @property {import("react").ReactNode} [children]
+ */
+
+/**
+ * `forwardRef`'s result does not declare `propTypes`, but React reads one at
+ * runtime and eslint's `react/prop-types` requires it — as with the memo'd
+ * components elsewhere in the tree.
+ *
+ * @type {import("react").ForwardRefExoticComponent<AlertProps & import("react").RefAttributes<HTMLDivElement>> & {propTypes?: object}}
+ */
+const Alert = forwardRef(
+  /**
+   * @param {AlertProps} props
+   * @param {import("react").Ref<HTMLDivElement>} ref
+   */
+  function Alert({ severity, sx, onClose, children }, ref) {
+    return (
+      <MuiAlert
+        elevation={6}
+        ref={ref}
+        variant="filled"
+        severity={severity}
+        sx={sx}
+        onClose={onClose}
+      >
+        {children}
+      </MuiAlert>
+    );
+  },
+);
 
 Alert.propTypes = {
   severity: PropTypes.string,
@@ -146,6 +170,15 @@ const Loader = () => (
  * boundary inside it, a chunk that 404s after a deploy takes the whole tree
  * down instead of the one panel that could not load. The boundary goes outside
  * `Suspense` because that is where React looks once the lazy promise rejects.
+ */
+/**
+ * A lazy route's boundary pair: an error boundary outside a Suspense fence.
+ *
+ * Props are named here rather than left to `propTypes` inference, which types
+ * `children` as prop-types' own `ReactNodeLike` — a type ordinary JSX elements
+ * do not satisfy.
+ *
+ * @param {{label?: string, children?: import("react").ReactNode}} props
  */
 const LazyRegion = ({ label, children }) => (
   <ErrorBoundary compact label={label}>

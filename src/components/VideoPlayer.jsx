@@ -37,37 +37,61 @@ import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
-const ControlBar = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "show",
-})(({ theme, show }) => ({
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  right: 0,
-  background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
-  padding: theme.spacing(2),
-  transition: "opacity 0.3s ease-in-out",
-  opacity: show ? 1 : 0,
-  pointerEvents: show ? "auto" : "none",
-  zIndex: 2,
-}));
+/**
+ * `show` is a custom prop, held back from the DOM by `shouldForwardProp`. MUI's
+ * types describe the props of the component being wrapped, so a styled
+ * component's own props have to be named — otherwise `show` is an error both
+ * where it is read below and where it is passed in the JSX.
+ *
+ * @typedef {import("@mui/material").BoxProps & {show: boolean}} BarProps
+ */
 
-const TopBar = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "show",
-})(({ theme, show }) => ({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  background: "linear-gradient(rgba(0,0,0,0.8), transparent)",
-  padding: theme.spacing(2),
-  display: "flex",
-  alignItems: "center",
-  transition: "opacity 0.3s ease-in-out",
-  opacity: show ? 1 : 0,
-  pointerEvents: show ? "auto" : "none",
-  zIndex: 2,
-}));
+const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
+  styled(Box, {
+    shouldForwardProp: (prop) => prop !== "show",
+  })(
+    /** @param {{theme: import("@mui/material/styles").Theme, show: boolean}} props */ ({
+      theme,
+      show,
+    }) => ({
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
+      padding: theme.spacing(2),
+      transition: "opacity 0.3s ease-in-out",
+      opacity: show ? 1 : 0,
+      pointerEvents: show ? "auto" : "none",
+      zIndex: 2,
+    }),
+  )
+);
+
+const TopBar = /** @type {import("react").ComponentType<BarProps>} */ (
+  styled(Box, {
+    shouldForwardProp: (prop) => prop !== "show",
+  })(
+    /** @param {{theme: import("@mui/material/styles").Theme, show: boolean}} props */ ({
+      theme,
+      show,
+    }) => ({
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      background: "linear-gradient(rgba(0,0,0,0.8), transparent)",
+      padding: theme.spacing(2),
+      display: "flex",
+      alignItems: "center",
+      transition: "opacity 0.3s ease-in-out",
+      opacity: show ? 1 : 0,
+      pointerEvents: show ? "auto" : "none",
+      zIndex: 2,
+    }),
+  )
+);
+
 const AutoPlaySwitch = styled(Switch)(() => ({
   width: 42,
   height: 24,
@@ -216,7 +240,8 @@ export default function VideoPlayer({
     if (timerRef_controlsTimeout.current)
       clearTimeout(timerRef_controlsTimeout.current);
     timerRef_controlsTimeout.current = setTimeout(() => {
-      if (isPlayingRef.current && !drawerOpenRef.current) setShowControls(false);
+      if (isPlayingRef.current && !drawerOpenRef.current)
+        setShowControls(false);
     }, 3000);
   }, []);
 
@@ -254,7 +279,7 @@ export default function VideoPlayer({
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
-      localStorage.setItem("ytdiff_player_muted", !isMuted);
+      localStorage.setItem("ytdiff_player_muted", String(!isMuted));
     }
   };
 
@@ -264,8 +289,8 @@ export default function VideoPlayer({
       videoRef.current.volume = value;
     }
     setIsMuted(value === 0);
-    localStorage.setItem("ytdiff_player_volume", value);
-    localStorage.setItem("ytdiff_player_muted", value === 0);
+    localStorage.setItem("ytdiff_player_volume", String(value));
+    localStorage.setItem("ytdiff_player_muted", String(value === 0));
     // Reset auto-hide timer when user interacts with mobile slider
     if (isMobile && showMobileVolume) {
       if (mobileVolumeTimeoutRef.current)
@@ -342,7 +367,7 @@ export default function VideoPlayer({
   const toggleAutoPlay = () => {
     const newVal = !autoPlayEnabled;
     setAutoPlayEnabled(newVal);
-    localStorage.setItem("ytdiff_player_autoplay", newVal);
+    localStorage.setItem("ytdiff_player_autoplay", String(newVal));
   };
 
   const handleVideoEnded = () => {
