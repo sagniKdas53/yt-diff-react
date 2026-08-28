@@ -52,14 +52,40 @@ describe("parseSubtitleText", () => {
     expect(cues).toEqual([{ start: 60, end: 62.5, text: "Text" }]);
   });
 
-  it("skips a bare mm:ss timing line", () => {
-    // Documenting what the timing regex actually accepts: it wants two colons
-    // (`\d{1,2}:?\d{2}:\d{2}`), so the shorter WebVTT `mm:ss.ttt` form is
-    // dropped rather than parsed — `parseTimestamp`'s two-part branch is
-    // unreachable from here. yt-dlp writes the long form, so nothing in this
-    // app hits it today.
+  it("reads the hourless timings ffmpeg writes for short videos", () => {
+    // WebVTT makes the hour optional and ffmpeg's writer omits it below an
+    // hour, so `--convert-subs vtt` produces this for most videos whose
+    // subtitles were not already VTT. The old pattern required the hour and
+    // silently returned no cues for the whole file.
     const cues = parseSubtitleText(
-      ["WEBVTT", "", "01:00.000 --> 01:02.500", "Text"].join("\n"),
+      [
+        "WEBVTT",
+        "",
+        "00:01.000 --> 00:03.500",
+        "First line",
+        "",
+        "01:05.000 --> 01:07.500",
+        "Second line",
+      ].join("\n"),
+    );
+
+    expect(cues).toEqual([
+      { start: 1, end: 3.5, text: "First line" },
+      { start: 65, end: 67.5, text: "Second line" },
+    ]);
+  });
+
+  it("reads a one-digit hour", () => {
+    const cues = parseSubtitleText(
+      ["WEBVTT", "", "1:00:01.000 --> 1:00:03.500", "Text"].join("\n"),
+    );
+    expect(cues).toEqual([{ start: 3601, end: 3603.5, text: "Text" }]);
+  });
+
+  it("does not read a bare second count as a timing", () => {
+    // The hour being optional must not make the minute optional too.
+    const cues = parseSubtitleText(
+      ["WEBVTT", "", "01.000 --> 03.500", "Text"].join("\n"),
     );
     expect(cues).toEqual([]);
   });

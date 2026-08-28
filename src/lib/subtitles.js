@@ -62,7 +62,15 @@ export function parseSubtitleText(text) {
     const match = lines
       .at(timingIdx)
       .match(
-        /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
+        // The hour is optional, because WebVTT's is: ffmpeg's writer emits
+        // `mm:ss.mmm` for anything under an hour, and that is what
+        // `--convert-subs vtt` produces for a source that was not already VTT.
+        // The previous pattern spelled the hour as `\d{1,2}:?`, which reads as
+        // optional but is not — it still demands the two colons that follow —
+        // so those files parsed to zero cues. Nothing said so: the CC button
+        // is gated on the subtitle URL, not on the cues, so it appeared and
+        // the overlay stayed empty.
+        /((?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{3})\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{3})/,
       );
     if (!match) continue;
 
