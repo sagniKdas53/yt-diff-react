@@ -51,6 +51,15 @@ import PlayListItemRow from "./PlayListItemRow.jsx";
 // submission, so the common case stays quiet.
 const QUEUE_DEPTH_NOTICE_THRESHOLD = 5;
 
+/**
+ * The delete-menu entries, in the layout the comment below describes.
+ *
+ * Typed as a tuple so the positional reads keep their meaning: without it the
+ * whole row widens to `(string | boolean)[]` and `option[5]`, the MUI colour,
+ * is as likely to be a boolean as a string.
+ *
+ * @type {Array<[string, boolean, boolean, boolean, string, "warning" | "secondary" | "error"]>}
+ */
 const options = [
   // [Label, deleteAllVideosInPlaylist, deletePlaylist, cleanUp, IconType, ColorType]
   ["Delete playlist", false, true, false, "playlist", "warning"],
@@ -715,9 +724,9 @@ function PlayList({
               backgroundColor: theme.palette.background.menu,
             },
           },
-          list: {
-            "aria-labelledby": "long-button",
-          },
+        }}
+        MenuListProps={{
+          "aria-labelledby": "long-button",
         }}
       >
         {openMenuIndex !== null &&

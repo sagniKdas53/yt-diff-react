@@ -4,11 +4,27 @@ import io from "socket.io-client";
 import PropTypes from "prop-types";
 import { socketPath } from "../config.js";
 
-export const SocketContext = createContext({
+/**
+ * The shape `useContext(SocketContext)` returns.
+ *
+ * `setConnectionId` is the state setter itself, so it accepts the updater form
+ * as well as a bare string — typing it as `() => void` made `setConnectionId("")`
+ * in the logout path an error.
+ *
+ * @typedef {Object} SocketContextValue
+ * @property {import("socket.io-client").Socket | null} socket - Null until connected.
+ * @property {string} connectionId - Assigned from the backend's "init" frame.
+ * @property {import("react").Dispatch<import("react").SetStateAction<string>>} setConnectionId
+ */
+
+/** @type {SocketContextValue} */
+const defaultValue = {
   socket: null,
   connectionId: "",
   setConnectionId: () => {},
-});
+};
+
+export const SocketContext = createContext(defaultValue);
 
 const base = import.meta.env.PROD ? "" : "http://localhost:8888";
 

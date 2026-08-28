@@ -56,6 +56,12 @@ async function errorFrom(response) {
  * caller to inspect, so the failure path cannot be forgotten — the previous
  * shape let a missing `if (!response.ok)` read an error body as data.
  *
+ * The path is typed against the generated contract
+ * (`generated/apiTypes.js`): `post("/getsub", body)` accepts exactly the
+ * request body `/getsub` documents and resolves to exactly its documented
+ * response. The types come from the backend's endpoint table — regenerate
+ * with `deno task gen:api` there after any contract change.
+ *
  * @param apiFetch - The transport from `useApi`.
  * @param hadToken - Whether the transport is carrying a session. Decides
  *   whether a 401 means "expired" (already reported) or "rejected".
@@ -64,12 +70,13 @@ export function createApiClient(apiFetch, hadToken = false) {
   /**
    * POSTs `body` as JSON to `path` and returns the parsed response.
    *
-   * @param {string} path - Backend-relative, e.g. "/getsub".
-   * @param {object} [body] - Serialized as the request body. Omit for none.
-   * @param {object} [options]
-   * @param {AbortSignal} [options.signal] - Cancels the request.
-   * @param {object} [options.headers] - Overrides, e.g. a different Accept.
-   * @returns {Promise<any>} The parsed response body.
+   * @template {import("./generated/apiTypes.js").ApiRoute["path"]} P
+   * @param {P} path - Backend-relative, e.g. "/getsub".
+   * @param {Extract<import("./generated/apiTypes.js").ApiRoute, {path: P}>["request"]} [body] -
+   *   Serialized as the request body. Omit for none.
+   * @param {{signal?: AbortSignal, headers?: object}} [options]
+   * @returns {Promise<Extract<import("./generated/apiTypes.js").ApiRoute, {path: P}>["response"]>}
+   *   The parsed response body.
    * @throws {ApiError} On any non-2xx, or on a body that is not JSON.
    */
   async function post(path, body, { signal, headers } = {}) {
@@ -101,3 +108,15 @@ export function createApiClient(apiFetch, hadToken = false) {
 
   return { post };
 }
+
+/**
+ * The client `useApiClient` hands out.
+ *
+ * Named here so the hooks and components that take it as a parameter can say
+ * so in JSDoc — `@param {import("../api/client.js").ApiClient} api` — and get
+ * the typed `post` rather than an implicit `any`. Derived from
+ * `createApiClient` rather than restated, so it cannot describe a client the
+ * factory does not return.
+ *
+ * @typedef {ReturnType<typeof createApiClient>} ApiClient
+ */

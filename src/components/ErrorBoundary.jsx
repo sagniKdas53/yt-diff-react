@@ -50,6 +50,15 @@ const palette = {
   accentText: "#ffffff",
 };
 
+/**
+ * Plain inline styles, because this component renders when the app has already
+ * failed — it must not depend on MUI's theme or emotion having survived.
+ *
+ * Annotated so `flexWrap: "wrap"` and friends stay the literal unions
+ * `CSSProperties` wants, rather than widening to `string`.
+ *
+ * @type {Record<string, import("react").CSSProperties>}
+ */
 const styles = {
   page: {
     minHeight: "60vh",

@@ -3,12 +3,8 @@ import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { Clear as ClearIcon } from "@mui/icons-material";
 import { Download as DownloadIcon } from "@mui/icons-material";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
 import Fab from "@mui/material/Fab";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
@@ -21,7 +17,6 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import debounce from "lodash.debounce";
 import PropTypes from "prop-types";
@@ -37,11 +32,13 @@ import {
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { NotificationContext } from "../contexts/NotificationContext";
 import { DownloadContext } from "../contexts/DownloadContext";
-import { ApiError } from "../api/client.js";
 import { useApiClient } from "../hooks/useApiClient.js";
+import { useSubListRows } from "../hooks/useSubListRows.js";
+import { useThumbnailUrls } from "../hooks/useThumbnailUrls.js";
 import { assetBase } from "../config.js";
 import TablePaginationActions from "./Pagination.jsx";
 import SubListItemCard from "./SubListItemCard.jsx";
+import SubListDeleteDialog from "./SubListDeleteDialog.jsx";
 import VideoPlayer from "./VideoPlayer.jsx";
 
 function SubList({
@@ -75,13 +72,17 @@ function SubList({
   const [stop, setStop] = useState(8);
   const [page, setPage] = useState(0);
   // actual table data
-  const [items, setItems] = useState([]);
-  const [itemCount, setItemCount] = useState(0);
+  const { items, setItems, itemCount, playlistDirectory, playlistTitle } =
+    useSubListRows({
+      api,
+      start,
+      stop,
+      sort,
+      query,
+      loadedPlayList,
+      reFetch,
+    });
   const [selectedItems, updateSelected] = useState({});
-  const [selectAll, setSelectAll] = useState(false);
-  const [playlistDirectory, setPlaylistDirectory] = useState("init");
-  const [playlistTitle, setPlaylistTitle] = useState("");
-  const [thumbUrls, setThumbUrls] = useState({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmPayload, setConfirmPayload] = useState(null);
   const [playerOpen, setPlayerOpen] = useState(false);
@@ -91,79 +92,35 @@ function SubList({
   const [currentPlayerSubTitleFile, setCurrentPlayerSubTitleFile] =
     useState(null);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
-  const thumbMetaRef = useRef({});
-  const thumbRefreshTimerRef = useRef(null);
+
+  // Signed thumbnails for the visible rows, kept alive across expiries.
+  const { thumbUrls } = useThumbnailUrls({
+    api,
+    items,
+    playlistDirectory,
+    loadedPlayList,
+  });
+
+  // Selection state stores one entry per row url. Readers default missing
+  // entries to false, so there is no mirror effect keeping the map in sync
+  // with the rows: "select all" is derived from the rows currently on screen,
+  // and anything a page change leaves behind simply stops being reachable.
+  const selectAll = useMemo(() => {
+    if (items.length === 0) return false;
+    return items.every(
+      (element) =>
+        Reflect.get(selectedItems, element.video_metadatum?.videoUrl) === true,
+    );
+  }, [items, selectedItems]);
 
   const itemsRef = useRef(items);
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
 
-  const clearThumbnailRefreshTimer = useCallback(() => {
-    if (thumbRefreshTimerRef.current) {
-      clearTimeout(thumbRefreshTimerRef.current);
-      thumbRefreshTimerRef.current = null;
-    }
-  }, []);
-
-  const scheduleThumbnailRefresh = useCallback(() => {
-    clearThumbnailRefreshTimer();
-
-    const activeEntries = Object.values(thumbMetaRef.current).filter(
-      (entry) => entry?.fileId && entry?.expiry,
-    );
-    if (activeEntries.length === 0) return;
-
-    const nextExpiry = Math.min(...activeEntries.map((entry) => entry.expiry));
-    const timeUntilExpiry = nextExpiry - Date.now();
-    const refreshTime = Math.max(0, timeUntilExpiry - 300000);
-
-    thumbRefreshTimerRef.current = setTimeout(async () => {
-      const entries = Object.entries(thumbMetaRef.current).filter(
-        ([, entry]) => entry?.fileId && entry?.expiry,
-      );
-      const dueEntries = entries.filter(
-        ([, entry]) => entry.expiry - Date.now() <= 300000,
-      );
-      if (dueEntries.length === 0) {
-        scheduleThumbnailRefresh();
-        return;
-      }
-
-      try {
-        const data = await api.post("/refreshfiles", {
-          fileIds: dueEntries.map(([, entry]) => entry.fileId),
-        });
-
-        if (data.status === "success" && data.files) {
-          dueEntries.forEach(([fileName, entry]) => {
-            const refreshed = Reflect.get(data.files, entry.fileId);
-            if (refreshed?.expiry) {
-              Reflect.set(thumbMetaRef.current, fileName, {
-                ...Reflect.get(thumbMetaRef.current, fileName),
-                expiry: refreshed.expiry,
-              });
-            } else {
-              Reflect.deleteProperty(thumbMetaRef.current, fileName);
-              setThumbUrls((prev) => {
-                const next = { ...prev };
-                Reflect.set(next, fileName, null);
-                return next;
-              });
-            }
-          });
-        }
-      } catch (_error) {
-        // Let the next bulk fetch recover if this refresh fails.
-      }
-
-      scheduleThumbnailRefresh();
-    }, refreshTime);
-  }, [api, clearThumbnailRefreshTimer]);
   // const functions and normal functions
   const handleChangePage = useCallback(
     (_event, newPage) => {
-      //console.log("handleChangePage: Page: ", newPage);
       const validPage = Math.max(0, newPage);
       setPage(validPage);
       setStart(validPage * rowsPerPage);
@@ -173,7 +130,6 @@ function SubList({
   );
 
   const handleChangeRowsPerPage = (event) => {
-    //console.log("handleChangeRowsPerPage: Rows per page: ", event.target.value);
     // I plan to persist he relative page when rows change but not now
     setPage(0);
     setStart(0);
@@ -193,7 +149,6 @@ function SubList({
       Reflect.set(tempState, element.video_metadatum.videoUrl, !selectAll);
     });
     updateSelected((prevSelected) => ({ ...prevSelected, ...tempState }));
-    setSelectAll(!selectAll);
   };
 
   const handleSort = () => {
@@ -202,7 +157,6 @@ function SubList({
 
   const clearList = () => {
     setPlayListUrl("init");
-    setPlaylistDirectory("init");
     handleChangePage(null, 0);
     setSubListIndex(0);
     // On mobile, navigate back to playlists after clearing
@@ -229,8 +183,13 @@ function SubList({
   };
 
   async function downloadFunc() {
-    const data = Object.keys(selectedItems).filter((key) =>
-      Reflect.get(selectedItems, key),
+    // Scoped to the rows on screen: a selection left over from a previous
+    // page or playlist is unreachable everywhere else, so it must not queue.
+    const urlsOnPage = new Set(
+      items.map((element) => element.video_metadatum.videoUrl),
+    );
+    const data = Object.keys(selectedItems).filter(
+      (key) => Reflect.get(selectedItems, key) && urlsOnPage.has(key),
     );
 
     if (data.length === 0) return;
@@ -254,7 +213,6 @@ function SubList({
       acceptedUrls.forEach((url) => Reflect.set(next, url, false));
       return next;
     });
-    if (acceptedUrls.length > 0) setSelectAll(false);
   }
 
   const getFileAndDownload = useCallback(
@@ -266,7 +224,6 @@ function SubList({
 
       try {
         // perform the request and stream the response so we can report progress
-        //console.log("Requesting file: ", { saveDirectory, fileName });
         setSnack(`Downloading: ${fileName}`, "info");
         const json_data = await api.post("/getfile", {
           saveDirectory,
@@ -276,7 +233,6 @@ function SubList({
         if (json_data.status === "success" && json_data.signedUrlId) {
           const downloadUrl = new URL(assetBase + "/getfile");
           downloadUrl.searchParams.append("fileId", json_data.signedUrlId);
-          //console.log("Opening download URL: ", downloadUrl.toString());
           // open in new tab
           globalThis.open(
             downloadUrl.toString(),
@@ -305,24 +261,14 @@ function SubList({
   );
 
   /**
-   * Delete a video from the playlist.
-   * @param {string} playListUrl The playlist to delete from.
-   * @param {string} videoUrl The URL of the video to delete.
-   * @param {string} title The title of the video to delete.
-   * @param {boolean} cleanUp Whether to clean up the downloaded files.
-   * @param {boolean} deleteVideoMappings Whether to delete the video mappings from the database.
-   * @param {boolean} deleteVideosInDB Whether to delete the video itself from the database.
+   * Delete videos from the playlist.
+   *
+   * @param {import("./SubListDeleteDialog.jsx").SubListDeletePayload} payload - What and how to delete.
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
-  const deleteVideo = async (
-    playListUrl,
-    mappingId,
-    videoUrl,
-    title,
-    cleanUp,
-    deleteVideoMappings,
-    deleteVideosInDB,
-  ) => {
+  const confirmDelete = async (payload) => {
+    const { playListUrl, mappingId, videoUrl, title } = payload;
+    const { cleanUp, deleteVideoMappings, deleteVideosInDB } = payload;
     setSnack(`Deleting: ${videoUrl}`, "info");
     try {
       await api.post("/delsub", {
@@ -362,72 +308,6 @@ function SubList({
     "SubList",
   );
 
-  /**
-   * Fetches sub-list items from the backend with the given parameters
-   * @param {AbortController} controller - an AbortController to handle aborting the request
-   * @returns {Promise<void>} - a promise that resolves when the request is complete
-   */
-  const fetchData = async (controller) => {
-    //console.log("Fetching items with params: ", { start, stop, sort, query, url: loadedPlayList });
-
-    try {
-      const json_data = await api.post(
-        "/getsub",
-        {
-          start,
-          stop,
-          sortDownloaded: sort,
-          query,
-          url: loadedPlayList,
-        },
-        { signal: controller.signal },
-      );
-
-      if (controller.signal.aborted) return; // Don't update state if component unmounted
-
-      setItems(json_data["rows"]);
-      setPlaylistDirectory(json_data["saveDirectory"]);
-      setPlaylistTitle(json_data["playlistTitle"] || "");
-      setItemCount(parseInt(json_data["count"]));
-    } catch (error) {
-      if (error instanceof ApiError && !controller.signal.aborted) {
-        // The table is the only place there is to say this, so the refusal is
-        // rendered as the one row it can show.
-        setItems([
-          {
-            positionInPlaylist: 1,
-            id: "error-row",
-            playlistUrl: loadedPlayList,
-            video_metadatum: {
-              title: `Error in fetching sub-lists: ${error.status} ${error.message}`,
-              videoId: "",
-              videoUrl: "",
-              downloadStatus: false,
-              isAvailable: false,
-            },
-          },
-        ]);
-        setItemCount(1);
-      }
-      // Anything else -- an abort, or the network -- leaves the table showing
-      // what it already had.
-    }
-  };
-  // useEffects  to load items
-  // Fetch data when dependencies change
-  useEffect(() => {
-    // Handle initial "init" playlist state, unless doing a global search
-    if (loadedPlayList === "init" && !query.startsWith("global:")) {
-      setItems([]);
-      setItemCount(0);
-      return;
-    }
-    const abortController = new AbortController();
-    fetchData(abortController);
-    return () => abortController.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, start, stop, sort, query, loadedPlayList, reFetch]);
-
   // Responsive card media height using MUI breakpoints
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("sm"));
@@ -435,68 +315,8 @@ function SubList({
   const isMd = useMediaQuery(theme.breakpoints.between("md", "lg"));
   const mediaHeight = isXs ? 220 : isSm ? 200 : isMd ? 160 : 140;
 
-  // Bulk fetch thumbnails
-  useEffect(() => {
-    if (!items || items.length === 0 || playlistDirectory === "init") return;
-
-    const fetchThumbnails = async () => {
-      const filesToFetch = items
-        .map((item) => {
-          const thumb = item.video_metadatum?.thumbNailFile;
-          if (thumb && thumbUrls[thumb] === undefined) {
-            return {
-              saveDirectory:
-                item.video_metadatum?.saveDirectory ?? playlistDirectory,
-              fileName: thumb,
-            };
-          }
-          return null;
-        })
-        .filter(Boolean);
-
-      if (filesToFetch.length === 0) return;
-
-      // Mark as in-progress
-      const newThumbUrls = {};
-      filesToFetch.forEach((f) => Reflect.set(newThumbUrls, f.fileName, null));
-      setThumbUrls((prev) => ({ ...prev, ...newThumbUrls }));
-
-      try {
-        const data = await api.post("/getfiles", { files: filesToFetch });
-
-        if (data.status === "success" && data.files) {
-          const updates = {};
-          Object.entries(data.files).forEach(([fileName, fileData]) => {
-            if (fileData?.signedUrlId) {
-              Reflect.set(
-                updates,
-                fileName,
-                assetBase + "/getfile?fileId=" + fileData.signedUrlId,
-              );
-              Reflect.set(thumbMetaRef.current, fileName, {
-                fileId: fileData.signedUrlId,
-                expiry: fileData.expiry,
-              });
-            } else {
-              Reflect.set(updates, fileName, null);
-              Reflect.deleteProperty(thumbMetaRef.current, fileName);
-            }
-          });
-          setThumbUrls((prev) => ({ ...prev, ...updates }));
-          scheduleThumbnailRefresh();
-        }
-      } catch (_error) {
-        //console.error("Error fetching thumbnails:", error);
-      }
-    };
-
-    fetchThumbnails();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, playlistDirectory, api]);
-
   useEffect(() => {
     if (downloadedItem.url !== null) {
-      //console.log(downloadedItem);
       if (sort) {
         setReFetch(
           "download-completed-" +
@@ -533,59 +353,16 @@ function SubList({
         });
       });
     }
-  }, [downloadedItem, sort, loadedPlayList, setReFetch]);
+  }, [downloadedItem, sort, loadedPlayList, setReFetch, setItems]);
 
   useEffect(() => {
+    // Resetting selection/sort when the open playlist changes is deliberate:
+    // they describe one playlist's rows, not the view. The synchronous reset
+    // avoids one render showing the new playlist under the old sort.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updateSelected({});
-    setSelectAll(false);
     updateSort(false);
-    clearThumbnailRefreshTimer();
-    thumbMetaRef.current = {};
-    setThumbUrls({});
-  }, [clearThumbnailRefreshTimer, loadedPlayList]);
-
-  useEffect(() => {
-    return () => {
-      clearThumbnailRefreshTimer();
-    };
-  }, [clearThumbnailRefreshTimer]);
-
-  useEffect(() => {
-    updateSelected((prevSelected) => {
-      const next = { ...prevSelected };
-      // Only initialize new items — preserve existing selections
-      items.forEach((element) => {
-        const url = element.video_metadatum.videoUrl;
-        if (!(url in next)) {
-          Reflect.set(next, url, false);
-        }
-      });
-      // Remove keys not present in current items
-      const currentUrls = new Set(
-        items.map((el) => el.video_metadatum.videoUrl),
-      );
-      Object.keys(next).forEach((key) => {
-        if (!currentUrls.has(key)) {
-          Reflect.deleteProperty(next, key);
-        }
-      });
-      return next;
-    });
-  }, [items]);
-
-  useEffect(() => {
-    if (
-      !(
-        Object.keys(selectedItems).length === 0 &&
-        selectedItems.constructor === Object
-      )
-    )
-      setSelectAll(
-        Object.values(selectedItems).every((value) => {
-          return value === true;
-        }),
-      );
-  }, [selectedItems]);
+  }, [loadedPlayList]);
 
   const debouncedQuery = useMemo(
     () => debounce((value) => updateQuery(value.trim()), 1000),
@@ -605,73 +382,72 @@ function SubList({
 
   useEffect(() => {
     if (subListIndex === -1) {
-      handleChangePage(null, 0); // Reset to the first page if subListIndex is -1
+      // Reset to the first page if subListIndex is -1
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the page state exists to follow this prop; there is no derived form of "which page shows position N"
+      handleChangePage(null, 0);
     } else {
-      //console.log("subListIndex: ", subListIndex, "itemCount: ", itemCount);
       // Calculate the current page based on the response index
       const currentIndex =
         subListIndex < itemCount ? subListIndex : itemCount - 1;
       const calculatedPage = Math.floor(currentIndex / rowsPerPage);
-      //console.log("currentIndex: ", currentIndex, "calculatedPage: ", calculatedPage);
       handleChangePage(null, calculatedPage);
     }
   }, [subListIndex, handleChangePage, rowsPerPage, itemCount]);
 
-  const handleRemove = useCallback(
-    (id) => {
+  const buildDeletePayload = useCallback(
+    (id, overrides) => {
       const element = itemsRef.current.find((item) => item.id === id);
-      if (!element) return;
+      if (!element) return null;
       const meta = element.video_metadatum || {};
-      setConfirmPayload({
+      return {
         playListUrl: loadedPlayList,
         mappingId: element.id,
         videoUrl: meta.videoUrl,
         title: meta.title,
+        ...overrides,
+      };
+    },
+    [loadedPlayList],
+  );
+
+  const openDeleteDialog = useCallback(
+    (id, overrides) => {
+      const payload = buildDeletePayload(id, overrides);
+      if (!payload) return;
+      setConfirmPayload(payload);
+      setConfirmOpen(true);
+    },
+    [buildDeletePayload],
+  );
+
+  const handleRemove = useCallback(
+    (id) =>
+      openDeleteDialog(id, {
         cleanUp: false,
         deleteVideoMappings: true,
         deleteVideosInDB: false,
-      });
-      setConfirmOpen(true);
-    },
-    [loadedPlayList],
+      }),
+    [openDeleteDialog],
   );
 
   const handleDeleteDownloaded = useCallback(
-    (id) => {
-      const element = itemsRef.current.find((item) => item.id === id);
-      if (!element) return;
-      const meta = element.video_metadatum || {};
-      setConfirmPayload({
-        playListUrl: loadedPlayList,
-        mappingId: element.id,
-        videoUrl: meta.videoUrl,
-        title: meta.title,
+    (id) =>
+      openDeleteDialog(id, {
         cleanUp: true,
         deleteVideoMappings: false,
         deleteVideosInDB: false,
-      });
-      setConfirmOpen(true);
-    },
-    [loadedPlayList],
+      }),
+    [openDeleteDialog],
   );
 
   const handleDeleteDB = useCallback(
-    (id) => {
-      const element = itemsRef.current.find((item) => item.id === id);
-      if (!element) return;
-      const meta = element.video_metadatum || {};
-      setConfirmPayload({
-        playListUrl: loadedPlayList,
-        mappingId: element.id,
-        videoUrl: meta.videoUrl,
-        title: meta.title,
+    (id) =>
+      openDeleteDialog(id, {
         cleanUp: true,
         deleteVideoMappings: true,
         deleteVideosInDB: true,
-      });
-      setConfirmOpen(true);
-    },
-    [loadedPlayList],
+      }),
+    [openDeleteDialog],
   );
 
   const handlePlay = useCallback(
@@ -891,64 +667,19 @@ function SubList({
         ActionsComponent={TablePaginationActions}
       />
       {/* Confirmation dialog for sub list delete actions */}
-      <Dialog
+      <SubListDeleteDialog
         open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        aria-labelledby="confirm-delete-title-sub"
-      >
-        <DialogTitle id="confirm-delete-title-sub">Confirm delete</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            {confirmPayload ? (
-              <>
-                Are you sure you want to{" "}
-                <strong>
-                  {confirmPayload.cleanUp &&
-                  confirmPayload.deleteVideoMappings &&
-                  confirmPayload.deleteVideosInDB
-                    ? "Delete from DB and file system"
-                    : confirmPayload.cleanUp &&
-                        !confirmPayload.deleteVideoMappings
-                      ? "Delete downloaded files"
-                      : !confirmPayload.cleanUp &&
-                          confirmPayload.deleteVideoMappings
-                        ? "Delete video from playlist"
-                        : "Delete"}
-                </strong>{" "}
-                for video <strong>{confirmPayload.title}</strong>?
-              </>
-            ) : (
-              "Are you sure you want to perform this delete operation?"
-            )}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)} color="primary">
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              if (confirmPayload) {
-                deleteVideo(
-                  confirmPayload.playListUrl,
-                  confirmPayload.mappingId,
-                  confirmPayload.videoUrl,
-                  confirmPayload.title,
-                  confirmPayload.cleanUp,
-                  confirmPayload.deleteVideoMappings,
-                  confirmPayload.deleteVideosInDB,
-                );
-              }
-              setConfirmOpen(false);
-              setConfirmPayload(null);
-            }}
-            color="error"
-            variant="contained"
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
+        payload={confirmPayload}
+        onClose={() => {
+          setConfirmOpen(false);
+          setConfirmPayload(null);
+        }}
+        onConfirm={(payload) => {
+          void confirmDelete(payload);
+          setConfirmOpen(false);
+          setConfirmPayload(null);
+        }}
+      />
       <Dialog fullScreen open={playerOpen} onClose={closePlayer}>
         {playerOpen && (
           <VideoPlayer
@@ -962,7 +693,6 @@ function SubList({
             page={page}
             start={start}
             currentPlayerIndex={currentPlayerIndex}
-            setCurrentPlayerIndex={setCurrentPlayerIndex}
             setPage={(newPage) => handleChangePage(null, newPage)}
             openPlayer={openPlayer}
             playlistDirectory={playlistDirectory}

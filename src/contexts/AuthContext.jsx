@@ -1,12 +1,32 @@
 import { createContext, useState, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 
-export const AuthContext = createContext({
+/**
+ * The shape `useContext(AuthContext)` returns.
+ *
+ * Declared for the same reason `NotificationContext` declares one: without a
+ * type here, each zero-arg arrow in the default value is what every consumer's
+ * call is checked against, so `setToken(token, {persist})` reads as passing
+ * two arguments to a function that takes none.
+ *
+ * @typedef {Object} AuthContextValue
+ * @property {string | null} token - The live bearer token, if any.
+ * @property {number | null} expiresAt - The token's `exp` claim, in seconds.
+ * @property {(token: string | null, options?: {persist?: boolean, expiresAt?: number | null}) => void} setToken
+ *   Installs or clears the session. `persist` decides whether it outlives the
+ *   tab; clearing ignores both options.
+ * @property {() => void} logout - Clears the session.
+ */
+
+/** @type {AuthContextValue} */
+const defaultValue = {
   token: null,
   expiresAt: null,
   setToken: () => {},
   logout: () => {},
-});
+};
+
+export const AuthContext = createContext(defaultValue);
 
 const TOKEN_KEY = "ytdiff_token";
 const EXPIRY_KEY = "ytdiff_token_expires_at";

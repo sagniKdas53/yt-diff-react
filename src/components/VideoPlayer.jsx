@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
 
 import { useApiClient } from "../hooks/useApiClient.js";
-import { assetBase } from "../config.js";
+import { useSignedPlayback } from "../hooks/useSignedPlayback.js";
+import { useSubtitleTrack } from "../hooks/useSubtitleTrack.js";
+import { usePlaylistNavigation } from "../hooks/usePlaylistNavigation.js";
+import { formatTime } from "../lib/subtitles.js";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
@@ -34,37 +37,61 @@ import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
-const ControlBar = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "show",
-})(({ theme, show }) => ({
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  right: 0,
-  background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
-  padding: theme.spacing(2),
-  transition: "opacity 0.3s ease-in-out",
-  opacity: show ? 1 : 0,
-  pointerEvents: show ? "auto" : "none",
-  zIndex: 2,
-}));
+/**
+ * `show` is a custom prop, held back from the DOM by `shouldForwardProp`. MUI's
+ * types describe the props of the component being wrapped, so a styled
+ * component's own props have to be named — otherwise `show` is an error both
+ * where it is read below and where it is passed in the JSX.
+ *
+ * @typedef {import("@mui/material").BoxProps & {show: boolean}} BarProps
+ */
 
-const TopBar = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "show",
-})(({ theme, show }) => ({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  background: "linear-gradient(rgba(0,0,0,0.8), transparent)",
-  padding: theme.spacing(2),
-  display: "flex",
-  alignItems: "center",
-  transition: "opacity 0.3s ease-in-out",
-  opacity: show ? 1 : 0,
-  pointerEvents: show ? "auto" : "none",
-  zIndex: 2,
-}));
+const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
+  styled(Box, {
+    shouldForwardProp: (prop) => prop !== "show",
+  })(
+    /** @param {{theme: import("@mui/material/styles").Theme, show: boolean}} props */ ({
+      theme,
+      show,
+    }) => ({
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
+      padding: theme.spacing(2),
+      transition: "opacity 0.3s ease-in-out",
+      opacity: show ? 1 : 0,
+      pointerEvents: show ? "auto" : "none",
+      zIndex: 2,
+    }),
+  )
+);
+
+const TopBar = /** @type {import("react").ComponentType<BarProps>} */ (
+  styled(Box, {
+    shouldForwardProp: (prop) => prop !== "show",
+  })(
+    /** @param {{theme: import("@mui/material/styles").Theme, show: boolean}} props */ ({
+      theme,
+      show,
+    }) => ({
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      background: "linear-gradient(rgba(0,0,0,0.8), transparent)",
+      padding: theme.spacing(2),
+      display: "flex",
+      alignItems: "center",
+      transition: "opacity 0.3s ease-in-out",
+      opacity: show ? 1 : 0,
+      pointerEvents: show ? "auto" : "none",
+      zIndex: 2,
+    }),
+  )
+);
+
 const AutoPlaySwitch = styled(Switch)(() => ({
   width: 42,
   height: 24,
@@ -131,11 +158,6 @@ export default function VideoPlayer({
   const api = useApiClient();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const [videoUrl, setVideoUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [subtitleUrl, setSubtitleUrl] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -153,329 +175,87 @@ export default function VideoPlayer({
     const saved = localStorage.getItem("ytdiff_player_autoplay");
     return saved === "true";
   });
-  const [pendingNextPage, setPendingNextPage] = useState(false);
-  const [pendingPrevPage, setPendingPrevPage] = useState(false);
   const [showMobileVolume, setShowMobileVolume] = useState(false);
   const [bufferedTime, setBufferedTime] = useState(0);
-  const [subtitlesEnabled, setSubtitlesEnabled] = useState(() => {
-    const saved = localStorage.getItem("ytdiff_player_subtitles");
-    return saved !== null ? saved === "true" : true; // default ON
-  });
-  const [subtitleCues, setSubtitleCues] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const pipSupported =
     "pictureInPictureEnabled" in document && document.pictureInPictureEnabled;
 
   const videoRef = useRef(null);
   const containerRef = useRef(null);
-  const fileIdRef = useRef(null);
-  const expiryRef = useRef(null);
-  const timerRef = useRef(null);
-  const recoveryTimerRef = useRef(null);
-  const controlsTimeoutRef = useRef(null);
-  const subtitleObjectUrlRef = useRef(null);
-  const itemsAtTimeOfNext = useRef(null);
-  const itemsAtTimeOfPrev = useRef(null);
+  const timerRef_controlsTimeout = useRef(null);
+  const mobileVolumeTimeoutRef = useRef(null);
   const isPlayingRef = useRef(isPlaying);
   const drawerOpenRef = useRef(drawerOpen);
   const volumeTapRef = useRef(null);
-  const mobileVolumeTimeoutRef = useRef(null);
-  const abortControllerRef = useRef(null);
-  const isMountedRef = useRef(false);
-  const playerSessionRef = useRef(0);
 
-  const clearRefreshTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
+  // Signed-URL lifecycle: minting, pre-expiry refresh, mid-stream recovery.
+  const { videoUrl, loading, errorMsg, reload } = useSignedPlayback({
+    api,
+    saveDirectory,
+    fileName,
+    videoRef,
+  });
 
-  const clearRecoveryTimer = useCallback(() => {
-    if (recoveryTimerRef.current) {
-      clearTimeout(recoveryTimerRef.current);
-      recoveryTimerRef.current = null;
-    }
-  }, []);
+  // Subtitles: fetch, parse and cue selection against the playhead.
+  const {
+    subtitleUrl,
+    activeCues,
+    subtitlesEnabled,
+    toggleSubtitles,
+    reportTime,
+  } = useSubtitleTrack({ api, saveDirectory, subTitleFile });
 
-  const clearSubtitleObjectUrl = useCallback(() => {
-    if (subtitleObjectUrlRef.current) {
-      URL.revokeObjectURL(subtitleObjectUrlRef.current);
-      subtitleObjectUrlRef.current = null;
-    }
-  }, []);
+  // Previous/next within the playlist, including resume across pagination.
+  const { handleNext, handlePrev } = usePlaylistNavigation({
+    openPlayer,
+    items,
+    itemCount,
+    page,
+    start,
+    currentPlayerIndex,
+    playlistDirectory,
+    setPage: setPage ?? null,
+  });
 
-  const formatTime = (seconds) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    return [h, m, s]
-      .map((v) => (v < 10 ? "0" + v : v))
-      .filter((v, i) => v !== "00" || i > 0)
-      .join(":");
-  };
-
-  const parseSubtitleText = (text) => {
-    const cues = [];
-    const normalized = text.replace(/^\uFEFF/, "").replace(/\r/g, "");
-    const blocks = normalized.split(/\n\n+/);
-
-    const parseTime = (ts) => {
-      const cleaned = ts.replace(",", ".");
-      const parts = cleaned.split(":");
-      if (parts.length === 3) {
-        return (
-          parseFloat(parts[0]) * 3600 +
-          parseFloat(parts[1]) * 60 +
-          parseFloat(parts[2])
-        );
-      } else if (parts.length === 2) {
-        return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
-      }
-      return 0;
+  useEffect(() => {
+    return () => {
+      if (timerRef_controlsTimeout.current)
+        clearTimeout(timerRef_controlsTimeout.current);
+      if (mobileVolumeTimeoutRef.current)
+        clearTimeout(mobileVolumeTimeoutRef.current);
     };
+  }, []);
 
-    const parser = new DOMParser();
+  // Mirror into refs so deferred callbacks (the auto-hide timer) read current
+  // values. An effect suffices here — unlike App's socket handlers, nothing
+  // fires in the paint gap that a three-second hide timer would notice.
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+    drawerOpenRef.current = drawerOpen;
+  }, [isPlaying, drawerOpen]);
 
-    for (const block of blocks) {
-      const lines = block.trim().split("\n");
-      let timingIdx = -1;
-      for (let i = 0; i < lines.length; i++) {
-        if (lines.at(i).includes("-->")) {
-          timingIdx = i;
-          break;
-        }
-      }
-      if (timingIdx === -1) continue;
-
-      const match = lines
-        .at(timingIdx)
-        .match(
-          /(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{1,2}:?\d{2}:\d{2}[.,]\d{3})/,
-        );
-      if (!match) continue;
-
-      const start = parseTime(match[1]);
-      const end = parseTime(match[2]);
-      const rawText = lines
-        .slice(timingIdx + 1)
-        .join("\n")
-        .trim();
-      // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
-      // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
-      const noTimeTags = rawText.replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "");
-      const doc = parser.parseFromString(noTimeTags, "text/html");
-      const textContent = (doc.body.textContent || "")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-      if (textContent) {
-        cues.push({ start, end, text: textContent });
-      }
-    }
-    return cues;
-  };
-
-  const fetchSignedUrl = async (isRecovery = false, resumeTime = 0) => {
-    const sessionId = playerSessionRef.current;
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    clearRecoveryTimer();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    try {
-      setLoading(true);
-      setErrorMsg(null);
-      if (!isRecovery) {
-        setCurrentTime(0);
-        setDuration(0);
-        setBufferedTime(0);
-        setIsPlaying(false);
-        if (videoRef.current) {
-          videoRef.current.pause();
-        }
-      }
-      // A refusal throws with the server's own message, which is what the
-      // player surfaces to the viewer.
-      const data = await api.post(
-        "/getfile",
-        { saveDirectory, fileName },
-        { signal: controller.signal },
-      );
-
-      if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
-        return;
-      }
-      if (data.status === "success" && data.signedUrlId) {
-        fileIdRef.current = data.signedUrlId;
-        expiryRef.current = data.expiry;
-
-        const newUrl =
-          assetBase + "/getfile?fileId=" + data.signedUrlId + "&inline=true";
-        setVideoUrl(newUrl);
-        setErrorMsg(null);
-        scheduleRefresh(data.signedUrlId, sessionId, data.expiry);
-
-        if (isRecovery && videoRef.current) {
-          recoveryTimerRef.current = setTimeout(() => {
-            if (
-              isMountedRef.current &&
-              playerSessionRef.current === sessionId &&
-              fileIdRef.current === data.signedUrlId &&
-              videoRef.current
-            ) {
-              videoRef.current.currentTime = resumeTime;
-              videoRef.current
-                .play()
-                .catch((e) => console.error("Auto-resume failed", e));
-            }
-          }, 100);
-        }
-      } else {
-        throw new Error("Failed to get download URL");
-      }
-    } catch (error) {
-      if (error.name === "AbortError") return;
-      console.error("fetchSignedUrl error:", error);
-      if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
-        return;
-      }
-      setErrorMsg(error.message);
-      setVideoUrl(null);
-    } finally {
-      if (isMountedRef.current && playerSessionRef.current === sessionId) {
-        setLoading(false);
-      }
-      if (abortControllerRef.current === controller) {
-        abortControllerRef.current = null;
-      }
-    }
-  };
-
-  const fetchSubtitleUrl = useCallback(
-    async (subtitleFileName, subtitleSaveDirectory, sessionId) => {
-      clearSubtitleObjectUrl();
-      setSubtitleUrl(null);
-      setSubtitleCues([]);
-
-      if (!subtitleFileName) return;
-
-      try {
-        const data = await api.post("/getfile", {
-          saveDirectory: subtitleSaveDirectory,
-          fileName: subtitleFileName,
-        });
-
-        if (
-          !isMountedRef.current ||
-          playerSessionRef.current !== sessionId ||
-          data.status !== "success" ||
-          !data.signedUrlId
-        ) {
-          return;
-        }
-
-        const signedSubtitleUrl =
-          assetBase + "/getfile?fileId=" + data.signedUrlId + "&inline=true";
-
-        // Always fetch text content to parse cues for custom overlay
-        const subtitleResponse = await fetch(signedSubtitleUrl);
-        if (!subtitleResponse.ok) {
-          throw new Error("Failed to load subtitle contents");
-        }
-
-        const subtitleText = await subtitleResponse.text();
-        if (!isMountedRef.current || playerSessionRef.current !== sessionId) {
-          return;
-        }
-
-        const cues = parseSubtitleText(subtitleText);
-        setSubtitleCues(cues);
-        // Set subtitleUrl as a flag that subtitles are available
-        setSubtitleUrl(signedSubtitleUrl);
-      } catch (error) {
-        if (isMountedRef.current && playerSessionRef.current === sessionId) {
-          console.warn("Subtitle loading failed", error);
-          setSubtitleUrl(null);
-          setSubtitleCues([]);
-        }
-      }
-    },
-    [api, clearSubtitleObjectUrl],
-  );
-
-  const scheduleRefresh = useCallback(
-    (
-      scheduledFileId = fileIdRef.current,
-      scheduledSessionId = playerSessionRef.current,
-      scheduledExpiry = expiryRef.current,
-    ) => {
-      clearRefreshTimer();
-      if (!scheduledExpiry || !scheduledFileId) return;
-
-      const timeUntilExpiry = scheduledExpiry - Date.now();
-      // refresh the file 5 mins before expiry (300000 ms)
-      const refreshTime = Math.max(0, timeUntilExpiry - 300000);
-
-      timerRef.current = setTimeout(async () => {
-        if (
-          !isMountedRef.current ||
-          playerSessionRef.current !== scheduledSessionId ||
-          fileIdRef.current !== scheduledFileId
-        ) {
-          return;
-        }
-        try {
-          const data = await api.post("/refreshfile", {
-            fileId: scheduledFileId,
-          });
-
-          if (
-            data.status === "success" &&
-            isMountedRef.current &&
-            playerSessionRef.current === scheduledSessionId &&
-            fileIdRef.current === scheduledFileId
-          ) {
-            expiryRef.current = data.expiry;
-            scheduleRefresh(scheduledFileId, scheduledSessionId, data.expiry);
-          }
-        } catch (err) {
-          if (
-            isMountedRef.current &&
-            playerSessionRef.current === scheduledSessionId
-          ) {
-            console.error("Auto-refresh failed", err);
-          }
-        }
-      }, refreshTime);
-    },
-    [api, clearRefreshTimer],
-  );
-
-  // Keep refs in sync so setTimeout callbacks always read latest values
-  isPlayingRef.current = isPlaying;
-  drawerOpenRef.current = drawerOpen;
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => {
+  const hideControlsSoon = useCallback(() => {
+    if (timerRef_controlsTimeout.current)
+      clearTimeout(timerRef_controlsTimeout.current);
+    timerRef_controlsTimeout.current = setTimeout(() => {
       if (isPlayingRef.current && !drawerOpenRef.current)
         setShowControls(false);
     }, 3000);
+  }, []);
+
+  const handleMouseMove = () => {
+    setShowControls(true);
+    hideControlsSoon();
   };
 
   // Auto-hide controls when playback begins (e.g. after autoplay navigates to next video)
   useEffect(() => {
     if (isPlaying && !drawerOpen) {
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-      controlsTimeoutRef.current = setTimeout(() => {
-        if (isPlayingRef.current && !drawerOpenRef.current)
-          setShowControls(false);
-      }, 3000);
+      hideControlsSoon();
     }
-  }, [isPlaying, drawerOpen]);
+  }, [isPlaying, drawerOpen, hideControlsSoon]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -499,7 +279,7 @@ export default function VideoPlayer({
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
-      localStorage.setItem("ytdiff_player_muted", !isMuted);
+      localStorage.setItem("ytdiff_player_muted", String(!isMuted));
     }
   };
 
@@ -509,8 +289,8 @@ export default function VideoPlayer({
       videoRef.current.volume = value;
     }
     setIsMuted(value === 0);
-    localStorage.setItem("ytdiff_player_volume", value);
-    localStorage.setItem("ytdiff_player_muted", value === 0);
+    localStorage.setItem("ytdiff_player_volume", String(value));
+    localStorage.setItem("ytdiff_player_muted", String(value === 0));
     // Reset auto-hide timer when user interacts with mobile slider
     if (isMobile && showMobileVolume) {
       if (mobileVolumeTimeoutRef.current)
@@ -584,73 +364,10 @@ export default function VideoPlayer({
     }
   };
 
-  // --- Playlist Navigation Logic ---
-  const handleNext = useCallback(() => {
-    if (!openPlayer) return;
-    for (let i = currentPlayerIndex + 1; i < items.length; i++) {
-      const meta = items.at(i).video_metadatum || {};
-      if (meta.downloadStatus) {
-        openPlayer(
-          meta.saveDirectory ?? playlistDirectory,
-          meta.fileName,
-          meta.title,
-          i,
-          meta.subTitleFile || null,
-        );
-        return;
-      }
-    }
-    // Hit the end of current page, request next page if available
-    if (start + items.length < itemCount && setPage) {
-      setPage(page + 1);
-      itemsAtTimeOfNext.current = items;
-      setPendingNextPage(true);
-    }
-  }, [
-    currentPlayerIndex,
-    items,
-    itemCount,
-    openPlayer,
-    page,
-    playlistDirectory,
-    setPage,
-    start,
-  ]);
-
-  const handlePrev = useCallback(() => {
-    if (!openPlayer) return;
-    for (let i = currentPlayerIndex - 1; i >= 0; i--) {
-      const meta = items.at(i).video_metadatum || {};
-      if (meta.downloadStatus) {
-        openPlayer(
-          meta.saveDirectory ?? playlistDirectory,
-          meta.fileName,
-          meta.title,
-          i,
-          meta.subTitleFile || null,
-        );
-        return;
-      }
-    }
-
-    // If we reach the beginning of the page, request the previous page if available
-    if (page > 0 && setPage) {
-      setPage(page - 1);
-      itemsAtTimeOfPrev.current = items;
-      setPendingPrevPage(true);
-    }
-  }, [currentPlayerIndex, items, openPlayer, page, playlistDirectory, setPage]);
-
   const toggleAutoPlay = () => {
     const newVal = !autoPlayEnabled;
     setAutoPlayEnabled(newVal);
-    localStorage.setItem("ytdiff_player_autoplay", newVal);
-  };
-
-  const toggleSubtitles = () => {
-    const newVal = !subtitlesEnabled;
-    setSubtitlesEnabled(newVal);
-    localStorage.setItem("ytdiff_player_subtitles", newVal);
+    localStorage.setItem("ytdiff_player_autoplay", String(newVal));
   };
 
   const handleVideoEnded = () => {
@@ -659,115 +376,6 @@ export default function VideoPlayer({
       handleNext();
     }
   };
-
-  // Auto-resume across pagination
-  useEffect(() => {
-    if (
-      pendingNextPage &&
-      items !== itemsAtTimeOfNext.current &&
-      items &&
-      items.length > 0 &&
-      openPlayer
-    ) {
-      for (let i = 0; i < items.length; i++) {
-        const meta = items.at(i).video_metadatum || {};
-        if (meta.downloadStatus) {
-          openPlayer(
-            meta.saveDirectory ?? playlistDirectory,
-            meta.fileName,
-            meta.title,
-            i,
-            meta.subTitleFile || null,
-          );
-          break;
-        }
-      }
-      setPendingNextPage(false);
-      itemsAtTimeOfNext.current = null;
-    }
-
-    if (
-      pendingPrevPage &&
-      items !== itemsAtTimeOfPrev.current &&
-      items &&
-      items.length > 0 &&
-      openPlayer
-    ) {
-      for (let i = items.length - 1; i >= 0; i--) {
-        const meta = items.at(i).video_metadatum || {};
-        if (meta.downloadStatus) {
-          openPlayer(
-            meta.saveDirectory ?? playlistDirectory,
-            meta.fileName,
-            meta.title,
-            i,
-            meta.subTitleFile || null,
-          );
-          break;
-        }
-      }
-      setPendingPrevPage(false);
-      itemsAtTimeOfPrev.current = null;
-    }
-  }, [items, pendingNextPage, pendingPrevPage, openPlayer, playlistDirectory]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Compute active subtitle cues based on current playback time
-  const activeCues = useMemo(() => {
-    if (!subtitleCues.length || !subtitlesEnabled) return [];
-    return subtitleCues.filter(
-      (cue) => currentTime >= cue.start && currentTime <= cue.end,
-    );
-  }, [subtitleCues, currentTime, subtitlesEnabled]);
-
-  useEffect(() => {
-    playerSessionRef.current += 1;
-    clearRefreshTimer();
-    clearRecoveryTimer();
-    clearSubtitleObjectUrl();
-    fileIdRef.current = null;
-    expiryRef.current = null;
-    setSubtitleUrl(null);
-    fetchSignedUrl();
-    fetchSubtitleUrl(subTitleFile, saveDirectory, playerSessionRef.current);
-    const videoElement = videoRef.current;
-    return () => {
-      playerSessionRef.current += 1;
-      clearRefreshTimer();
-      clearRecoveryTimer();
-      clearSubtitleObjectUrl();
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-      if (mobileVolumeTimeoutRef.current)
-        clearTimeout(mobileVolumeTimeoutRef.current);
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      fileIdRef.current = null;
-      expiryRef.current = null;
-
-      // Clean up the video element
-      if (videoElement) {
-        videoElement.pause();
-        videoElement.removeAttribute("src");
-        videoElement.load();
-      }
-    };
-    // Dependency on saveDirectory/fileName forces refresh on track change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    clearRecoveryTimer,
-    clearRefreshTimer,
-    clearSubtitleObjectUrl,
-    fetchSubtitleUrl,
-    saveDirectory,
-    fileName,
-    subTitleFile,
-  ]);
 
   useEffect(() => {
     if (videoUrl && videoRef.current) {
@@ -797,14 +405,14 @@ export default function VideoPlayer({
     ) {
       vid.pause();
       const time = vid.currentTime;
-      fetchSignedUrl(true, time);
+      void reload(true, time);
     }
   };
 
   const truncatedTitle =
     title && title.length > 60 ? title.substring(0, 57) + "…" : title;
 
-  const handleProgress = () => {
+  const handleProgress = useCallback(() => {
     if (videoRef.current && videoRef.current.buffered.length > 0) {
       const vid = videoRef.current;
       const time = vid.currentTime;
@@ -825,7 +433,14 @@ export default function VideoPlayer({
 
       setBufferedTime(activeBufferEnd);
     }
-  };
+  }, []);
+
+  const handleTimeUpdate = useCallback(() => {
+    const now = videoRef.current ? videoRef.current.currentTime : 0;
+    setCurrentTime(now);
+    reportTime(now);
+    handleProgress();
+  }, [reportTime, handleProgress]);
 
   return (
     <Box
@@ -859,10 +474,7 @@ export default function VideoPlayer({
           ref={videoRef}
           onError={handleError}
           onProgress={handleProgress}
-          onTimeUpdate={() => {
-            setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0);
-            handleProgress();
-          }}
+          onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={() =>
             setDuration(videoRef.current ? videoRef.current.duration : 0)
           }
