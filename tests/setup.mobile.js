@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import * as matchers from "@testing-library/jest-dom/matchers";
-import { expect, afterEach, vi } from "vitest";
+import { expect, afterEach, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 
 // Mock localStorage and sessionStorage for testing environment
@@ -34,6 +34,13 @@ Object.defineProperty(window, "sessionStorage", { value: mockSessionStorage, wri
 
 // Extend Vitest expect assertions
 expect.extend(matchers);
+
+// The address bar is now application state: which playlist is open lives in
+// `location.hash`. jsdom keeps one location for the whole file, so without
+// this a test starts wherever the previous one navigated to.
+beforeEach(() => {
+  globalThis.history.replaceState(null, "", "#/");
+});
 
 // Clean up DOM after each test
 afterEach(() => {

@@ -40,7 +40,9 @@ export default [
     },
   },
   {
-    files: ['src/contexts/**/*.{js,jsx}'],
+    // Providers ship with the hooks that read them; splitting a context across
+    // two files to satisfy fast refresh costs more than fast refresh is worth.
+    files: ['src/contexts/**/*.{js,jsx}', 'src/router/**/*.{js,jsx}'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },
