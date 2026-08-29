@@ -84,18 +84,24 @@ export function RouterProvider({ children }) {
   const route = useMemo(() => parseRoute(hash), [hash]);
 
   /**
-   * Goes to `next`.
+   * Goes to the location `patch` describes, merged over the one we are on.
    *
-   * `replace` is not a detail: an auto-navigation the user did not ask for —
-   * a background listing finishing and pulling the view to its playlist — must
-   * not leave a history entry they have to press Back through to escape. Those
-   * call sites replace; everything a person clicks pushes.
+   * A patch rather than a whole route, and merged against the location read
+   * back *now* rather than against a render's snapshot. Two navigations in one
+   * event handler are ordinary here — clearing the list moves the playlist and
+   * resets the video page — and against a snapshot the second would carry the
+   * first's stale fields back into the URL, undoing it.
    *
-   * @param {import("./routes.js").Route} next
+   * `replace` is not a detail either: an auto-navigation the user did not ask
+   * for — a background listing finishing and pulling the view to its playlist
+   * — must not leave a history entry they have to press Back through to
+   * escape. Those call sites replace; everything a person clicks pushes.
+   *
+   * @param {Partial<import("./routes.js").Route>} patch
    * @param {{replace?: boolean}} [options]
    */
-  const navigate = useCallback((next, { replace = false } = {}) => {
-    const target = formatRoute(next);
+  const navigate = useCallback((patch, { replace = false } = {}) => {
+    const target = formatRoute({ ...parseRoute(readHash()), ...patch });
     const history = globalThis.history;
 
     // Re-navigating to where we already are must never add an entry.
@@ -137,7 +143,10 @@ export function useRoute() {
 /**
  * The navigate function. A no-op without a provider, for the same reason.
  *
- * @returns {(next: import("./routes.js").Route, options?: {replace?: boolean}) => void}
+ * It takes a patch, not a whole route: callers say what changes and the rest
+ * is read off the location as it stands. See `navigate` for why that matters.
+ *
+ * @returns {(patch: Partial<import("./routes.js").Route>, options?: {replace?: boolean}) => void}
  */
 export function useNavigate() {
   const context = useContext(RouterContext);

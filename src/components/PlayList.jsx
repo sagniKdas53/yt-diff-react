@@ -44,6 +44,7 @@ import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { NotificationContext } from "../contexts/NotificationContext";
 import { ApiError } from "../api/client.js";
 import { useApiClient } from "../hooks/useApiClient.js";
+import { DEFAULT_PLAYLIST_PAGE_SIZE } from "../router/routes.js";
 import TablePaginationActions from "./Pagination.jsx";
 import PlayListItemRow from "./PlayListItemRow.jsx";
 
@@ -67,6 +68,14 @@ const options = [
   ["Delete everything", true, true, true, "everything", "error"],
 ];
 
+/**
+ * The default `onPaginationChange`. A module constant so the default keeps a
+ * stable identity across renders and does not churn the callbacks built on it.
+ *
+ * @type {(page: number, pageSize: number) => void}
+ */
+const NO_REPORT = () => {};
+
 function PlayList({
   setPlayListUrl,
   playListUrl,
@@ -78,6 +87,12 @@ function PlayList({
   setRowsPerPageSubList,
   playListIndex,
   setPlayListIndex,
+  // Where the location says this list is paged to, read once to start from.
+  // After that the list owns its own page and reports it back through
+  // `onPaginationChange`; the location follows the list, not the reverse.
+  initialPage = 0,
+  initialRowsPerPage = DEFAULT_PLAYLIST_PAGE_SIZE,
+  onPaginationChange = NO_REPORT,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onMobileLoad,
@@ -93,10 +108,15 @@ function PlayList({
   const [order, updateOrder] = useState("1");
   // These are the controls
   const [localQuery, setLocalQuery] = useState("");
-  const [start, setStart] = useState(0);
-  const [stop, setStop] = useState(10);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Seeded from the location so the very first fetch asks for the page the
+  // link named. Deriving it later instead would spend a request on page 1 and
+  // then throw those rows away.
+  const [start, setStart] = useState(() => initialPage * initialRowsPerPage);
+  const [stop, setStop] = useState(
+    () => (initialPage + 1) * initialRowsPerPage,
+  );
+  const [page, setPage] = useState(() => initialPage);
+  const [rowsPerPage, setRowsPerPage] = useState(() => initialRowsPerPage);
   // actual table data
   const [items, setItems] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -340,14 +360,17 @@ function PlayList({
       setPage(validPage);
       setStart(validPage * rowsPerPage);
       setStop((validPage + 1) * rowsPerPage);
+      onPaginationChange(validPage, rowsPerPage);
     },
-    [rowsPerPage, setStart, setStop, setPage],
+    [rowsPerPage, setStart, setStop, setPage, onPaginationChange],
   );
 
   const handleChangeRowsPerPage = (event) => {
-    setStop(start + +event.target.value);
-    setRowsPerPage(+event.target.value);
+    const size = +event.target.value;
+    setStop(start + size);
+    setRowsPerPage(size);
     setPage(0);
+    onPaginationChange(0, size);
   };
 
   const handleLoad = (url, title) => {
@@ -379,6 +402,11 @@ function PlayList({
   // from App, which means setting state from an effect. Untangling it belongs
   // with the PlayList decomposition, not here.
   useEffect(() => {
+    // Nothing has loaded yet: the seek below would compute a page from a count
+    // of zero and reset to page 1, undoing the page the location asked for
+    // before the rows that justify it have arrived.
+    if (totalItems === 0) return;
+
     if (playListIndex === -1) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       handleChangePage(null, 0); // Reset to the first page if playListIndex is -1
@@ -823,6 +851,9 @@ PlayList.propTypes = {
   rowsPerPageSubList: PropTypes.number.isRequired,
   setRowsPerPageSubList: PropTypes.func.isRequired,
   playListIndex: PropTypes.number.isRequired,
+  initialPage: PropTypes.number,
+  initialRowsPerPage: PropTypes.number,
+  onPaginationChange: PropTypes.func,
   setPlayListIndex: PropTypes.func.isRequired,
   // Mobile props
   isMobile: PropTypes.bool,

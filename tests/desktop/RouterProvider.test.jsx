@@ -30,6 +30,16 @@ function Probe() {
       >
         replace
       </button>
+      {/* Two navigations in one handler, the shape `clearList` has: leave the
+          playlist, then reset the video page. */}
+      <button
+        onClick={() => {
+          navigate({ playlistUrl: NO_PLAYLIST, videoUrl: null });
+          navigate({ videoPage: 0 }, { replace: true });
+        }}
+      >
+        clear then reset
+      </button>
     </div>
   );
 }
@@ -109,5 +119,23 @@ describe("RouterProvider", () => {
     render(<Probe />);
     expect(screen.getByTestId("playlist").textContent).toBe(NO_PLAYLIST);
     expect(() => screen.getByText("push").click()).not.toThrow();
+  });
+
+  test("a second navigation in one handler does not undo the first", async () => {
+    // Both calls happen before React re-renders, so a `navigate` that merged
+    // against a render's snapshot would carry the playlist the first call just
+    // cleared back into the URL. It merges against the live location instead.
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/playlist/" + encodeURIComponent(PLAYLIST) + "?vp=4",
+    );
+    renderProbe();
+    expect(playlist()).toBe(PLAYLIST);
+
+    await click("clear then reset");
+
+    expect(playlist()).toBe(NO_PLAYLIST);
+    expect(globalThis.location.hash).toBe("#/");
   });
 });

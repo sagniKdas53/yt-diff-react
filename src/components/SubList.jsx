@@ -54,6 +54,13 @@ import VideoPlayer from "./VideoPlayer.jsx";
  */
 const NO_ROUTER = () => {};
 
+/**
+ * The default `onPaginationChange`, a module constant for the same reason.
+ *
+ * @type {(page: number, pageSize: number) => void}
+ */
+const NO_REPORT = () => {};
+
 function SubList({
   setPlayListUrl,
   loadedPlayList,
@@ -69,6 +76,11 @@ function SubList({
   // router still plays videos, it just does not put them in the address bar.
   playerVideoUrl = null,
   setPlayerVideoUrl = NO_ROUTER,
+  // Where the location says this list is paged to, read once to start from.
+  // After that the list owns its page and reports it back; the location
+  // follows the list, not the reverse.
+  initialPage = 0,
+  onPaginationChange = NO_REPORT,
   // Mobile props (optional — only passed on mobile)
   isMobile,
   onBack,
@@ -85,9 +97,11 @@ function SubList({
   const [sort, updateSort] = useState(false);
   // These are the controls
   const [localQuery, setLocalQuery] = useState("");
-  const [start, setStart] = useState(0);
-  const [stop, setStop] = useState(8);
-  const [page, setPage] = useState(0);
+  // Seeded from the location so the first fetch asks for the page the link
+  // named, rather than spending a request on page 1 and discarding it.
+  const [start, setStart] = useState(() => initialPage * rowsPerPage);
+  const [stop, setStop] = useState(() => (initialPage + 1) * rowsPerPage);
+  const [page, setPage] = useState(() => initialPage);
   // actual table data
   const { items, setItems, itemCount, playlistDirectory, playlistTitle } =
     useSubListRows({
@@ -151,8 +165,9 @@ function SubList({
       setPage(validPage);
       setStart(validPage * rowsPerPage);
       setStop((validPage + 1) * rowsPerPage);
+      onPaginationChange(validPage, rowsPerPage);
     },
-    [rowsPerPage, setPage, setStart, setStop],
+    [rowsPerPage, setPage, setStart, setStop, onPaginationChange],
   );
 
   const handleChangeRowsPerPage = (event) => {
@@ -497,6 +512,10 @@ function SubList({
   };
 
   useEffect(() => {
+    // Before any rows have arrived the seek below has nothing to measure
+    // against, and would reset to page 1 the page the location asked for.
+    if (itemCount === 0) return;
+
     if (subListIndex === -1) {
       // Reset to the first page if subListIndex is -1
       // eslint-disable-next-line react-hooks/set-state-in-effect -- the page state exists to follow this prop; there is no derived form of "which page shows position N"
@@ -835,6 +854,8 @@ SubList.propTypes = {
   setRowsPerPage: PropTypes.func.isRequired,
   playerVideoUrl: PropTypes.string,
   setPlayerVideoUrl: PropTypes.func,
+  initialPage: PropTypes.number,
+  onPaginationChange: PropTypes.func,
   // Mobile props
   isMobile: PropTypes.bool,
   onBack: PropTypes.func,
