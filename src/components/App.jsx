@@ -231,12 +231,27 @@ export default function App() {
   // thing a link, a bookmark or the Back button has to be able to name. It is
   // read from the router and written through it, so the URL and the view
   // cannot disagree — there is only the one value.
-  const { playlistUrl: playListUrl, videoUrl: routeVideoUrl } = useRoute();
+  const {
+    playlistUrl: playListUrl,
+    videoUrl: routeVideoUrl,
+    playlistPage: routePlaylistPage,
+    playlistPageSize: routePlaylistPageSize,
+    videoPage: routeVideoPage,
+    videoPageSize: routeVideoPageSize,
+  } = useRoute();
   const navigate = useNavigate();
 
-  /** A person clicked something: leave an entry for Back to return to. */
+  /**
+   * A person clicked something: leave an entry for Back to return to.
+   *
+   * Opening a different playlist keeps the page the playlist list is on — you
+   * picked that row *from* page 26, so throwing you back to page 1 would undo
+   * the navigation you just did — but starts the new playlist's videos at
+   * their first page, since a position in the previous playlist means nothing
+   * in this one. The page size carries over, because that is a preference.
+   */
   const setPlayListUrl = useCallback(
-    (url) => navigate({ playlistUrl: url, videoUrl: null }),
+    (url) => navigate({ playlistUrl: url, videoUrl: null, videoPage: 0 }),
     [navigate],
   );
 
@@ -246,20 +261,55 @@ export default function App() {
    * an entry they have to press Back through to leave.
    */
   const replacePlayListUrl = useCallback(
-    (url) => navigate({ playlistUrl: url, videoUrl: null }, { replace: true }),
+    (url) =>
+      navigate(
+        { playlistUrl: url, videoUrl: null, videoPage: 0 },
+        { replace: true },
+      ),
     [navigate],
   );
 
   /** Opens or closes the player, within whatever list is currently open. */
   const setRouteVideoUrl = useCallback(
-    (videoUrl, { replace = false } = {}) =>
-      navigate({ playlistUrl: playListUrl, videoUrl }, { replace }),
-    [navigate, playListUrl],
+    (videoUrl, { replace = false } = {}) => navigate({ videoUrl }, { replace }),
+    [navigate],
   );
 
-  const [subListIndex, setSubListIndex] = useState(0);
+  /**
+   * Records where a list has been paged to.
+   *
+   * Always a replace. Paging is a refinement of the view you are already in,
+   * not somewhere new: if it pushed, Back would walk you through every page
+   * you had turned instead of leaving the playlist, which is the one thing
+   * Back has to keep meaning.
+   */
+  const setPlaylistPagination = useCallback(
+    (page, pageSize) =>
+      navigate(
+        { playlistPage: page, playlistPageSize: pageSize },
+        { replace: true },
+      ),
+    [navigate],
+  );
+
+  const setVideoPagination = useCallback(
+    (page, pageSize) =>
+      navigate({ videoPage: page, videoPageSize: pageSize }, { replace: true }),
+    [navigate],
+  );
+
+  // Both lists page by seeking to an index rather than to a page number, so
+  // the route's page reaches them as the index it names. That is why a link
+  // to page 26 of the playlist list opens on page 26 rather than on page 1:
+  // it feeds the same seek the socket handlers already use, instead of adding
+  // a second way for a list to be told where to go.
+  const [subListIndex, setSubListIndex] = useState(
+    () => routeVideoPage * routeVideoPageSize,
+  );
   // this will be used to seek to the latest playlist
-  const [playListIndex, setPlayListIndex] = useState(0);
+  const [playListIndex, setPlayListIndex] = useState(
+    () => routePlaylistPage * routePlaylistPageSize,
+  );
   const [disableProgress, toggleProgress] = useState(false);
 
   // progress bar and re-fetch state
@@ -270,7 +320,22 @@ export default function App() {
   const [reFetchPlaylist, setReFetchPlaylist] = useState(Date.now().toString());
   const [reFetchSubList, setReFetchSubList] = useState(Date.now().toString());
   // TODO: Add separate reFetch states for playlist and sub-list to avoid unnecessary fetches
-  const [rowsPerPageSubList, setRowsPerPageSubList] = useState(8);
+  const [rowsPerPageSubList, setRowsPerPageSubList] = useState(
+    () => routeVideoPageSize,
+  );
+
+  /**
+   * Changing the page size restarts the list from its first page, so the two
+   * move together — and the location says so, rather than keeping a page
+   * number that the new size has made meaningless.
+   */
+  const handleSetRowsPerPageSubList = useCallback(
+    (size) => {
+      setRowsPerPageSubList(size);
+      setVideoPagination(0, size);
+    },
+    [setVideoPagination],
+  );
 
   // Mobile slide navigation state.
   //
@@ -548,7 +613,10 @@ export default function App() {
     setSubListIndex,
     tableContainerHeight: `${tableContainerHeight}px`,
     rowsPerPageSubList,
-    setRowsPerPageSubList,
+    setRowsPerPageSubList: handleSetRowsPerPageSubList,
+    initialPage: routePlaylistPage,
+    initialRowsPerPage: routePlaylistPageSize,
+    onPaginationChange: setPlaylistPagination,
   };
 
   const subListProps = {
@@ -561,9 +629,11 @@ export default function App() {
     setReFetch: setReFetchSubList,
     tableContainerHeight: `${tableContainerHeight}px`,
     rowsPerPage: rowsPerPageSubList,
-    setRowsPerPage: setRowsPerPageSubList,
+    setRowsPerPage: handleSetRowsPerPageSubList,
     playerVideoUrl: routeVideoUrl,
     setPlayerVideoUrl: setRouteVideoUrl,
+    initialPage: routeVideoPage,
+    onPaginationChange: setVideoPagination,
   };
 
   // renders mobile main with slide navigation

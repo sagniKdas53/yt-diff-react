@@ -31,18 +31,46 @@ vi.mock("../../src/components/Nav.jsx", () => ({
 // Surfaces the playlist it was handed, and offers a way to select one, so the
 // tests can drive selection the way a click does.
 vi.mock("../../src/components/PlayList.jsx", () => ({
-  default: ({ playListUrl, setPlayListUrl }) => (
+  default: ({
+    playListUrl,
+    setPlayListUrl,
+    initialPage,
+    initialRowsPerPage,
+    playListIndex,
+    onPaginationChange,
+  }) => (
     <div data-testid="mock-playlist">
       {`current:${playListUrl}`}
+      <span data-testid="pl-seed">
+        {`page:${initialPage} size:${initialRowsPerPage} index:${playListIndex}`}
+      </span>
       <button onClick={() => setPlayListUrl("https://yt/list?list=PL1")}>
         open PL1
+      </button>
+      <button onClick={() => setPlayListUrl("https://yt/list?list=PL2")}>
+        open PL2
+      </button>
+      <button onClick={() => onPaginationChange(25, 10)}>
+        playlists page 26
       </button>
     </div>
   ),
 }));
 vi.mock("../../src/components/SubList.jsx", () => ({
-  default: ({ loadedPlayList }) => (
-    <div data-testid="mock-sublist">{`loaded:${loadedPlayList}`}</div>
+  default: ({
+    loadedPlayList,
+    initialPage,
+    rowsPerPage,
+    subListIndex,
+    onPaginationChange,
+  }) => (
+    <div data-testid="mock-sublist">
+      {`loaded:${loadedPlayList}`}
+      <span data-testid="sub-seed">
+        {`page:${initialPage} size:${rowsPerPage} index:${subListIndex}`}
+      </span>
+      <button onClick={() => onPaginationChange(3, 8)}>videos page 4</button>
+    </div>
   ),
 }));
 vi.mock("../../src/components/Login.jsx", () => ({
@@ -71,6 +99,8 @@ const click = async (name) => {
 };
 
 const current = () => screen.getByTestId("mock-playlist").textContent;
+const playlistSeed = () => screen.getByTestId("pl-seed").textContent;
+const videoSeed = () => screen.getByTestId("sub-seed").textContent;
 
 const renderApp = async () => {
   localStorage.setItem("ytdiff_token", "stored_mock_token");
@@ -159,5 +189,69 @@ describe("App — routing (Desktop)", () => {
 
     expect(current()).toContain("current:https://yt/list?list=PLauto");
     expect(globalThis.history.length).toBe(before);
+  });
+
+  describe("pagination in the location", () => {
+    test("a link to a playlist on page 26 opens the list on page 26", async () => {
+      // The bug this covers: the right panel honoured the link and the left
+      // panel stayed on page 1, so "resume" only half worked.
+      globalThis.history.replaceState(
+        null,
+        "",
+        "#/playlist/" +
+          encodeURIComponent("https://yt/list?list=PL1") +
+          "?pp=26",
+      );
+      await renderApp();
+
+      // Seeded as a page for the first fetch, and as the index the existing
+      // seek already understands: 25 * 10.
+      expect(playlistSeed()).toBe("page:25 size:10 index:250");
+    });
+
+    test("a link carries the video page and page size too", async () => {
+      globalThis.history.replaceState(null, "", "#/unlisted?vp=4&vs=32");
+      await renderApp();
+
+      expect(videoSeed()).toBe("page:3 size:32 index:96");
+    });
+
+    test("paging records where you are without stacking history", async () => {
+      // Paging replaces rather than pushes: Back has to keep meaning "leave
+      // this playlist", not "undo the last page turn".
+      await renderApp();
+      await click("open PL1");
+      const afterOpen = globalThis.history.length;
+
+      await click("videos page 4");
+
+      expect(globalThis.location.hash).toContain("vp=4");
+      expect(globalThis.history.length).toBe(afterOpen);
+    });
+
+    test("the playlist list keeps its page when a playlist is opened", async () => {
+      // You picked that row from page 26; snapping the list back to page 1
+      // would undo the navigation you just made.
+      await renderApp();
+      await click("playlists page 26");
+      expect(globalThis.location.hash).toContain("pp=26");
+
+      await click("open PL1");
+
+      expect(globalThis.location.hash).toContain("pp=26");
+      expect(current()).toContain("current:https://yt/list?list=PL1");
+    });
+
+    test("opening another playlist starts its videos at page 1", async () => {
+      // A position in the previous playlist means nothing in this one.
+      await renderApp();
+      await click("open PL1");
+      await click("videos page 4");
+      expect(globalThis.location.hash).toContain("vp=4");
+
+      await click("open PL2");
+
+      expect(globalThis.location.hash).not.toContain("vp=");
+    });
   });
 });

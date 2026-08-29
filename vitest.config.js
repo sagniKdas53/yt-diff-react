@@ -28,8 +28,8 @@ export default mergeConfig(
         exclude: ["src/main.jsx"],
         thresholds: {
           statements: 72,
-          branches: 55,
-          functions: 62,
+          branches: 56,
+          functions: 63,
           lines: 73,
         },
       },
