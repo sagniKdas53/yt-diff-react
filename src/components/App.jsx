@@ -123,6 +123,17 @@ const themeObj = (theme) =>
  */
 
 /**
+ * The severities MUI's `Alert` accepts, as a literal tuple so `PropTypes.oneOf`
+ * infers `AlertColor` rather than `string`.
+ */
+const ALERT_SEVERITIES = /** @type {const} */ ([
+  "success",
+  "info",
+  "warning",
+  "error",
+]);
+
+/**
  * `forwardRef`'s result does not declare `propTypes`, but React reads one at
  * runtime and eslint's `react/prop-types` requires it — as with the memo'd
  * components elsewhere in the tree.
@@ -151,10 +162,19 @@ const Alert = forwardRef(
 );
 
 Alert.propTypes = {
-  severity: PropTypes.string,
+  // `oneOf` over the literal severities, not a bare string: MUI types this
+  // prop as `AlertColor`, and a `Requireable<string>` does not satisfy the
+  // `Validator<AlertColor>` React declares for it.
+  severity: PropTypes.oneOf(ALERT_SEVERITIES),
   sx: PropTypes.object,
   onClose: PropTypes.func,
-  children: PropTypes.node,
+  // `PropTypes.node` is typed as `ReactNodeLike`, which @types/prop-types
+  // still widens with `bigint`; React 18's `ReactNode` does not include it.
+  // The validator is the right one at runtime — only the two upstream type
+  // packages disagree — so the cast is confined to this seam.
+  children: /** @type {import("prop-types").Validator<import("react").ReactNode>} */ (
+    PropTypes.node
+  ),
 };
 
 // Common loader used in Suspense fallbacks

@@ -5,10 +5,6 @@ export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
-      workspace: [
-        "tests/desktop/vitest.config.js",
-        "tests/mobile/vitest.config.js",
-      ],
       projects: [
         "tests/desktop/vitest.config.js",
         "tests/mobile/vitest.config.js",
