@@ -5,9 +5,19 @@ import { useApiClient } from "../hooks/useApiClient.js";
 import { useSignedPlayback } from "../hooks/useSignedPlayback.js";
 import { useSubtitleTrack } from "../hooks/useSubtitleTrack.js";
 import { usePlaylistNavigation } from "../hooks/usePlaylistNavigation.js";
+import {
+  parseDescriptionSegments,
+  useDescription,
+} from "../hooks/useDescription.js";
 import { formatTime } from "../lib/subtitles.js";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Slider from "@mui/material/Slider";
@@ -34,6 +44,7 @@ import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { ClosedCaption as ClosedCaptionIcon } from "@mui/icons-material";
 import { ClosedCaptionDisabled as ClosedCaptionDisabledIcon } from "@mui/icons-material";
+import { Subject as SubjectIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -226,6 +237,24 @@ export default function VideoPlayer({
   } = useSubtitleTrack({ api, saveDirectory, subTitleFile });
 
   // Previous/next within the playlist, including resume across pagination.
+  // The description belongs to the row the player is on, and the player
+  // already has that row: reading it here rather than threading it down keeps
+  // showPlayer's five positional arguments from becoming six.
+  const descriptionFile =
+    currentPlayerIndex === -1
+      ? null
+      : items[currentPlayerIndex]?.video_metadatum?.descriptionFile ?? null;
+
+  const {
+    available: hasDescription,
+    open: descriptionOpen,
+    loading: descriptionLoading,
+    error: descriptionError,
+    text: descriptionText,
+    show: showDescription,
+    close: closeDescription,
+  } = useDescription({ api, saveDirectory, descriptionFile });
+
   const { handleNext, handlePrev } = usePlaylistNavigation({
     openPlayer,
     items,
@@ -286,11 +315,15 @@ export default function VideoPlayer({
     }
   };
 
-  const handleSeek = (_, value) => {
+  const seekTo = useCallback((seconds) => {
     if (videoRef.current) {
-      videoRef.current.currentTime = value;
-      setCurrentTime(value);
+      videoRef.current.currentTime = seconds;
+      setCurrentTime(seconds);
     }
+  }, []);
+
+  const handleSeek = (_, value) => {
+    seekTo(value);
   };
 
   const toggleMute = () => {
@@ -870,6 +903,23 @@ export default function VideoPlayer({
             />
           </Stack>
 
+          <Tooltip title={hasDescription ? "Description" : "No description"}>
+            <span>
+              <IconButton
+                size="small"
+                onClick={showDescription}
+                disabled={!hasDescription}
+                aria-label="show description"
+                sx={{
+                  color: hasDescription ? "white" : "rgba(255,255,255,0.2)",
+                  "&:hover": { color: "white" },
+                }}
+              >
+                <SubjectIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+
           <Tooltip
             title={
               !subtitleUrl
@@ -938,6 +988,62 @@ export default function VideoPlayer({
           </IconButton>
         </Stack>
       </ControlBar>
+
+      <Dialog
+        open={descriptionOpen}
+        onClose={closeDescription}
+        fullWidth
+        maxWidth="sm"
+        fullScreen={isMobile}
+        aria-label="description dialog"
+      >
+        <DialogTitle>{truncatedTitle || "Description"}</DialogTitle>
+        <DialogContent dividers>
+          {descriptionLoading && <CircularProgress size={24} />}
+          {descriptionError && (
+            <Typography color="error">Error: {descriptionError}</Typography>
+          )}
+          {!descriptionLoading && !descriptionError && (
+            <Typography
+              variant="body2"
+              sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+            >
+              {parseDescriptionSegments(descriptionText).map((segment, i) => {
+                if (segment.kind === "link") {
+                  return (
+                    <Link
+                      key={i}
+                      href={segment.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {segment.value}
+                    </Link>
+                  );
+                }
+                if (segment.kind === "time") {
+                  return (
+                    <Link
+                      key={i}
+                      component="button"
+                      type="button"
+                      onClick={() => seekTo(segment.seconds)}
+                      aria-label={`seek to ${segment.value}`}
+                      sx={{ mx: 0.25 }}
+                    >
+                      {segment.value}
+                    </Link>
+                  );
+                }
+                return <span key={i}>{segment.value}</span>;
+              })}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDescription}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Playlist Drawer inside the Player */}
       <PlayerPlaylistDrawer

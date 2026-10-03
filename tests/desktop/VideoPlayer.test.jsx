@@ -160,6 +160,99 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(document.querySelector("video").playbackRate).toBe(1);
   });
 
+  test("opens the description and links what it finds in it", async () => {
+    const description =
+      "Chapters: 00:00 intro, 2:13 the bit you came for\nhttps://example.test/more";
+
+    // A routing mock rather than ordered one-shots: the description costs two
+    // requests (mint, then fetch) and their order relative to the player's own
+    // mint is not something a test should have to know.
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post") {
+        return Promise.resolve(
+          mockResponse(
+            ({
+              status: "success",
+              signedUrlId:
+                body.fileName === "video.description"
+                  ? "desc_url_1"
+                  : "signed_url_123",
+              expiry: Date.now() + 3600000,
+            }),
+          ),
+        );
+      }
+      if (url.includes("desc_url_1")) {
+        // Plain text, not a JSON envelope: mockResponse serialises, and a
+        // quoted description would put a stray quote inside the last URL.
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: async () => description,
+          json: async () => ({ status: "success" }),
+        });
+      }
+      return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+    });
+
+    const row = {
+      video_metadatum: {
+        videoUrl: "https://example.test/v",
+        fileName: "video.mp4",
+        saveDirectory: "/downloads",
+        title: "A video",
+        descriptionFile: "video.description",
+        downloadStatus: true,
+      },
+    };
+
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        subTitleFile={null}
+        items={[row]}
+        currentPlayerIndex={0}
+      />,
+      { contexts },
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText("show description"));
+
+    const dialog = await screen.findByLabelText("description dialog");
+    await waitFor(() => {
+      expect(dialog).toHaveTextContent("Chapters:");
+    });
+
+    // A link opens out of the player; a timestamp is a seek, which is the
+    // chapter list nobody has chapters for.
+    const link = dialog.querySelector("a[href='https://example.test/more']");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(
+      dialog.querySelector("button[aria-label='seek to 2:13']"),
+    ).toBeInTheDocument();
+  });
+
+  test("offers no description button when the row has no description file", async () => {
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+    );
+
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText("show description")).toBeDisabled();
+  });
+
   test("toggles mute setting and saves in localStorage", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 

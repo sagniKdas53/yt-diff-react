@@ -87,6 +87,66 @@ describe("VideoPlayer Component (Mobile)", () => {
     expect(localStorage.getItem("ytdiff_player_muted")).toBe("true");
   });
 
+  test("shows the description full-screen on mobile", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post") {
+        return Promise.resolve(
+          mockResponse(
+            ({
+              status: "success",
+              signedUrlId:
+                body.fileName === "video.description"
+                  ? "desc_url_1"
+                  : "signed_url_123",
+              expiry: Date.now() + 3600000,
+            }),
+          ),
+        );
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => "A short description",
+        json: async () => ({ status: "success" }),
+      });
+    });
+
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        subTitleFile={null}
+        items={[{
+          video_metadatum: {
+            videoUrl: "https://example.test/v",
+            fileName: "video.mp4",
+            saveDirectory: "/downloads",
+            descriptionFile: "video.description",
+            downloadStatus: true,
+          },
+        }]}
+        currentPlayerIndex={0}
+      />,
+      { contexts },
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText("show description"));
+
+    // The same dialog, sized for the screen: on a phone a width-limited
+    // paper is unreadable and the close button is off-screen.
+    const dialog = await screen.findByLabelText("description dialog");
+    await waitFor(() => {
+      expect(dialog).toHaveTextContent("A short description");
+    });
+    expect(
+      dialog.querySelector(".MuiDialog-paperFullScreen"),
+    ).not.toBeNull();
+  });
+
   test("changes the playback speed from the control bar", async () => {
     renderPlayer();
 
