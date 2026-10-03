@@ -120,7 +120,15 @@ export function useThumbnailUrls({ api, items, playlistDirectory, loadedPlayList
         // Out of budget: give up on the ids and let the fetch effect ask for
         // them again. Retrying an expired id is what looped forever.
         if (retryIn === null) {
+          // The count is per-campaign, not per-thumbnail: leaving it spent
+          // would make the very next unrelated failure look like the last one.
+          refreshFailuresRef.current = 0;
           forgetThumbnails(dueEntries.map(([fileName]) => fileName));
+          // The due entries were the only ones this timer was chasing, and
+          // they are gone now. Without a new schedule the loop stops here and
+          // every thumbnail that is still alive goes unrefreshed until
+          // something else happens to re-arm it.
+          scheduleThumbnailRefresh();
           return;
         }
         scheduleThumbnailRefresh(retryIn);

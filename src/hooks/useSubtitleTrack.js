@@ -4,6 +4,19 @@ import { parseSubtitleText } from "../lib/subtitles.js";
 import { assetBase } from "../config.js";
 
 /**
+ * How far back the active-cue walk looks.
+ *
+ * Subtitle files do contain overlapping cues — a rolling auto-caption starts
+ * its next line before the previous one ends, and an extractor can repeat a
+ * cue — so the cue that started last is not the only one on screen. Finding
+ * the rest means walking back past every cue that has ended since, which is
+ * capped here: no cue a person wrote runs for half a minute, and an uncapped
+ * walk on a track with one 10 ms cue per word would undo the point of not
+ * filtering.
+ */
+const MAX_ACTIVE_CUE_WINDOW_SECONDS = 30;
+
+/**
  * Subtitles for the track currently playing.
  *
  * Fetches the .vtt through a signed URL, parses it into plain-text cues, and
@@ -28,7 +41,9 @@ import { assetBase } from "../config.js";
  *
  * `subtitleCues` is the whole parsed track, not just the cue on screen: it is
  * what the transcript list renders, and re-parsing it there would mean
- * fetching the file a second time.
+ * fetching the file a second time. It is sorted by `start` on the way out,
+ * because a .vtt is free to list its blocks out of order and both the
+ * transcript and the search below need them in time order.
  * @returns {{
  *   subtitleUrl: string | null,
  *   subtitleCues: Array<{start: number, end: number, text: string}>,
@@ -109,6 +124,13 @@ export function useSubtitleTrack({ api, saveDirectory, subTitleFile, currentTime
     };
   }, [api, saveDirectory, subTitleFile]);
 
+  // Cues in time order. A track is usually already listed in order, but not
+  // always, and both the transcript and the search below assume it.
+  const sortedCues = useMemo(
+    () => [...subtitleCues].sort((a, b) => a.start - b.start),
+    [subtitleCues],
+  );
+
   // The cues active right now.
   //
   // Binary search rather than a filter: `timeupdate` fires about four times a
@@ -116,15 +138,20 @@ export function useSubtitleTrack({ api, saveDirectory, subTitleFile, currentTime
   // with auto-captions that is thousands of comparisons per tick to find the
   // one or two cues on screen. Cues are sorted by start, so the last cue that
   // has already started is the only place to start looking.
+  //
+  // That cue is not necessarily the only one on screen: overlapping cues are
+  // normal in real files, and returning just it hid the earlier line for the
+  // length of the overlap. So the walk continues backwards over everything
+  // that has ended since, up to the window that bounds it.
   const activeCues = useMemo(() => {
-    if (!subtitleCues.length || !subtitlesEnabled) return [];
+    if (!sortedCues.length || !subtitlesEnabled) return [];
 
     let low = 0;
-    let high = subtitleCues.length - 1;
+    let high = sortedCues.length - 1;
     let found = -1;
     while (low <= high) {
       const mid = (low + high) >> 1;
-      if (subtitleCues[mid].start <= currentTime) {
+      if (sortedCues[mid].start <= currentTime) {
         found = mid;
         low = mid + 1;
       } else {
@@ -133,13 +160,21 @@ export function useSubtitleTrack({ api, saveDirectory, subTitleFile, currentTime
     }
 
     if (found === -1) return [];
-    const cue = subtitleCues[found];
-    return currentTime <= cue.end ? [cue] : [];
-  }, [subtitleCues, currentTime, subtitlesEnabled]);
+
+    const active = [];
+    const oldestActiveStart = currentTime - MAX_ACTIVE_CUE_WINDOW_SECONDS;
+    for (let i = found; i >= 0 && sortedCues[i].start >= oldestActiveStart; i--) {
+      const cue = sortedCues[i];
+      if (currentTime <= cue.end) active.push(cue);
+    }
+    // Collected newest first; the overlay reads top to bottom, so the line
+    // that started earlier goes above the one that covered it.
+    return active.reverse();
+  }, [sortedCues, currentTime, subtitlesEnabled]);
 
   return {
     subtitleUrl,
-    subtitleCues,
+    subtitleCues: sortedCues,
     activeCues,
     subtitlesEnabled,
     toggleSubtitles,

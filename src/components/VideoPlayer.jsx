@@ -167,6 +167,10 @@ export default function VideoPlayer({
   const isPlayingRef = useRef(isPlaying);
   const drawerOpenRef = useRef(drawerOpen);
   const volumeTapRef = useRef(null);
+  // Where the description dialog and the speed menu render. Inside the player
+  // box rather than the document body: in fullscreen the box is the only
+  // thing painted, so a body-portalled dialog is invisible.
+  const descriptionDialogRef = useRef(null);
   // The position a link asked for, and the one last written back. Both are
   // per-track: a new file starts again from wherever the link says, and a
   // position belonging to the previous video must not be written over it.
@@ -324,7 +328,14 @@ export default function VideoPlayer({
     if (videoRef.current) {
       videoRef.current.playbackRate = rate;
     }
-    localStorage.setItem("ytdiff_player_rate", String(rate));
+    // Persisting is a courtesy, not part of the selection: private mode and
+    // a full quota both throw here, and the rate the viewer just chose
+    // applies to this session either way.
+    try {
+      localStorage.setItem("ytdiff_player_rate", String(rate));
+    } catch {
+      // Storage unavailable; the in-session rate still stands.
+    }
   }, []);
 
   const handleVolumeChange = useCallback((_, value) => {
@@ -419,7 +430,20 @@ export default function VideoPlayer({
    */
   useEffect(() => {
     const onKeyDown = (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
       const target = event.target;
+      // Keystrokes inside the dialog belong to the dialog: typing, tabbing
+      // and scrolling through the text, and space/arrows over its own
+      // controls.
+      if (
+        descriptionDialogRef.current &&
+        target instanceof Node &&
+        descriptionDialogRef.current.contains(target)
+      ) {
+        return;
+      }
       if (
         target instanceof HTMLElement &&
         (target.isContentEditable ||
@@ -637,7 +661,7 @@ export default function VideoPlayer({
             // Once per track. A recovery remint loads the metadata again, and
             // re-seeking there would throw the viewer back to the start of
             // whatever they had just watched past.
-            if (startAt > 0 && appliedStartAtRef.current !== startAt) {
+            if (startAt > 0 && appliedStartAtRef.current === null) {
               appliedStartAtRef.current = startAt;
               lastWrittenRef.current = Math.floor(startAt);
               element.currentTime = startAt;
@@ -802,11 +826,14 @@ export default function VideoPlayer({
         onToggleFullscreen={toggleFullscreen}
         playbackRate={playbackRate}
         onChangePlaybackRate={changePlaybackRate}
+        menuContainer={() => containerRef.current}
         descriptionAvailable={hasDescription}
         onShowDescription={showDescription}
       />
 
       <Dialog
+        ref={descriptionDialogRef}
+        container={() => containerRef.current}
         open={descriptionOpen}
         onClose={closeDescription}
         fullWidth

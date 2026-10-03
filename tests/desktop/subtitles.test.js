@@ -210,4 +210,31 @@ describe("parseSubtitleText with YouTube auto-captions", () => {
       "The second line",
     ]);
   });
+
+  it("keeps an authored cue that starts with the previous one whole", () => {
+    const cues = parseSubtitleText(
+      [
+        "WEBVTT",
+        "",
+        "00:00:01.000 --> 00:00:03.000",
+        "The first line",
+        "",
+        "00:00:03.000 --> 00:00:05.000",
+        "The first line, spoken again",
+        "",
+        "00:00:05.000 --> 00:00:07.000",
+        "The first line",
+        "and it carries on",
+      ].join("\n"),
+    );
+    // A shared prefix is only a rolling caption's growth if the 10 ms echo is
+    // there in front of it. Nothing here has one, so the second and third cues
+    // are the author writing a sentence that starts like the one before —
+    // wrapped or not, both keep every word they were given.
+    expect(cues.map((cue) => cue.text)).toEqual([
+      "The first line",
+      "The first line, spoken again",
+      "The first line\nand it carries on",
+    ]);
+  });
 });

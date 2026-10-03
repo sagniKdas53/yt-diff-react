@@ -54,10 +54,10 @@ function formatExpiry(botExpiresAt) {
   if (minutes < 1) return "expires in under a minute";
   if (minutes < 60) return `expires in ${minutes} min`;
 
-  const hours = Math.round(until / 3_600_000);
+  const hours = Math.floor(until / 3_600_000);
   if (hours < 24) return `expires in ${hours} h`;
 
-  const days = Math.round(until / 86_400_000);
+  const days = Math.floor(until / 86_400_000);
   return `expires in ${days} ${days === 1 ? "day" : "days"}`;
 }
 
@@ -510,9 +510,11 @@ const SubListItemCard = memo(
           open={Boolean(menuAnchor)}
           onClose={() => setMenuAnchor(null)}
         >
-          <MenuItem onClick={fetchMissingExtras} disabled={syncing}>
-            {syncing ? "Fetching missing extras…" : "Fetch missing extras"}
-          </MenuItem>
+          {partialChip && (
+            <MenuItem onClick={fetchMissingExtras} disabled={syncing}>
+              {syncing ? "Fetching missing extras…" : "Fetch missing extras"}
+            </MenuItem>
+          )}
           {expiryChip && (
             <MenuItem onClick={keepFile} disabled={keeping}>
               {keeping ? "Keeping…" : "Keep"}

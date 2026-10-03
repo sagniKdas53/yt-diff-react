@@ -1,7 +1,16 @@
 import "@testing-library/jest-dom";
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { expect, afterEach, beforeEach, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
+
+// Every `waitFor` in this project inherits this ceiling, and one second is not
+// enough once the coverage instrumentation has every core busy: renders cost
+// several times what they do uninstrumented, and the tests that failed were not
+// broken, they were waiting for a machine that was not there any more. These
+// wait on a condition, not on a duration, so a longer ceiling costs nothing
+// when things are healthy. `@testing-library/react` forwards this to
+// `@testing-library/dom`'s own config, which is what `waitFor` reads.
+configure({ asyncUtilTimeout: 10000 });
 
 // Mock localStorage and sessionStorage for testing environment
 const createStorageMock = () => {

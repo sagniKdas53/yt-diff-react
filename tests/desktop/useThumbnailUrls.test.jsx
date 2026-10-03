@@ -203,6 +203,89 @@ describe("useThumbnailUrls", () => {
     await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeUndefined());
   });
 
+  it("keeps refreshing a healthy thumbnail after another exhausts its retries", async () => {
+    // Two rows on the same clock: one about to expire, one with an hour left.
+    const soon = Date.now() + REFRESH_MARGIN_MS + 1000;
+    api.post.mockResolvedValueOnce({
+      status: "success",
+      files: {
+        "a.jpg": { signedUrlId: "sid-a", expiry: soon },
+        "b.jpg": { signedUrlId: "sid-b", expiry: Date.now() + 3600000 },
+      },
+    });
+
+    renderThumbs({ items: [itemWith("a.jpg"), itemWith("b.jpg")] });
+    await waitFor(() => expect(latest.thumbUrls["b.jpg"]).toContain("sid-b"));
+
+    api.post.mockRejectedValue(new Error("server down"));
+
+    const refreshCalls = () =>
+      api.post.mock.calls.filter((call) => call[0] === "/refreshfiles");
+
+    // Ten minutes is the whole backoff sequence for the expiring id: five
+    // attempts, then it is given up on.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    });
+
+    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeUndefined());
+    expect(latest.thumbUrls["b.jpg"]).toContain("sid-b");
+    // Only the expiring id was ever due, so only it was ever dropped.
+    expect(refreshCalls().every((call) => call[1].fileIds.includes("sid-a"))).toBe(
+      true,
+    );
+
+    // An hour later the survivor comes due. A timer loop that stopped with the
+    // exhausted id would leave it unrefreshed for the life of the page.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    });
+
+    await waitFor(() =>
+      expect(
+        refreshCalls().some((call) => call[1].fileIds.includes("sid-b")),
+      ).toBe(true),
+    );
+  });
+
+  it("starts the backoff count over after it gives up on an id", async () => {
+    const soon = Date.now() + REFRESH_MARGIN_MS + 1000;
+    api.post.mockResolvedValueOnce({
+      status: "success",
+      files: {
+        "a.jpg": { signedUrlId: "sid-a", expiry: soon },
+        "b.jpg": { signedUrlId: "sid-b", expiry: Date.now() + 3600000 },
+      },
+    });
+
+    renderThumbs({ items: [itemWith("a.jpg"), itemWith("b.jpg")] });
+    await waitFor(() => expect(latest.thumbUrls["b.jpg"]).toContain("sid-b"));
+
+    api.post.mockRejectedValue(new Error("server down"));
+
+    const refreshCallsFor = (fileId) =>
+      api.post.mock.calls.filter(
+        (call) =>
+          call[0] === "/refreshfiles" && call[1].fileIds.includes(fileId),
+      );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    });
+    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeUndefined());
+    expect(refreshCallsFor("sid-b")).toHaveLength(0);
+
+    // Its first failure, an hour after the mint, plus the whole backoff run.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(65 * 60 * 1000);
+    });
+
+    // A fresh sequence is five attempts and then the id is let go. Reading the
+    // exhausted count off the id just dropped would make this first failure
+    // the fifth, so the survivor would be given up on without a second try.
+    expect(refreshCallsFor("sid-b")).toHaveLength(5);
+  });
+
   it("starts a new playlist with a clean slate", async () => {
     api.post.mockResolvedValue({
       status: "success",

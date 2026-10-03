@@ -37,6 +37,8 @@ export function useDescription({ api, saveDirectory, descriptionFile }) {
   // screen must never be the previous video's.
   useEffect(() => {
     sessionRef.current += 1;
+    // A track change must not show the previous track's description, so this
+    // reset cannot be deferred to a user action the way the fetch is.
     setOpen(false);
     setText("");
     setError(null);

@@ -70,6 +70,16 @@ function PlayerPlaylistDrawer({
   // scrolling itself away while you read is worse than a static one.
   const [syncTranscript, setSyncTranscript] = useState(true);
   const showChapterTabs = chapters.length > 0 || subtitleCues.length > 0;
+  // A tab can outlive its data: the chapter list re-fetches and comes back
+  // empty, or a video has no transcript at all. Rather than rendering an empty
+  // body under a selected tab, resolve the request once here and let every
+  // consumer read the same answer.
+  const effectiveTab =
+    tab === "chapters" && chapters.length > 0
+      ? "chapters"
+      : tab === "transcript" && subtitleCues.length > 0
+        ? "transcript"
+        : "playlist";
 
   const activeChapterIndex = useMemo(() => {
     let active = -1;
@@ -283,9 +293,9 @@ function PlayerPlaylistDrawer({
         }}
       >
         <Typography variant="h6">
-          {tab === "playlist"
+          {effectiveTab === "playlist"
             ? "Current Playlist"
-            : tab === "chapters"
+            : effectiveTab === "chapters"
             ? "Chapters"
             : "Transcript"}
         </Typography>
@@ -300,7 +310,7 @@ function PlayerPlaylistDrawer({
 
       {showChapterTabs && (
         <Tabs
-          value={tab}
+          value={effectiveTab}
           onChange={(_event, next) => setTab(next)}
           variant="fullWidth"
           aria-label="drawer views"
@@ -320,11 +330,11 @@ function PlayerPlaylistDrawer({
       )}
 
       {/* Items list */}
-      {tab === "playlist" && (
+      {effectiveTab === "playlist" && (
         <List sx={{ overflowY: "auto", flex: 1 }}>{playlistItems}</List>
       )}
 
-      {tab === "chapters" && (
+      {effectiveTab === "chapters" && (
         <List sx={{ overflowY: "auto", flex: 1 }}>
           {chapters.map((chapter, index) => (
             <ListItemButton
@@ -348,7 +358,7 @@ function PlayerPlaylistDrawer({
         </List>
       )}
 
-      {tab === "transcript" && (
+      {effectiveTab === "transcript" && (
         <>
           <Box sx={{ px: 2, pt: 1, display: "flex", justifyContent: "flex-end" }}>
             <FormControlLabel

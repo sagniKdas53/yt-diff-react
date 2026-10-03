@@ -2,7 +2,11 @@ import React from "react";
 import { screen, fireEvent } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import PlayerPlaylistDrawer from "../../src/components/PlayerPlaylistDrawer.jsx";
-import { makeContexts, renderWithContexts } from "../contextHarness.jsx";
+import {
+  makeContexts,
+  renderWithContexts,
+  ContextHarness,
+} from "../contextHarness.jsx";
 
 describe("PlayerPlaylistDrawer Component (Desktop)", () => {
   const mockItems = [
@@ -111,6 +115,40 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
     renderDrawer();
     expect(screen.queryByRole("tab", { name: "Chapters" })).toBeNull();
     expect(screen.queryByRole("tab", { name: "Transcript" })).toBeNull();
+  });
+
+  test("falls back to the playlist when the selected tab loses its data", () => {
+    const { rerender } = renderDrawer({
+      ...defaultProps,
+      rowsPerPage: 8,
+      chapters: [{ start: 0, end: 45, title: "Opening" }],
+      subtitleCues: [{ start: 0, end: 5, text: "Hello there" }],
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Chapters" }));
+    expect(screen.getByRole("tab", { name: "Chapters" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // The chapter list re-fetches and comes back empty.
+    rerender(
+      <ContextHarness contexts={contexts}>
+        <PlayerPlaylistDrawer
+          {...defaultProps}
+          rowsPerPage={8}
+          chapters={[]}
+          subtitleCues={[{ start: 0, end: 5, text: "Hello there" }]}
+        />
+      </ContextHarness>,
+    );
+
+    expect(screen.getByRole("tab", { name: "Playlist" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("heading", { name: "Current Playlist" })).toBeTruthy();
+    expect(screen.getByText("Downloaded Video")).toBeTruthy();
   });
 
   test("lists the transcript and marks the line being spoken", () => {

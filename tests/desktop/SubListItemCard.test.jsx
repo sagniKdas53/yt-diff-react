@@ -449,7 +449,7 @@ describe("SubListItemCard Component (Desktop)", () => {
       globalThis.fetch.mockResolvedValue(
         mockResponse({ status: "success", kept: 1 }),
       );
-      renderExpiring(inMs(3 * HOUR));
+      renderExpiring(inMs(3 * HOUR + MINUTE));
 
       fireEvent.click(await openKeepMenu());
 
@@ -467,7 +467,7 @@ describe("SubListItemCard Component (Desktop)", () => {
 
     test("does not fire a second request while one is in flight", async () => {
       let release;
-      renderExpiring(inMs(3 * HOUR));
+      renderExpiring(inMs(3 * HOUR + MINUTE));
       globalThis.fetch.mockImplementation(
         () =>
           new Promise((resolve) => {
@@ -496,7 +496,7 @@ describe("SubListItemCard Component (Desktop)", () => {
     });
 
     test("takes the chip away and says what it kept", async () => {
-      const { contexts } = renderExpiring(inMs(3 * HOUR));
+      const { contexts } = renderExpiring(inMs(3 * HOUR + MINUTE));
       globalThis.fetch.mockResolvedValue(
         mockResponse({ status: "success", kept: 2 }),
       );
@@ -516,7 +516,7 @@ describe("SubListItemCard Component (Desktop)", () => {
     test("says nothing was kept rather than claiming it was", async () => {
       // The bot never fetched this file, so there was nothing for Keep to
       // keep — and the file is still going to be reaped, so the chip stays.
-      const { contexts } = renderExpiring(inMs(3 * HOUR));
+      const { contexts } = renderExpiring(inMs(3 * HOUR + MINUTE));
       globalThis.fetch.mockResolvedValue(
         mockResponse({ status: "success", kept: 0 }),
       );
@@ -534,7 +534,7 @@ describe("SubListItemCard Component (Desktop)", () => {
     });
 
     test("reports a refused Keep and leaves the chip alone", async () => {
-      const { contexts } = renderExpiring(inMs(3 * HOUR));
+      const { contexts } = renderExpiring(inMs(3 * HOUR + MINUTE));
       globalThis.fetch.mockResolvedValue(
         mockResponse(
           { error: "Could not keep that file." },
@@ -552,5 +552,89 @@ describe("SubListItemCard Component (Desktop)", () => {
       );
       expect(screen.getByText("expires in 3 h")).toBeInTheDocument();
     });
+
+  describe("the overflow menu", () => {
+    const HOUR = 60 * 60 * 1000;
+    const inMs = (ms) => new Date(Date.now() + ms).toISOString();
+
+    const menuRow = ({ missingExtras, reason, botExpiresAt }) => ({
+      id: "video_555",
+      isAvailable: true,
+      video_metadatum: {
+        videoUrl: "https://youtube.com/watch?v=555",
+        title: "Menu Video",
+        downloadStatus: true,
+        fileName: "menu.mp4",
+        saveDirectory: "/downloads",
+        missingExtras,
+        reason,
+        botExpiresAt,
+      },
+    });
+
+    const renderMenuRow = (overrides) =>
+      renderWithContexts(
+        <SubListItemCard
+          {...defaultProps}
+          element={menuRow(overrides)}
+        />,
+        { contexts: makeContexts() },
+      );
+
+    beforeEach(() => {
+      globalThis.fetch = vi.fn();
+    });
+
+    test("offers neither repair when the row has neither chip", () => {
+      renderMenuRow({ missingExtras: null, reason: null, botExpiresAt: null });
+
+      expect(screen.queryByLabelText("fetch missing extras")).toBeNull();
+      expect(screen.queryByLabelText("keep file")).toBeNull();
+      expect(screen.queryByRole("menuitem")).toBeNull();
+    });
+
+    test("offers the repair, and only that one, for a partial row", async () => {
+      renderMenuRow({
+        missingExtras: ["subtitles"],
+        reason: "rate-limited",
+        botExpiresAt: null,
+      });
+
+      fireEvent.click(screen.getByLabelText("fetch missing extras"));
+
+      expect(
+        await screen.findByRole("menuitem", { name: /fetch missing extras/i }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Keep" })).toBeNull();
+    });
+
+    test("offers the repair, and only that one, for an expiring row", async () => {
+      renderMenuRow({
+        missingExtras: null,
+        reason: null,
+        botExpiresAt: inMs(3 * HOUR + HOUR / 60),
+      });
+
+      fireEvent.click(screen.getByLabelText("keep file"));
+
+      expect(
+        await screen.findByRole("menuitem", { name: "Keep" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("menuitem", { name: /fetch missing extras/i }),
+      ).toBeNull();
+    });
+
+    test("never rounds an hours count up past the time that is left", () => {
+      renderMenuRow({
+        missingExtras: null,
+        reason: null,
+        botExpiresAt: inMs(23 * HOUR + 0.7 * HOUR),
+      });
+
+      expect(screen.getByText("expires in 23 h")).toBeInTheDocument();
+      expect(screen.queryByText("expires in 24 h")).toBeNull();
+    });
+  });
   });
  });

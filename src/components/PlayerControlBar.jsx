@@ -98,6 +98,8 @@ const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
  * @property {number} playbackRate
  * @property {(rate: number) => void} onChangePlaybackRate
  * @property {boolean} descriptionAvailable
+ * @property {() => (HTMLElement | null)} [menuContainer] - Portal target for
+ *   the speed menu, so it survives fullscreen.
  * @property {() => void} onShowDescription
  */
 function PlayerControlBar({
@@ -132,6 +134,7 @@ function PlayerControlBar({
   onChangePlaybackRate,
   descriptionAvailable,
   onShowDescription,
+  menuContainer,
 }) {
   const [rateAnchor, setRateAnchor] = useState(null);
   // Kept here rather than lifted: nothing outside the bar renders this menu,
@@ -352,6 +355,7 @@ function PlayerControlBar({
                 </IconButton>
               </Tooltip>
               <Menu
+                container={menuContainer ? menuContainer() : undefined}
                 anchorEl={rateAnchor}
                 open={Boolean(rateAnchor)}
                 onClose={() => setRateAnchor(null)}
@@ -516,6 +520,7 @@ PlayerControlBar.propTypes = {
   onChangePlaybackRate: PropTypes.func.isRequired,
   descriptionAvailable: PropTypes.bool.isRequired,
   onShowDescription: PropTypes.func.isRequired,
+  menuContainer: PropTypes.func,
 };
 
 export default memo(PlayerControlBar);

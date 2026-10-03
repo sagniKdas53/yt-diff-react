@@ -51,6 +51,9 @@ function parseTimestamp(ts) {
  */
 export function parseSubtitleText(text) {
   const cues = [];
+  // Kept beside the cues rather than on them: a cue is the parsed track's
+  // shape and every caller sees it.
+  const wrapped = [];
   const normalized = text.replace(/^\uFEFF/, "").replace(/\r/g, "");
   const blocks = normalized.split(/\n\n+/);
 
@@ -81,13 +84,12 @@ export function parseSubtitleText(text) {
         /((?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{3})\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{3})/,
       );
     if (!match) continue;
-
     const start = parseTimestamp(match[1]);
     const end = parseTimestamp(match[2]);
-    const rawText = lines
-      .slice(timingIdx + 1)
-      .join("\n")
-      .trim();
+
+    const rawLines = lines.slice(timingIdx + 1);
+    const rawText = rawLines.join("\n").trim();
+
     // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
     // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
     const noTimeTags = rawText.replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "");
@@ -95,11 +97,16 @@ export function parseSubtitleText(text) {
     const textContent = (doc.body.textContent || "")
       .replace(/\s{2,}/g, " ")
       .trim();
+
     if (textContent) {
       cues.push({ start, end, text: textContent });
+      // Whether the cue's words spanned more than one source line, which is
+      // what the grown cue of a rolling caption looks like and what tells it
+      // from an authored cue that happens to continue the one before it.
+      wrapped.push(rawLines.filter((line) => line.trim()).length > 1);
     }
   }
-  return collapseRollingCues(cues);
+  return collapseRollingCues(cues, wrapped);
 }
 
 /**
@@ -114,19 +121,31 @@ export function parseSubtitleText(text) {
  * An echo is identified by what it is rather than by what it says: a cue of
  * no more than {@link ECHO_MAX_SECONDS} that repeats the line before it. A
  * human-authored subtitle that deliberately re-displays a line is a second or
- * more long and is left alone. Growth is positional — a cue that *starts*
- * with the previous one is that line gaining words, and what it gained is the
- * next line: the echo already closed the previous cue, so the remainder
- * becomes a cue of its own with the grown cue's timings. A real subtitle file
- * does neither, because each of its cues starts a new thought.
+ * more long and is left alone.
+ *
+ * Growth is positional — a cue that *starts* with the previous one is that
+ * line gaining words, and what it gained is the next line: the echo already
+ * closed the previous cue, so the remainder becomes a cue of its own with the
+ * grown cue's timings. Two things say that is what is going on, and both have
+ * to hold. The echo has to be there: no real subtitle file contains a 10 ms
+ * cue. And the grown cue's words have to have wrapped, because the rolling
+ * writer starts the next line on a line of its own. An authored cue that
+ * shares a prefix with the one before it — a quote, or a second pass at the
+ * same line — has neither, and keeps its text whole.
  *
  * @param {Array<{start: number, end: number, text: string}>} cues
+ * @param {boolean[]} wrapped - Per cue, whether its words spanned more than
+ *   one source line in the file.
  * @returns {Array<{start: number, end: number, text: string}>}
  */
-function collapseRollingCues(cues) {
+function collapseRollingCues(cues, wrapped) {
   const collapsed = [];
+  // Whether the cue just dropped was the 10 ms echo of the cue now at the tail
+  // of `collapsed`. Only the cue right behind an echo can be a grown one.
+  let echoed = false;
 
-  for (const cue of cues) {
+  for (let i = 0; i < cues.length; i++) {
+    const cue = cues[i];
     const previous = collapsed.at(-1);
 
     if (previous && cue.text === previous.text) {
@@ -134,13 +153,20 @@ function collapseRollingCues(cues) {
       // grown cue invisible, so dropping it costs nothing. A longer cue saying
       // the same thing is somebody repeating themselves, and that is theirs.
       if (cue.end - cue.start <= ECHO_MAX_SECONDS) {
+        echoed = true;
         continue;
       }
       collapsed.push(cue);
+      echoed = false;
       continue;
     }
 
-    if (previous && cue.text.startsWith(previous.text)) {
+    if (
+      previous &&
+      echoed &&
+      wrapped[i] &&
+      cue.text.startsWith(previous.text)
+    ) {
       // What the line gained is the *next* line, not more of this one: the
       // echo already ended the previous cue, so this starts a new one. It
       // takes the grown cue's timings, which span the whole of it.
@@ -148,10 +174,12 @@ function collapseRollingCues(cues) {
       if (grown) {
         collapsed.push({ start: cue.start, end: cue.end, text: grown });
       }
+      echoed = false;
       continue;
     }
 
     collapsed.push(cue);
+    echoed = false;
   }
 
   return collapsed;
