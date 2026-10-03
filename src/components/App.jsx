@@ -258,6 +258,7 @@ export default function App() {
     playlistPageSize: routePlaylistPageSize,
     videoPage: routeVideoPage,
     videoPageSize: routeVideoPageSize,
+    startAt: routeStartAt,
   } = useRoute();
   const navigate = useNavigate();
 
@@ -289,9 +290,28 @@ export default function App() {
     [navigate],
   );
 
-  /** Opens or closes the player, within whatever list is currently open. */
+  /**
+   * Opens or closes the player, within whatever list is currently open.
+   *
+   * The position is dropped on the way: a video reached by moving on from the
+   * previous one starts at its beginning, and a position belonging to a
+   * different video means nothing here.
+   */
   const setRouteVideoUrl = useCallback(
-    (videoUrl, { replace = false } = {}) => navigate({ videoUrl }, { replace }),
+    (videoUrl, { replace = false } = {}) =>
+      navigate({ videoUrl, startAt: 0 }, { replace }),
+    [navigate],
+  );
+
+  /**
+   * Records where playback has got to.
+   *
+   * Always a replace: the position is a property of the video you are already
+   * watching, not a place you have navigated to, and Back has to keep meaning
+   * "close the player" rather than stepping through every ten seconds.
+   */
+  const setRouteStartAt = useCallback(
+    (startAt) => navigate({ startAt }, { replace: true }),
     [navigate],
   );
 
@@ -652,6 +672,8 @@ export default function App() {
     setRowsPerPage: handleSetRowsPerPageSubList,
     playerVideoUrl: routeVideoUrl,
     setPlayerVideoUrl: setRouteVideoUrl,
+    playerStartAt: routeStartAt,
+    setPlayerStartAt: setRouteStartAt,
     initialPage: routeVideoPage,
     onPaginationChange: setVideoPagination,
   };

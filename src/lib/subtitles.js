@@ -1,4 +1,12 @@
 /**
+ * How long an echo cue can be and still be one.
+ *
+ * YouTube writes them at 10 ms; the slack is for the rounding that shows up in
+ * converted tracks, and the ceiling is far below any cue a person wrote.
+ */
+const ECHO_MAX_SECONDS = 0.05;
+
+/**
  * Formats seconds as h:mm:ss (or m:ss below an hour), matching the player
  * control bar's readout.
  *
@@ -43,6 +51,9 @@ function parseTimestamp(ts) {
  */
 export function parseSubtitleText(text) {
   const cues = [];
+  // Kept beside the cues rather than on them: a cue is the parsed track's
+  // shape and every caller sees it.
+  const wrapped = [];
   const normalized = text.replace(/^\uFEFF/, "").replace(/\r/g, "");
   const blocks = normalized.split(/\n\n+/);
 
@@ -73,13 +84,12 @@ export function parseSubtitleText(text) {
         /((?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{3})\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{3})/,
       );
     if (!match) continue;
-
     const start = parseTimestamp(match[1]);
     const end = parseTimestamp(match[2]);
-    const rawText = lines
-      .slice(timingIdx + 1)
-      .join("\n")
-      .trim();
+
+    const rawLines = lines.slice(timingIdx + 1);
+    const rawText = rawLines.join("\n").trim();
+
     // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
     // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
     const noTimeTags = rawText.replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "");
@@ -87,9 +97,90 @@ export function parseSubtitleText(text) {
     const textContent = (doc.body.textContent || "")
       .replace(/\s{2,}/g, " ")
       .trim();
+
     if (textContent) {
       cues.push({ start, end, text: textContent });
+      // Whether the cue's words spanned more than one source line, which is
+      // what the grown cue of a rolling caption looks like and what tells it
+      // from an authored cue that happens to continue the one before it.
+      wrapped.push(rawLines.filter((line) => line.trim()).length > 1);
     }
   }
-  return cues;
+  return collapseRollingCues(cues, wrapped);
+}
+
+/**
+ * Collapses the rolling cue style YouTube's auto-captions emit.
+ *
+ * An auto-generated track repeats every line three times: once with karaoke
+ * word timings, then again as the 10 ms echo that carries the plain text, then
+ * once more as the first line of the next cue with the following words
+ * appended. Read as-is, the overlay double-renders each line and the transcript
+ * repeats itself three times over.
+ *
+ * An echo is identified by what it is rather than by what it says: a cue of
+ * no more than {@link ECHO_MAX_SECONDS} that repeats the line before it. A
+ * human-authored subtitle that deliberately re-displays a line is a second or
+ * more long and is left alone.
+ *
+ * Growth is positional — a cue that *starts* with the previous one is that
+ * line gaining words, and what it gained is the next line: the echo already
+ * closed the previous cue, so the remainder becomes a cue of its own with the
+ * grown cue's timings. Two things say that is what is going on, and both have
+ * to hold. The echo has to be there: no real subtitle file contains a 10 ms
+ * cue. And the grown cue's words have to have wrapped, because the rolling
+ * writer starts the next line on a line of its own. An authored cue that
+ * shares a prefix with the one before it — a quote, or a second pass at the
+ * same line — has neither, and keeps its text whole.
+ *
+ * @param {Array<{start: number, end: number, text: string}>} cues
+ * @param {boolean[]} wrapped - Per cue, whether its words spanned more than
+ *   one source line in the file.
+ * @returns {Array<{start: number, end: number, text: string}>}
+ */
+function collapseRollingCues(cues, wrapped) {
+  const collapsed = [];
+  // Whether the cue just dropped was the 10 ms echo of the cue now at the tail
+  // of `collapsed`. Only the cue right behind an echo can be a grown one.
+  let echoed = false;
+
+  for (let i = 0; i < cues.length; i++) {
+    const cue = cues[i];
+    const previous = collapsed.at(-1);
+
+    if (previous && cue.text === previous.text) {
+      // The echo. Its 10 ms of screen time is what makes the hand-off to the
+      // grown cue invisible, so dropping it costs nothing. A longer cue saying
+      // the same thing is somebody repeating themselves, and that is theirs.
+      if (cue.end - cue.start <= ECHO_MAX_SECONDS) {
+        echoed = true;
+        continue;
+      }
+      collapsed.push(cue);
+      echoed = false;
+      continue;
+    }
+
+    if (
+      previous &&
+      echoed &&
+      wrapped[i] &&
+      cue.text.startsWith(previous.text)
+    ) {
+      // What the line gained is the *next* line, not more of this one: the
+      // echo already ended the previous cue, so this starts a new one. It
+      // takes the grown cue's timings, which span the whole of it.
+      const grown = cue.text.slice(previous.text.length).trim();
+      if (grown) {
+        collapsed.push({ start: cue.start, end: cue.end, text: grown });
+      }
+      echoed = false;
+      continue;
+    }
+
+    collapsed.push(cue);
+    echoed = false;
+  }
+
+  return collapsed;
 }

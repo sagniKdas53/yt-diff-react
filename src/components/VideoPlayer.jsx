@@ -1,40 +1,36 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 
 import { useApiClient } from "../hooks/useApiClient.js";
 import { useSignedPlayback } from "../hooks/useSignedPlayback.js";
 import { useSubtitleTrack } from "../hooks/useSubtitleTrack.js";
 import { usePlaylistNavigation } from "../hooks/usePlaylistNavigation.js";
-import { formatTime } from "../lib/subtitles.js";
+import {
+  parseDescriptionSegments,
+  useDescription,
+} from "../hooks/useDescription.js";
+import { PLAYBACK_RATES, readStoredRate } from "../lib/playbackRate.js";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
-import Slider from "@mui/material/Slider";
-import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 
 import { PlayArrow as PlayArrowIcon } from "@mui/icons-material";
-import { Pause as PauseIcon } from "@mui/icons-material";
-import { SkipNext as SkipNextIcon } from "@mui/icons-material";
-import { SkipPrevious as SkipPreviousIcon } from "@mui/icons-material";
 import { QueueMusic as QueueMusicIcon } from "@mui/icons-material";
-import { Replay10 as Replay10Icon } from "@mui/icons-material";
-import { Forward10 as Forward10Icon } from "@mui/icons-material";
-import { VolumeUp as VolumeUpIcon } from "@mui/icons-material";
-import { VolumeOff as VolumeOffIcon } from "@mui/icons-material";
-import { Fullscreen as FullscreenIcon } from "@mui/icons-material";
-import { FullscreenExit as FullscreenExitIcon } from "@mui/icons-material";
-import { PictureInPictureAlt as PictureInPictureAltIcon } from "@mui/icons-material";
-import { OpenInNew as OpenInNewIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
-import { ClosedCaption as ClosedCaptionIcon } from "@mui/icons-material";
-import { ClosedCaptionDisabled as ClosedCaptionDisabledIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import PlayerControlBar from "./PlayerControlBar.jsx";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
 /**
@@ -45,28 +41,6 @@ import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
  *
  * @typedef {import("@mui/material").BoxProps & {show: boolean}} BarProps
  */
-
-const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
-  styled(Box, {
-    shouldForwardProp: (prop) => prop !== "show",
-  })(
-    /** @param {{theme: import("@mui/material/styles").Theme, show: boolean}} props */ ({
-      theme,
-      show,
-    }) => ({
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
-      padding: theme.spacing(2),
-      transition: "opacity 0.3s ease-in-out",
-      opacity: show ? 1 : 0,
-      pointerEvents: show ? "auto" : "none",
-      zIndex: 2,
-    }),
-  )
-);
 
 const TopBar = /** @type {import("react").ComponentType<BarProps>} */ (
   styled(Box, {
@@ -142,6 +116,9 @@ export default function VideoPlayer({
   fileName,
   title,
   subTitleFile,
+  startAt = 0,
+  onStartAtChange,
+  chapters = [],
   onClose,
   items = [],
   itemCount = 0,
@@ -176,6 +153,7 @@ export default function VideoPlayer({
     return saved === "true";
   });
   const [showMobileVolume, setShowMobileVolume] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(readStoredRate);
   const [bufferedTime, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -189,6 +167,20 @@ export default function VideoPlayer({
   const isPlayingRef = useRef(isPlaying);
   const drawerOpenRef = useRef(drawerOpen);
   const volumeTapRef = useRef(null);
+  // Where the description dialog and the speed menu render. Inside the player
+  // box rather than the document body: in fullscreen the box is the only
+  // thing painted, so a body-portalled dialog is invisible.
+  const descriptionDialogRef = useRef(null);
+  // The position a link asked for, and the one last written back. Both are
+  // per-track: a new file starts again from wherever the link says, and a
+  // position belonging to the previous video must not be written over it.
+  const appliedStartAtRef = useRef(null);
+  const lastWrittenRef = useRef(-1);
+
+  useEffect(() => {
+    appliedStartAtRef.current = null;
+    lastWrittenRef.current = -1;
+  }, [fileName]);
 
   // Signed-URL lifecycle: minting, pre-expiry refresh, mid-stream recovery.
   const { videoUrl, loading, errorMsg, reload } = useSignedPlayback({
@@ -201,13 +193,54 @@ export default function VideoPlayer({
   // Subtitles: fetch, parse and cue selection against the playhead.
   const {
     subtitleUrl,
+    subtitleCues,
     activeCues,
     subtitlesEnabled,
     toggleSubtitles,
-    reportTime,
-  } = useSubtitleTrack({ api, saveDirectory, subTitleFile });
+  } = useSubtitleTrack({ api, saveDirectory, subTitleFile, currentTime });
+
+  /**
+   * The chapter boundaries, as marks on the seek bar.
+   *
+   * The first chapter's mark is dropped: it sits at zero, where the slider
+   * already starts, and a dot there is a decoration that means nothing.
+   */
+  const chapterMarks = useMemo(
+    () =>
+      chapters.slice(1).map((chapter) => ({ value: chapter.start })),
+    [chapters],
+  );
+
+  /** The chapter the playhead is inside, or null before the first one. */
+  const currentChapter = useMemo(() => {
+    if (!chapters.length) return null;
+    for (let i = chapters.length - 1; i >= 0; i--) {
+      if (currentTime >= chapters[i].start) {
+        return chapters[i];
+      }
+    }
+    return null;
+  }, [chapters, currentTime]);
 
   // Previous/next within the playlist, including resume across pagination.
+  // The description belongs to the row the player is on, and the player
+  // already has that row: reading it here rather than threading it down keeps
+  // showPlayer's five positional arguments from becoming six.
+  const descriptionFile =
+    currentPlayerIndex === -1
+      ? null
+      : items[currentPlayerIndex]?.video_metadatum?.descriptionFile ?? null;
+
+  const {
+    available: hasDescription,
+    open: descriptionOpen,
+    loading: descriptionLoading,
+    error: descriptionError,
+    text: descriptionText,
+    show: showDescription,
+    close: closeDescription,
+  } = useDescription({ api, saveDirectory, descriptionFile });
+
   const { handleNext, handlePrev } = usePlaylistNavigation({
     openPlayer,
     items,
@@ -257,33 +290,55 @@ export default function VideoPlayer({
     }
   }, [isPlaying, drawerOpen, hideControlsSoon]);
 
-  const togglePlay = () => {
+  // `onPlay` and `onPause` already set this, so the optimistic set here was a
+  // second, redundant write on every click. The element's own events are the
+  // truth about whether it is playing.
+  const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       videoRef.current.play();
-      setIsPlaying(true);
     } else {
       videoRef.current.pause();
-      setIsPlaying(false);
     }
-  };
+  }, []);
+
+  const seekTo = useCallback((seconds) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
+      setCurrentTime(seconds);
+    }
+  }, []);
 
   const handleSeek = (_, value) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = value;
-      setCurrentTime(value);
-    }
+    seekTo(value);
   };
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
       localStorage.setItem("ytdiff_player_muted", String(!isMuted));
     }
-  };
+  }, [isMuted]);
 
-  const handleVolumeChange = (_, value) => {
+  const changePlaybackRate = useCallback((rate) => {
+    setPlaybackRate(rate);
+    // Applied here as well as in the effect: the menu is reachable while the
+    // element is mounted, and the effect only runs again on a track change.
+    if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+    }
+    // Persisting is a courtesy, not part of the selection: private mode and
+    // a full quota both throw here, and the rate the viewer just chose
+    // applies to this session either way.
+    try {
+      localStorage.setItem("ytdiff_player_rate", String(rate));
+    } catch {
+      // Storage unavailable; the in-session rate still stands.
+    }
+  }, []);
+
+  const handleVolumeChange = useCallback((_, value) => {
     setVolume(value);
     if (videoRef.current) {
       videoRef.current.volume = value;
@@ -300,7 +355,7 @@ export default function VideoPlayer({
         3000,
       );
     }
-  };
+  }, [isMobile, showMobileVolume]);
 
   const handleVolumeButtonClick = () => {
     if (!isMobile) {
@@ -330,7 +385,7 @@ export default function VideoPlayer({
     }
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen();
       setIsFullscreen(true);
@@ -338,7 +393,7 @@ export default function VideoPlayer({
       document.exitFullscreen();
       setIsFullscreen(false);
     }
-  };
+  }, []);
 
   const togglePiP = async () => {
     try {
@@ -358,11 +413,107 @@ export default function VideoPlayer({
     }
   };
 
-  const skip = (amount) => {
+  const skip = useCallback((amount) => {
     if (videoRef.current) {
       videoRef.current.currentTime += amount;
     }
-  };
+  }, []);
+
+  /**
+   * Keyboard control, on the keys every video player uses.
+   *
+   * Bound to the document rather than the player box so it works wherever
+   * focus happens to be, and skipped entirely when focus is somewhere a
+   * keystroke means something else — an input, a textarea, anything editable.
+   * Volume is the awkward one: it is stored in state already, so the handler
+   * steps that state rather than writing to the element directly.
+   */
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      const target = event.target;
+      // Keystrokes inside the dialog belong to the dialog: typing, tabbing
+      // and scrolling through the text, and space/arrows over its own
+      // controls.
+      if (
+        descriptionDialogRef.current &&
+        target instanceof Node &&
+        descriptionDialogRef.current.contains(target)
+      ) {
+        return;
+      }
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+
+      switch (event.key) {
+        case " ":
+        case "k":
+          event.preventDefault();
+          togglePlay();
+          return;
+        case "ArrowLeft":
+          event.preventDefault();
+          skip(-10);
+          return;
+        case "ArrowRight":
+          event.preventDefault();
+          skip(10);
+          return;
+        case "ArrowUp":
+          event.preventDefault();
+          handleVolumeChange(null, Math.min(1, (isMuted ? 0 : volume) + 0.1));
+          return;
+        case "ArrowDown":
+          event.preventDefault();
+          handleVolumeChange(null, Math.max(0, (isMuted ? 0 : volume) - 0.1));
+          return;
+        case "m":
+          toggleMute();
+          return;
+        case "f":
+          toggleFullscreen();
+          return;
+        case "c":
+          if (subtitleUrl) toggleSubtitles();
+          return;
+        case "<": {
+          const index = PLAYBACK_RATES.indexOf(playbackRate);
+          changePlaybackRate(PLAYBACK_RATES[Math.max(0, index - 1)]);
+          return;
+        }
+        case ">": {
+          const index = PLAYBACK_RATES.indexOf(playbackRate);
+          changePlaybackRate(
+            PLAYBACK_RATES[Math.min(PLAYBACK_RATES.length - 1, index + 1)],
+          );
+          return;
+        }
+      }
+    };
+
+    globalThis.addEventListener("keydown", onKeyDown);
+    return () => globalThis.removeEventListener("keydown", onKeyDown);
+  }, [
+    changePlaybackRate,
+    handleVolumeChange,
+    playbackRate,
+    skip,
+    subtitleUrl,
+    subtitlesEnabled,
+    toggleFullscreen,
+    toggleMute,
+    togglePlay,
+    toggleSubtitles,
+    volume,
+    isMuted,
+  ]);
 
   const toggleAutoPlay = () => {
     const newVal = !autoPlayEnabled;
@@ -376,6 +527,32 @@ export default function VideoPlayer({
       handleNext();
     }
   };
+
+  /**
+   * Hands the playhead to the location, so the link in the address bar is the
+   * link to share.
+   *
+   * Guarded against writing the value it was just given, and against writing
+   * at all when nothing asked for updates — otherwise every tick of the timer
+   * would replace a history entry that says nothing changed.
+   */
+  const writeStartAt = useCallback((seconds) => {
+    if (!onStartAtChange || !videoRef.current) return;
+    const rounded = Math.floor(seconds);
+    if (rounded === lastWrittenRef.current) return;
+    lastWrittenRef.current = rounded;
+    onStartAtChange(rounded);
+  }, [onStartAtChange]);
+
+  // While playing, roughly every ten seconds; on pause, immediately, because
+  // that is when someone is most likely to copy the link.
+  useEffect(() => {
+    if (!isPlaying) return undefined;
+    const timer = setInterval(() => {
+      if (videoRef.current) writeStartAt(videoRef.current.currentTime);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [isPlaying, writeStartAt]);
 
   useEffect(() => {
     if (videoUrl && videoRef.current) {
@@ -393,8 +570,12 @@ export default function VideoPlayer({
     if (videoRef.current) {
       videoRef.current.volume = volume;
       videoRef.current.muted = isMuted;
+      // Re-applied per track, like volume: the element is unmounted while
+      // videoUrl is null, so a new one starts at 1 and would otherwise ignore
+      // a rate chosen on the previous video.
+      videoRef.current.playbackRate = playbackRate;
     }
-  }, [videoUrl, volume, isMuted]);
+  }, [videoUrl, volume, isMuted, playbackRate]);
 
   const handleError = () => {
     const vid = videoRef.current;
@@ -436,11 +617,9 @@ export default function VideoPlayer({
   }, []);
 
   const handleTimeUpdate = useCallback(() => {
-    const now = videoRef.current ? videoRef.current.currentTime : 0;
-    setCurrentTime(now);
-    reportTime(now);
+    setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0);
     handleProgress();
-  }, [reportTime, handleProgress]);
+  }, [handleProgress]);
 
   return (
     <Box
@@ -475,11 +654,27 @@ export default function VideoPlayer({
           onError={handleError}
           onProgress={handleProgress}
           onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={() =>
-            setDuration(videoRef.current ? videoRef.current.duration : 0)
-          }
+          onLoadedMetadata={() => {
+            const element = videoRef.current;
+            if (!element) return;
+            setDuration(element.duration);
+            // Once per track. A recovery remint loads the metadata again, and
+            // re-seeking there would throw the viewer back to the start of
+            // whatever they had just watched past.
+            if (startAt > 0 && appliedStartAtRef.current === null) {
+              appliedStartAtRef.current = startAt;
+              lastWrittenRef.current = Math.floor(startAt);
+              element.currentTime = startAt;
+            }
+          }}
           onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPause={() => {
+            setIsPlaying(false);
+            // Written here rather than in an effect: the element's own event
+            // is the only place the final position is known before the timer
+            // is torn down.
+            writeStartAt(videoRef.current ? videoRef.current.currentTime : 0);
+          }}
           onEnded={handleVideoEnded}
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
@@ -601,280 +796,98 @@ export default function VideoPlayer({
         </IconButton>
       )}
 
-      <ControlBar show={showControls} onClick={(e) => e.stopPropagation()}>
-        <Box
-          sx={{
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            width: "100%",
-          }}
-        >
-          {/* Base Background Rail */}
-          <Box
-            sx={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              height: 4,
-              bgcolor: "rgba(255, 255, 255, 0.2)",
-              borderRadius: 2,
-              pointerEvents: "none",
-            }}
-          />
+      <PlayerControlBar
+        show={showControls}
+        currentTime={currentTime}
+        duration={duration}
+        bufferedTime={bufferedTime}
+        isPlaying={isPlaying}
+        currentChapter={currentChapter}
+        chapterMarks={chapterMarks}
+        onSeek={handleSeek}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onSkip={skip}
+        onTogglePlay={togglePlay}
+        showTrackNavigation={Boolean(openPlayer)}
+        isMobile={isMobile}
+        showMobileVolume={showMobileVolume}
+        volume={volume}
+        isMuted={isMuted}
+        onVolumeChange={handleVolumeChange}
+        onVolumeButtonClick={handleVolumeButtonClick}
+        subtitleUrl={subtitleUrl}
+        subtitlesEnabled={subtitlesEnabled}
+        onToggleSubtitles={toggleSubtitles}
+        pipSupported={pipSupported}
+        onTogglePiP={togglePiP}
+        onOpenInNewTab={handleOpenInNewTab}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
+        playbackRate={playbackRate}
+        onChangePlaybackRate={changePlaybackRate}
+        menuContainer={() => containerRef.current}
+        descriptionAvailable={hasDescription}
+        onShowDescription={showDescription}
+      />
 
-          {/* Dynamic Buffered Area Bar */}
-          <Box
-            sx={{
-              position: "absolute",
-              left: 0,
-              height: 4,
-              width: `${duration > 0 ? (bufferedTime / duration) * 100 : 0}%`,
-              bgcolor: "rgba(255, 255, 255, 0.5)",
-              borderRadius: 2,
-              pointerEvents: "none",
-              transition: "width 0.2s linear",
-            }}
-          />
-
-          {/* Existing Slider */}
-          <Slider
-            size="small"
-            min={0}
-            max={duration || 100}
-            value={currentTime}
-            onChange={handleSeek}
-            sx={{
-              color: "#1976d2",
-              height: 4,
-              padding: "13px 0",
-              position: "relative",
-              zIndex: 1,
-              "& .MuiSlider-thumb": {
-                width: 12,
-                height: 12,
-                transition: "0.3s ease-in-out",
-                "&:before": { boxShadow: "0 2px 12px 0 rgba(0,0,0,0.4)" },
-                "&:hover, &.Mui-focusVisible": {
-                  boxShadow: `0px 0px 0px 8px rgba(25, 118, 210, 0.16)`,
-                },
-              },
-              // Hide the default rail so our custom background and buffer bars show through
-              "& .MuiSlider-rail": { opacity: 0 },
-            }}
-          />
-        </Box>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
-          {openPlayer && (
-            <IconButton
-              size="small"
-              onClick={handlePrev}
-              sx={{ color: "white" }}
-              title="Previous Video"
-              aria-label="previous video"
-            >
-              <SkipPreviousIcon />
-            </IconButton>
+      <Dialog
+        ref={descriptionDialogRef}
+        container={() => containerRef.current}
+        open={descriptionOpen}
+        onClose={closeDescription}
+        fullWidth
+        maxWidth="sm"
+        fullScreen={isMobile}
+        aria-label="description dialog"
+      >
+        <DialogTitle>{truncatedTitle || "Description"}</DialogTitle>
+        <DialogContent dividers>
+          {descriptionLoading && <CircularProgress size={24} />}
+          {descriptionError && (
+            <Typography color="error">Error: {descriptionError}</Typography>
           )}
-          <IconButton
-            size="small"
-            onClick={() => skip(-10)}
-            sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
-            aria-label="rewind 10 seconds"
-          >
-            <Replay10Icon />
-          </IconButton>
-          <IconButton
-            onClick={togglePlay}
-            sx={{ color: "white" }}
-            aria-label={isPlaying ? "pause" : "play"}
-          >
-            {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => skip(10)}
-            sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
-            aria-label="forward 10 seconds"
-          >
-            <Forward10Icon />
-          </IconButton>
-          {openPlayer && (
-            <IconButton
-              size="small"
-              onClick={handleNext}
-              sx={{ color: "white" }}
-              title="Next Video"
-              aria-label="next video"
+          {!descriptionLoading && !descriptionError && (
+            <Typography
+              variant="body2"
+              sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
             >
-              <SkipNextIcon />
-            </IconButton>
-          )}
-          <Typography
-            variant="caption"
-            sx={{
-              color: "white",
-              ml: 2,
-              minWidth: { xs: 60, sm: 100 },
-              display: { xs: "none", sm: "block" },
-            }}
-          >
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </Typography>
-
-          <Box sx={{ flexGrow: 1 }} />
-
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            sx={{ mr: 2, position: "relative" }}
-          >
-            {/* Mobile volume overlay — appears above the volume button */}
-            {isMobile && showMobileVolume && (
-              <Box
-                aria-label="volume slider overlay"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                sx={{
-                  position: "absolute",
-                  bottom: "100%",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  mb: 1,
-                  bgcolor: "rgba(0,0,0,0.75)",
-                  backdropFilter: "blur(6px)",
-                  borderRadius: 3,
-                  px: 1.5,
-                  py: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: 120,
-                  zIndex: 10,
-                }}
-              >
-                <Slider
-                  aria-label="mobile volume slider"
-                  orientation="vertical"
-                  size="small"
-                  value={isMuted ? 0 : volume}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  onChange={handleVolumeChange}
-                  sx={{
-                    color: "white",
-                    height: "100%",
-                    "& .MuiSlider-thumb": {
-                      width: 12,
-                      height: 12,
-                      transition: "0.3s ease-in-out",
-                      "&:before": { boxShadow: "0 2px 12px 0 rgba(0,0,0,0.4)" },
-                      "&:hover, &.Mui-focusVisible": {
-                        boxShadow: "0px 0px 0px 8px rgba(255,255,255,0.16)",
-                      },
-                    },
-                    "& .MuiSlider-rail": { opacity: 0.28 },
-                    "& .MuiSlider-track": { border: "none" },
-                  }}
-                />
-              </Box>
-            )}
-            <IconButton
-              size="small"
-              onClick={handleVolumeButtonClick}
-              sx={{ color: "white" }}
-              aria-label={
-                isMuted || volume === 0 ? "unmute volume" : "mute volume"
-              }
-            >
-              {isMuted || volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />}
-            </IconButton>
-            {/* Desktop horizontal slider — hidden on mobile */}
-            <Slider
-              size="small"
-              value={isMuted ? 0 : volume}
-              min={0}
-              max={1}
-              step={0.01}
-              onChange={handleVolumeChange}
-              sx={{
-                color: "white",
-                width: 80,
-                display: { xs: "none", sm: "block" },
-              }}
-            />
-          </Stack>
-
-          <Tooltip
-            title={
-              !subtitleUrl
-                ? "No subtitles available"
-                : subtitlesEnabled
-                  ? "Subtitles ON"
-                  : "Subtitles OFF"
-            }
-          >
-            <span>
-              <IconButton
-                size="small"
-                onClick={toggleSubtitles}
-                disabled={!subtitleUrl}
-                aria-label={
-                  subtitlesEnabled ? "disable subtitles" : "enable subtitles"
+              {parseDescriptionSegments(descriptionText).map((segment, i) => {
+                if (segment.kind === "link") {
+                  return (
+                    <Link
+                      key={i}
+                      href={segment.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {segment.value}
+                    </Link>
+                  );
                 }
-                sx={{
-                  color: !subtitleUrl
-                    ? "rgba(255,255,255,0.2)"
-                    : subtitlesEnabled
-                      ? "#fff"
-                      : "rgba(255,255,255,0.4)",
-                  "&:hover": { color: "white" },
-                }}
-              >
-                {subtitleUrl && subtitlesEnabled ? (
-                  <ClosedCaptionIcon />
-                ) : (
-                  <ClosedCaptionDisabledIcon />
-                )}
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          {pipSupported && (
-            <IconButton
-              size="small"
-              onClick={togglePiP}
-              title="Picture in Picture"
-              aria-label="picture in picture"
-              sx={{
-                color: "white",
-                display: { xs: "none", sm: "inline-flex" },
-              }}
-            >
-              <PictureInPictureAltIcon />
-            </IconButton>
+                if (segment.kind === "time") {
+                  return (
+                    <Link
+                      key={i}
+                      component="button"
+                      type="button"
+                      onClick={() => seekTo(segment.seconds)}
+                      aria-label={`seek to ${segment.value}`}
+                      sx={{ mx: 0.25 }}
+                    >
+                      {segment.value}
+                    </Link>
+                  );
+                }
+                return <span key={i}>{segment.value}</span>;
+              })}
+            </Typography>
           )}
-          <IconButton
-            size="small"
-            onClick={handleOpenInNewTab}
-            title="Open in New Tab"
-            aria-label="open in new tab"
-            sx={{ color: "white", display: { xs: "none", sm: "inline-flex" } }}
-          >
-            <OpenInNewIcon />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? "exit fullscreen" : "enter fullscreen"}
-            sx={{ color: "white" }}
-          >
-            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-          </IconButton>
-        </Stack>
-      </ControlBar>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDescription}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Playlist Drawer inside the Player */}
       <PlayerPlaylistDrawer
@@ -891,6 +904,13 @@ export default function VideoPlayer({
         thumbUrls={thumbUrls}
         loadedPlayList={loadedPlayList}
         rowsPerPage={rowsPerPage}
+        chapters={chapters}
+        subtitleCues={subtitleCues}
+        // Whole seconds: the drawer's highlighting moves once a second, and
+        // feeding it the raw playhead put a playlist-sized render in the path
+        // of every timeupdate.
+        currentTime={Math.floor(currentTime)}
+        onSeek={seekTo}
       />
     </Box>
   );
@@ -901,6 +921,9 @@ VideoPlayer.propTypes = {
   fileName: PropTypes.string.isRequired,
   title: PropTypes.string,
   subTitleFile: PropTypes.string,
+  startAt: PropTypes.number,
+  onStartAtChange: PropTypes.func,
+  chapters: PropTypes.array,
   onClose: PropTypes.func.isRequired,
   items: PropTypes.array,
   itemCount: PropTypes.number,

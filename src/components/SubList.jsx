@@ -25,6 +25,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   memo,
 } from "react";
@@ -76,6 +77,8 @@ function SubList({
   // router still plays videos, it just does not put them in the address bar.
   playerVideoUrl = null,
   setPlayerVideoUrl = NO_ROUTER,
+  playerStartAt = 0,
+  setPlayerStartAt = NO_ROUTER,
   // Where the location says this list is paged to, read once to start from.
   // After that the list owns its page and reports it back; the location
   // follows the list, not the reverse.
@@ -129,6 +132,12 @@ function SubList({
   // something else".
   const [currentPlayerVideoUrl, setCurrentPlayerVideoUrl] = useState(null);
 
+  // Chapters are read out of the media file at download time and carried on
+  // the row, so the row the player is on already has them.
+  const currentPlayerChapters = currentPlayerIndex === -1
+    ? []
+    : items[currentPlayerIndex]?.video_metadatum?.chapters ?? [];
+
   // Signed thumbnails for the visible rows, kept alive across expiries.
   const { thumbUrls } = useThumbnailUrls({
     api,
@@ -158,6 +167,12 @@ function SubList({
   // history entry or a move within the one it already has.
   const playerOpenRef = useLatest(playerOpen);
 
+  // What `/locate` has been asked about the link being opened, and how far
+  // that answer got. `status` is what the effect below reads it for: a link is
+  // asked about once, and the answer either moved the list to the page that
+  // holds the video or gave up on it.
+  const locatedRef = useRef(null);
+
   // const functions and normal functions
   const handleChangePage = useCallback(
     (_event, newPage) => {
@@ -168,6 +183,84 @@ function SubList({
       onPaginationChange(validPage, rowsPerPage);
     },
     [rowsPerPage, setPage, setStart, setStop, onPaginationChange],
+  );
+
+  /**
+   * Drops the `v=` the location carries, once it is clear the app cannot show
+   * what it names. Replace, because cleaning up a link is not a move the
+   * reader asked for — the same reasoning as closing the player.
+   */
+  const dropLinkVideo = useCallback(
+    () => setPlayerVideoUrl(null, { replace: true }),
+    [setPlayerVideoUrl],
+  );
+
+  /**
+   * Asks `/locate` where the link's video lives, and points this list at the
+   * page that holds it.
+   *
+   * The player can only open a row it has loaded, so a link to a video on page
+   * 4 of a long list was dropped the moment it arrived on page 1. `/getsub`'s
+   * ordering is not position order when the list is sorted downloaded-first,
+   * so the page is asked for rather than counted out here — and the answer is
+   * fed to `setSubListIndex`, the same seek the socket's `seekSubListTo` uses,
+   * rather than adding a second way for a list to be told where to go.
+   *
+   * What was asked, and what it answered, are remembered so that a link is
+   * located once: the effect below waits while the answer is in flight, and
+   * stops waiting once the page it named has loaded.
+   */
+  const locateLinkVideo = useCallback(
+    async (videoUrl) => {
+      const asked = { videoUrl, pageSize: rowsPerPage, sortDownloaded: sort };
+      locatedRef.current = { ...asked, status: "pending" };
+      try {
+        const location = await api.post("/locate", asked);
+        const targetPage =
+          typeof location?.page === "number" ? location.page : null;
+        // A video that belongs to no list has no page to be found on, and one
+        // that belongs to another list cannot be reached by paging this one.
+        // Switching lists would drop the very parameter being opened, so the
+        // link goes instead, which is what it did before `/locate` existed.
+        // An answer naming the page already showing contradicts the rows on
+        // screen — a search filter, or a `/getsub` that failed — and paging
+        // there would fetch the same rows again and never finish.
+        if (
+          targetPage === null ||
+          targetPage === page ||
+          (location.playlistUrl !== null &&
+            location.playlistUrl !== loadedPlayList)
+        ) {
+          locatedRef.current = { ...asked, status: "unplaced" };
+          dropLinkVideo();
+          return;
+        }
+        locatedRef.current = {
+          ...asked,
+          status: "moved",
+          // The rows on screen when the answer landed: until they are replaced
+          // the page it named has not loaded, and those rows cannot say
+          // anything about whether the video is on it.
+          rows: itemsRef.current,
+        };
+        setSubListIndex(targetPage * rowsPerPage);
+      } catch (error) {
+        locatedRef.current = { ...asked, status: "unplaced" };
+        // A dead session has already been reported once, by apiFetch.
+        if (error.sessionExpired) return;
+        dropLinkVideo();
+      }
+    },
+    [
+      api,
+      itemsRef,
+      rowsPerPage,
+      sort,
+      page,
+      loadedPlayList,
+      dropLinkVideo,
+      setSubListIndex,
+    ],
   );
 
   const handleChangeRowsPerPage = (event) => {
@@ -265,11 +358,12 @@ function SubList({
    * and a pasted URL all arrive as a change to `playerVideoUrl` and are acted
    * on here, by the same path a click takes.
    *
-   * A video can only be opened from a row that is loaded, so a link to one on
-   * a page that is not showing — or to one that was never downloaded — cannot
-   * be honoured. Rather than leave the location pointing at something the app
-   * is not showing, the parameter is dropped once the rows have arrived and
-   * it is clear the video is not among them.
+   * A video can only be opened from a row that is loaded, so a link to one
+   * that is not on the page showing is asked about — `/locate` knows which page
+   * of this list holds it, and the list is paged there. Only a video no page
+   * holds, or one that was never downloaded at all, is left unopenable: rather
+   * than leave the location pointing at something the app is not showing,
+   * those have their parameter dropped.
    */
   useEffect(() => {
     if (!playerVideoUrl) {
@@ -288,9 +382,34 @@ function SubList({
     const meta = index === -1 ? null : items.at(index).video_metadatum;
 
     if (!meta?.downloadStatus) {
-      // No rows yet means "still loading", which is not yet an answer. Rows
-      // without this video in them is an answer.
-      if (items.length > 0) setPlayerVideoUrl(null, { replace: true });
+      // No rows yet means "still loading", which is not yet an answer.
+      if (items.length === 0) return;
+
+      // The row is here, and it was never downloaded: no page of this list
+      // holds a file to play, so asking where it is would only ask again.
+      if (meta) {
+        dropLinkVideo();
+        return;
+      }
+
+      // It is not on the page showing, which is where a link to a video
+      // further down a long list used to end. Ask where it is.
+      const asked = locatedRef.current;
+      const sameLink =
+        asked !== null &&
+        asked.videoUrl === playerVideoUrl &&
+        asked.pageSize === rowsPerPage &&
+        asked.sortDownloaded === sort;
+      if (!sameLink) {
+        void locateLinkVideo(playerVideoUrl);
+        return;
+      }
+      // Asked and still in flight, or asked and the page it named has not
+      // loaded yet: the same "not yet an answer" rule, one step further on.
+      if (asked.status === "pending" || items === asked.rows) return;
+      // Asked, answered, and the page it named has loaded without the video on
+      // it — a stale answer. Drop the link rather than page the list again.
+      dropLinkVideo();
       return;
     }
 
@@ -308,7 +427,10 @@ function SubList({
     playerOpen,
     currentPlayerVideoUrl,
     playlistDirectory,
-    setPlayerVideoUrl,
+    rowsPerPage,
+    sort,
+    dropLinkVideo,
+    locateLinkVideo,
     showPlayer,
     hidePlayer,
   ]);
@@ -477,6 +599,11 @@ function SubList({
                 saveDirectory:
                   downloadedItem.saveDirectory ??
                   item.video_metadatum.saveDirectory,
+                // The partial verdict travels with the patch, so the row's
+                // warning chip appears with the download rather than waiting
+                // for the `/getsub` refresh that would have to agree.
+                missingExtras: downloadedItem.missingExtras ?? null,
+                reason: downloadedItem.reason ?? null,
               },
             };
           }
@@ -822,6 +949,9 @@ function SubList({
             fileName={currentPlayerFileName}
             title={currentPlayerVideoTitle}
             subTitleFile={currentPlayerSubTitleFile}
+            startAt={playerStartAt}
+            onStartAtChange={setPlayerStartAt}
+            chapters={currentPlayerChapters}
             onClose={closePlayer}
             items={items}
             itemCount={itemCount}
@@ -853,6 +983,8 @@ SubList.propTypes = {
   rowsPerPage: PropTypes.number.isRequired,
   setRowsPerPage: PropTypes.func.isRequired,
   playerVideoUrl: PropTypes.string,
+  playerStartAt: PropTypes.number,
+  setPlayerStartAt: PropTypes.func,
   setPlayerVideoUrl: PropTypes.func,
   initialPage: PropTypes.number,
   onPaginationChange: PropTypes.func,

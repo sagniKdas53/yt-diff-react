@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { assetBase } from "../config.js";
+import { nextBackoffDelay } from "../lib/refreshBackoff.js";
 
 const REFRESH_MARGIN_MS = 300000; // refresh 5 mins before expiry
 
@@ -42,6 +43,8 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
   const abortControllerRef = useRef(null);
   const isMountedRef = useRef(false);
   const playerSessionRef = useRef(0);
+  // Consecutive failed refreshes; a success resets it to zero.
+  const refreshFailuresRef = useRef(0);
 
   const clearRefreshTimer = useCallback(() => {
     if (timerRef.current) {
@@ -62,12 +65,18 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
       scheduledFileId = fileIdRef.current,
       scheduledSessionId = playerSessionRef.current,
       scheduledExpiry = expiryRef.current,
+      retryInMs = null,
     ) => {
       clearRefreshTimer();
       if (!scheduledExpiry || !scheduledFileId) return;
 
-      const timeUntilExpiry = scheduledExpiry - Date.now();
-      const refreshTime = Math.max(0, timeUntilExpiry - REFRESH_MARGIN_MS);
+      // A refresh that throws used to leave the timer scheduled at
+      // max(0, expiry - margin) — 0 for an id that had already expired, so the
+      // retry fired immediately, failed, and fired again for as long as the
+      // server was down. A retry is scheduled on the backoff instead.
+      const refreshTime = retryInMs !== null
+        ? retryInMs
+        : Math.max(1000, scheduledExpiry - Date.now() - REFRESH_MARGIN_MS);
 
       timerRef.current = setTimeout(async () => {
         if (
@@ -82,6 +91,7 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
             fileId: scheduledFileId,
           });
 
+          refreshFailuresRef.current = 0;
           if (
             data.status === "success" &&
             isMountedRef.current &&
@@ -93,11 +103,26 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
           }
         } catch (err) {
           if (
-            isMountedRef.current &&
-            playerSessionRef.current === scheduledSessionId
+            !isMountedRef.current ||
+            playerSessionRef.current !== scheduledSessionId
           ) {
-            console.error("Auto-refresh failed", err);
+            return;
           }
+          console.error("Auto-refresh failed", err);
+          refreshFailuresRef.current += 1;
+          const retryIn = nextBackoffDelay(refreshFailuresRef.current);
+          // Out of budget: stop scheduling. Playback recovers through the
+          // element's own `onError`, which remints and seeks — that path does
+          // not depend on the server answering a refresh.
+          if (retryIn === null) {
+            return;
+          }
+          scheduleRefresh(
+            scheduledFileId,
+            scheduledSessionId,
+            scheduledExpiry,
+            retryIn,
+          );
         }
       }, refreshTime);
     },
@@ -136,6 +161,7 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
         if (data.status === "success" && data.signedUrlId) {
           fileIdRef.current = data.signedUrlId;
           expiryRef.current = data.expiry;
+          refreshFailuresRef.current = 0;
 
           const newUrl =
             assetBase + "/getfile?fileId=" + data.signedUrlId + "&inline=true";
@@ -195,6 +221,7 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
     clearRecoveryTimer();
     fileIdRef.current = null;
     expiryRef.current = null;
+    refreshFailuresRef.current = 0;
     void reload();
     const videoElement = videoRef.current;
 

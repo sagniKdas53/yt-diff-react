@@ -1,4 +1,4 @@
-import { useContext, useMemo, useCallback } from "react";
+import { memo, useContext, useMemo, useCallback, useState } from "react";
 import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -10,6 +10,10 @@ import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import Tooltip from "@mui/material/Tooltip";
 
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
@@ -21,8 +25,18 @@ import { useTheme } from "@mui/material/styles";
 
 import { DownloadContext } from "../contexts/DownloadContext";
 import { assetBase } from "../config.js";
+import { formatTime } from "../lib/subtitles.js";
 
-export default function PlayerPlaylistDrawer({
+/**
+ * The drawer's list, memoised.
+ *
+ * `timeupdate` fires about four times a second and the drawer does not care
+ * until the whole second changes — which is the only resolution its chapter
+ * and transcript highlighting moves at anyway. `currentTime` is rounded by the
+ * player before it gets here, so a tick that lands in the same second does
+ * not re-render this at all.
+ */
+function PlayerPlaylistDrawer({
   drawerOpen,
   setDrawerOpen,
   items,
@@ -36,12 +50,54 @@ export default function PlayerPlaylistDrawer({
   thumbUrls,
   loadedPlayList,
   rowsPerPage,
+  chapters = [],
+  subtitleCues = [],
+  currentTime = 0,
+  onSeek,
 }) {
   const { activeDownloads, queuedItems, queueDownloads } =
     useContext(DownloadContext);
   const theme = useTheme();
 
   const totalPages = Math.max(1, Math.ceil(itemCount / rowsPerPage));
+
+  // Chapters and the transcript are two views of "where am I in this video",
+  // which is why they sit beside the playlist rather than below it: opening
+  // the drawer is the gesture for finding your place.
+  const [tab, setTab] = useState("playlist");
+  // YouTube lets the transcript stop following the playhead, and so does this:
+  // reading ahead is the point of a transcript, and a list that keeps
+  // scrolling itself away while you read is worse than a static one.
+  const [syncTranscript, setSyncTranscript] = useState(true);
+  const showChapterTabs = chapters.length > 0 || subtitleCues.length > 0;
+  // A tab can outlive its data: the chapter list re-fetches and comes back
+  // empty, or a video has no transcript at all. Rather than rendering an empty
+  // body under a selected tab, resolve the request once here and let every
+  // consumer read the same answer.
+  const effectiveTab =
+    tab === "chapters" && chapters.length > 0
+      ? "chapters"
+      : tab === "transcript" && subtitleCues.length > 0
+        ? "transcript"
+        : "playlist";
+
+  const activeChapterIndex = useMemo(() => {
+    let active = -1;
+    for (let i = 0; i < chapters.length; i++) {
+      if (currentTime >= chapters[i].start) active = i;
+    }
+    return active;
+  }, [chapters, currentTime]);
+
+  const activeCueIndex = useMemo(
+    () =>
+      syncTranscript
+        ? subtitleCues.findIndex(
+          (cue) => currentTime >= cue.start && currentTime < cue.end,
+        )
+        : -1,
+    [subtitleCues, currentTime, syncTranscript],
+  );
 
   const handleDownload = useCallback(
     (videoUrl, positionInPlaylist) => {
@@ -236,7 +292,13 @@ export default function PlayerPlaylistDrawer({
           borderBottom: "1px solid rgba(255,255,255,0.1)",
         }}
       >
-        <Typography variant="h6">Current Playlist</Typography>
+        <Typography variant="h6">
+          {effectiveTab === "playlist"
+            ? "Current Playlist"
+            : effectiveTab === "chapters"
+            ? "Chapters"
+            : "Transcript"}
+        </Typography>
         <IconButton
           onClick={() => setDrawerOpen(false)}
           aria-label="close drawer"
@@ -246,8 +308,98 @@ export default function PlayerPlaylistDrawer({
         </IconButton>
       </Box>
 
+      {showChapterTabs && (
+        <Tabs
+          value={effectiveTab}
+          onChange={(_event, next) => setTab(next)}
+          variant="fullWidth"
+          aria-label="drawer views"
+          sx={{
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            "& .MuiTab-root": { color: "rgba(255,255,255,0.6)" },
+            "& .Mui-selected": { color: "white !important" },
+            "& .MuiTabs-indicator": { bgcolor: "white" },
+          }}
+        >
+          <Tab value="playlist" label="Playlist" />
+          {chapters.length > 0 && <Tab value="chapters" label="Chapters" />}
+          {subtitleCues.length > 0 && (
+            <Tab value="transcript" label="Transcript" />
+          )}
+        </Tabs>
+      )}
+
       {/* Items list */}
-      <List sx={{ overflowY: "auto", flex: 1 }}>{playlistItems}</List>
+      {effectiveTab === "playlist" && (
+        <List sx={{ overflowY: "auto", flex: 1 }}>{playlistItems}</List>
+      )}
+
+      {effectiveTab === "chapters" && (
+        <List sx={{ overflowY: "auto", flex: 1 }}>
+          {chapters.map((chapter, index) => (
+            <ListItemButton
+              key={`${chapter.start}-${index}`}
+              selected={index === activeChapterIndex}
+              onClick={() => onSeek?.(chapter.start)}
+              aria-label={`go to chapter ${chapter.title || index + 1}`}
+              sx={{ color: "white" }}
+            >
+              <ListItemText
+                primary={chapter.title || `Chapter ${index + 1}`}
+                secondary={formatTime(chapter.start)}
+                primaryTypographyProps={{ variant: "body2" }}
+                secondaryTypographyProps={{
+                  variant: "caption",
+                  sx: { color: "rgba(255,255,255,0.6)" },
+                }}
+              />
+            </ListItemButton>
+          ))}
+        </List>
+      )}
+
+      {effectiveTab === "transcript" && (
+        <>
+          <Box sx={{ px: 2, pt: 1, display: "flex", justifyContent: "flex-end" }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={syncTranscript}
+                  onChange={(event) => setSyncTranscript(event.target.checked)}
+                  inputProps={{ "aria-label": "sync transcript to video time" }}
+                />
+              }
+              label="Sync to video time"
+              sx={{
+                color: "rgba(255,255,255,0.7)",
+                "& .MuiFormControlLabel-label": { fontSize: 12 },
+              }}
+            />
+          </Box>
+          <List sx={{ overflowY: "auto", flex: 1 }}>
+            {subtitleCues.map((cue, index) => (
+              <ListItemButton
+                key={`${cue.start}-${index}`}
+                selected={index === activeCueIndex}
+                onClick={() => onSeek?.(cue.start)}
+                aria-label={`go to ${cue.text}`}
+                sx={{ color: "white", alignItems: "flex-start" }}
+              >
+                <ListItemText
+                  primary={cue.text}
+                  secondary={formatTime(cue.start)}
+                  primaryTypographyProps={{ variant: "body2" }}
+                  secondaryTypographyProps={{
+                    variant: "caption",
+                    sx: { color: "rgba(255,255,255,0.6)" },
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </>
+      )}
 
       {/* Pagination controls */}
       {totalPages > 1 && (
@@ -314,4 +466,10 @@ PlayerPlaylistDrawer.propTypes = {
   thumbUrls: PropTypes.object,
   loadedPlayList: PropTypes.string,
   rowsPerPage: PropTypes.number,
+  chapters: PropTypes.array,
+  subtitleCues: PropTypes.array,
+  currentTime: PropTypes.number,
+  onSeek: PropTypes.func,
 };
+
+export default memo(PlayerPlaylistDrawer);
