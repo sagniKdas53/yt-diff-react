@@ -143,7 +143,7 @@ describe("useThumbnailUrls", () => {
     expect(latest.thumbUrls["a.jpg"]).toContain("sid-1");
   });
 
-  it("drops a thumbnail the refresh would not extend", async () => {
+  it("forgets a thumbnail the refresh would not extend, so it is asked for again", async () => {
     const soon = Date.now() + REFRESH_MARGIN_MS + 1000;
     api.post.mockResolvedValueOnce({
       status: "success",
@@ -160,7 +160,47 @@ describe("useThumbnailUrls", () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
 
-    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeNull());
+    // Dropped, not nulled. The fetch effect reads null as "in progress", so a
+    // null would leave the row without a thumbnail for the life of the page.
+    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeUndefined());
+  });
+
+  it("retries a refused mint rather than leaving the row blank forever", async () => {
+    api.post.mockRejectedValueOnce(new Error("server restarting"));
+
+    renderThumbs();
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+
+    // Nothing was minted, so the key must go back to the one state that asks
+    // again instead of sitting on the "in progress" null.
+    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeUndefined());
+  });
+
+  it("backs off instead of looping when the refresh keeps failing", async () => {
+    const soon = Date.now() + REFRESH_MARGIN_MS + 1000;
+    api.post.mockResolvedValueOnce({
+      status: "success",
+      files: { "a.jpg": { signedUrlId: "sid-1", expiry: soon } },
+    });
+
+    renderThumbs();
+    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toContain("sid-1"));
+
+    const refreshCallsBefore = api.post.mock.calls.length;
+    api.post.mockRejectedValue(new Error("server down"));
+
+    // Ten minutes: long enough for the whole backoff sequence to run out and
+    // for a tight loop to have made hundreds of calls.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    });
+
+    const refreshCalls = api.post.mock.calls.length - refreshCallsBefore;
+    // Five attempts, then it gives up and drops the id so the next fetch asks
+    // for it again.
+    expect(refreshCalls).toBeLessThanOrEqual(5);
+    expect(api.post.mock.calls.length).toBe(refreshCallsBefore + refreshCalls);
+    await waitFor(() => expect(latest.thumbUrls["a.jpg"]).toBeUndefined());
   });
 
   it("starts a new playlist with a clean slate", async () => {
