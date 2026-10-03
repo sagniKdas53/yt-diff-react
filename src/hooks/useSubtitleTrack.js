@@ -18,8 +18,13 @@ import { assetBase } from "../config.js";
  * @param {import("../api/client.js").ApiClient} deps.api
  * @param {string} deps.saveDirectory - Directory of the video being played.
  * @param {string | null} deps.subTitleFile - The track's subtitle file, if any.
+ *
+ * `subtitleCues` is the whole parsed track, not just the cue on screen: it is
+ * what the transcript list renders, and re-parsing it there would mean
+ * fetching the file a second time.
  * @returns {{
  *   subtitleUrl: string | null,
+ *   subtitleCues: Array<{start: number, end: number, text: string}>,
  *   activeCues: Array<{start: number, end: number, text: string}>,
  *   subtitlesEnabled: boolean,
  *   toggleSubtitles: () => void,
@@ -112,5 +117,12 @@ export function useSubtitleTrack({ api, saveDirectory, subTitleFile }) {
     );
   }, [subtitleCues, currentTime, subtitlesEnabled]);
 
-  return { subtitleUrl, activeCues, subtitlesEnabled, toggleSubtitles, reportTime };
+  return {
+    subtitleUrl,
+    subtitleCues,
+    activeCues,
+    subtitlesEnabled,
+    toggleSubtitles,
+    reportTime,
+  };
 }

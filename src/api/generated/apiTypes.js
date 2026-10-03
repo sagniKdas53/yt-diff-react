@@ -142,11 +142,18 @@
       "thumbNailFile"?: (string | null),
       "onlineThumbnail"?: (string | null),
       "subTitleFile"?: (string | null),
+      "commentsFile"?: (string | null),
+      "chapters"?: (Array<{
+        "start": number,
+        "end": number,
+        "title": string,
+      }> | null),
       "descriptionFile"?: (string | null),
       "isMetaDataSynced"?: boolean,
       "saveDirectory"?: (string | null),
       "missingExtras"?: (Array<string> | null),
       "lastDownloadError"?: (string | null),
+      "botExpiresAt"?: (string | null),
     },
   }>,
   "saveDirectory": string,
@@ -338,6 +345,51 @@
  */
 
 /**
+ * @typedef {{
+  "videoUrl": string,
+}} KeepfileRequest
+ */
+
+/**
+ * @typedef {{
+  "status": "success",
+  "kept": number,
+}} KeepfileResponse
+ */
+
+/**
+ * @typedef {{
+  "url": string,
+  "kind": ("download" | "list"),
+}} CancelRequest
+ */
+
+/**
+ * @typedef {{
+  "status": "success",
+  "url": string,
+  "kind": ("download" | "list"),
+  "outcome": ("killed" | "queued" | "not-found"),
+}} CancelResponse
+ */
+
+/**
+ * @typedef {{
+  "videoUrl": string,
+  "pageSize"?: number,
+  "sortDownloaded"?: boolean,
+}} LocateRequest
+ */
+
+/**
+ * @typedef {{
+  "videoUrl": string,
+  "playlistUrl": (string | null),
+  "page": (number | null),
+}} LocateResponse
+ */
+
+/**
  * @typedef {Record<string, never>} RefreshRequest
  */
 
@@ -408,6 +460,9 @@
 /** @typedef {{path: "/dedup-playlists", request: DedupPlaylistsRequest, response: DedupPlaylistsResponse}} DedupPlaylistsRoute */
 /** @typedef {{path: "/queuestatus", request: QueuestatusRequest, response: QueuestatusResponse}} QueuestatusRoute */
 /** @typedef {{path: "/syncextras", request: SyncextrasRequest, response: SyncextrasResponse}} SyncextrasRoute */
+/** @typedef {{path: "/keepfile", request: KeepfileRequest, response: KeepfileResponse}} KeepfileRoute */
+/** @typedef {{path: "/cancel", request: CancelRequest, response: CancelResponse}} CancelRoute */
+/** @typedef {{path: "/locate", request: LocateRequest, response: LocateResponse}} LocateRoute */
 /** @typedef {{path: "/refresh", request: RefreshRequest, response: RefreshResponse}} RefreshRoute */
 /** @typedef {{path: "/register", request: RegisterRequest, response: RegisterResponse}} RegisterRoute */
 /** @typedef {{path: "/login", request: LoginRequest, response: LoginResponse}} LoginRoute */
@@ -432,6 +487,9 @@
  *   | DedupPlaylistsRoute
  *   | QueuestatusRoute
  *   | SyncextrasRoute
+ *   | KeepfileRoute
+ *   | CancelRoute
+ *   | LocateRoute
  *   | RefreshRoute
  *   | RegisterRoute
  *   | LoginRoute

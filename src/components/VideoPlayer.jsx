@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 
 import { useApiClient } from "../hooks/useApiClient.js";
@@ -171,6 +171,7 @@ export default function VideoPlayer({
   subTitleFile,
   startAt = 0,
   onStartAtChange,
+  chapters = [],
   onClose,
   items = [],
   itemCount = 0,
@@ -242,11 +243,35 @@ export default function VideoPlayer({
   // Subtitles: fetch, parse and cue selection against the playhead.
   const {
     subtitleUrl,
+    subtitleCues,
     activeCues,
     subtitlesEnabled,
     toggleSubtitles,
     reportTime,
   } = useSubtitleTrack({ api, saveDirectory, subTitleFile });
+
+  /**
+   * The chapter boundaries, as marks on the seek bar.
+   *
+   * The first chapter's mark is dropped: it sits at zero, where the slider
+   * already starts, and a dot there is a decoration that means nothing.
+   */
+  const chapterMarks = useMemo(
+    () =>
+      chapters.slice(1).map((chapter) => ({ value: chapter.start })),
+    [chapters],
+  );
+
+  /** The chapter the playhead is inside, or null before the first one. */
+  const currentChapter = useMemo(() => {
+    if (!chapters.length) return null;
+    for (let i = chapters.length - 1; i >= 0; i--) {
+      if (currentTime >= chapters[i].start) {
+        return chapters[i];
+      }
+    }
+    return null;
+  }, [chapters, currentTime]);
 
   // Previous/next within the playlist, including resume across pagination.
   // The description belongs to the row the player is on, and the player
@@ -763,6 +788,8 @@ export default function VideoPlayer({
             max={duration || 100}
             value={currentTime}
             onChange={handleSeek}
+            marks={chapterMarks.length > 0 ? chapterMarks : undefined}
+            aria-label="seek bar"
             sx={{
               color: "#1976d2",
               height: 4,
@@ -840,6 +867,22 @@ export default function VideoPlayer({
           >
             {formatTime(currentTime)} / {formatTime(duration)}
           </Typography>
+
+          {currentChapter?.title && (
+            <Typography
+              variant="caption"
+              data-testid="current-chapter"
+              sx={{
+                color: "rgba(255,255,255,0.7)",
+                maxWidth: 260,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {currentChapter.title}
+            </Typography>
+          )}
 
           <Box sx={{ flexGrow: 1 }} />
 
@@ -1114,6 +1157,10 @@ export default function VideoPlayer({
         thumbUrls={thumbUrls}
         loadedPlayList={loadedPlayList}
         rowsPerPage={rowsPerPage}
+        chapters={chapters}
+        subtitleCues={subtitleCues}
+        currentTime={currentTime}
+        onSeek={seekTo}
       />
     </Box>
   );
@@ -1126,6 +1173,7 @@ VideoPlayer.propTypes = {
   subTitleFile: PropTypes.string,
   startAt: PropTypes.number,
   onStartAtChange: PropTypes.func,
+  chapters: PropTypes.array,
   onClose: PropTypes.func.isRequired,
   items: PropTypes.array,
   itemCount: PropTypes.number,

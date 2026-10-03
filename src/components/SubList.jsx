@@ -131,6 +131,12 @@ function SubList({
   // something else".
   const [currentPlayerVideoUrl, setCurrentPlayerVideoUrl] = useState(null);
 
+  // Chapters are read out of the media file at download time and carried on
+  // the row, so the row the player is on already has them.
+  const currentPlayerChapters = currentPlayerIndex === -1
+    ? []
+    : items[currentPlayerIndex]?.video_metadatum?.chapters ?? [];
+
   // Signed thumbnails for the visible rows, kept alive across expiries.
   const { thumbUrls } = useThumbnailUrls({
     api,
@@ -831,6 +837,7 @@ function SubList({
             subTitleFile={currentPlayerSubTitleFile}
             startAt={playerStartAt}
             onStartAtChange={setPlayerStartAt}
+            chapters={currentPlayerChapters}
             onClose={closePlayer}
             items={items}
             itemCount={itemCount}

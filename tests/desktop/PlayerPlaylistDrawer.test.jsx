@@ -82,6 +82,59 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
     });
   });
 
+  test("lists the chapters and seeks to the one you click", async () => {
+    const onSeek = vi.fn();
+    renderDrawer({
+      ...defaultProps,
+      rowsPerPage: 8,
+      chapters: [
+        { start: 0, end: 45, title: "Opening" },
+        { start: 45, end: 132, title: "The part everyone came for" },
+      ],
+      currentTime: 60,
+      onSeek,
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Chapters" }));
+
+    const chapter = screen.getByLabelText(
+      "go to chapter The part everyone came for",
+    );
+    // The chapter the playhead is inside is the active one.
+    expect(chapter).toHaveClass("Mui-selected");
+
+    fireEvent.click(chapter);
+    expect(onSeek).toHaveBeenCalledWith(45);
+  });
+
+  test("offers no chapter or transcript tab for a video that has neither", () => {
+    renderDrawer();
+    expect(screen.queryByRole("tab", { name: "Chapters" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Transcript" })).toBeNull();
+  });
+
+  test("lists the transcript and marks the line being spoken", () => {
+    const onSeek = vi.fn();
+    renderDrawer({
+      ...defaultProps,
+      rowsPerPage: 8,
+      subtitleCues: [
+        { start: 0, end: 5, text: "first line" },
+        { start: 5, end: 9, text: "second line" },
+      ],
+      currentTime: 6,
+      onSeek,
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Transcript" }));
+
+    const cue = screen.getByLabelText("go to second line");
+    expect(cue).toHaveClass("Mui-selected");
+
+    fireEvent.click(cue);
+    expect(onSeek).toHaveBeenCalledWith(5);
+  });
+
   test("renders all items in drawer list with correct states", () => {
     renderDrawer();
 

@@ -327,6 +327,78 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(onStartAtChange.mock.calls.length).toBe(calls);
   });
 
+  test("marks the chapter boundaries on the seek bar", async () => {
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+    );
+
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        subTitleFile={null}
+        chapters={[
+          { start: 0, end: 45, title: "Opening" },
+          { start: 45, end: 132, title: "The part everyone came for" },
+          { start: 132, end: 180, title: "Wrap-up" },
+        ]}
+      />,
+      { contexts },
+    );
+
+    const video = await waitFor(() => {
+      const element = document.querySelector("video");
+      expect(element).toBeInTheDocument();
+      return element;
+    });
+
+    // The seek bar has no length until the file says how long it is, and a
+    // mark past the end is not a place anyone can seek to.
+    Object.defineProperty(video, "duration", { value: 180, writable: true });
+    fireEvent.loadedMetadata(video);
+
+    // One fewer mark than chapters: the first boundary is zero, where the
+    // slider already starts.
+    await waitFor(() => {
+      const marks = document.querySelectorAll(".MuiSlider-mark");
+      expect(marks).toHaveLength(2);
+      // 45 s and 132 s of a 180 s file, positioned as the fractions of the
+      // bar they are.
+      expect([...marks].map((mark) => mark.style.left)).toEqual([
+        "25%",
+        `${(132 / 180) * 100}%`,
+      ]);
+    });
+
+    Object.defineProperty(video, "currentTime", { value: 60, writable: true });
+    fireEvent.timeUpdate(video);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("current-chapter")).toHaveTextContent(
+        "The part everyone came for",
+      );
+    });
+  });
+
+  test("says no chapter before the first one starts", async () => {
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+    );
+
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        subTitleFile={null}
+        chapters={[{ start: 30, end: 90, title: "Later" }]}
+      />,
+      { contexts },
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector("video")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("current-chapter")).toBeNull();
+  });
+
   test("toggles mute setting and saves in localStorage", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 
