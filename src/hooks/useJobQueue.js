@@ -61,7 +61,11 @@ export function useJobQueue({ enabled, open }) {
   const read = useCallback(async () => {
     setLoading(true);
     try {
-      const body = await api.post("/queuestatus");
+      // An empty object, not nothing: the endpoint validates its body and
+      // answers "Empty Request Body" when there is none, which the drawer
+      // would then render as an empty queue — indistinguishable from the
+      // server having nothing to do.
+      const body = await api.post("/queuestatus", {});
       setJobs({
         downloads: Array.isArray(body.queue) ? body.queue : [],
         listings: Array.isArray(body.listings) ? body.listings : [],

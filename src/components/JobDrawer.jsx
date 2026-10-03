@@ -7,9 +7,6 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import LinearProgress from "@mui/material/LinearProgress";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import {
   Download as DownloadIcon,
@@ -115,48 +112,22 @@ function JobRow({ job, kind, onAct, busy }) {
     : null;
 
   return (
-    <ListItem
-      alignItems="flex-start"
-      secondaryAction={
-        <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
-          {running && (
-            <Button
-              size="small"
-              startIcon={<PauseIcon fontSize="small" />}
-              disabled={busy}
-              onClick={() => onAct(job.id, "pause")}
-            >
-              Pause
-            </Button>
-          )}
-          {paused && (
-            <Button
-              size="small"
-              startIcon={<PlayIcon fontSize="small" />}
-              disabled={busy}
-              onClick={() => onAct(job.id, "resume")}
-            >
-              Resume
-            </Button>
-          )}
-          <Button
-            size="small"
-            color="error"
-            disabled={busy}
-            onClick={() => onAct(job.id, "cancel")}
-          >
-            Cancel
-          </Button>
-        </Box>
-      }
-      sx={{ display: "flex", flexDirection: "column", alignItems: "stretch" }}
+    // A plain column rather than a ListItem: ListItem's `secondaryAction` is
+    // absolutely positioned against the text, which put the buttons straight
+    // over the progress line. Nothing here is a list item semantically either
+    // — it is a row of controls that has to lay out top to bottom.
+    <Box
+      // Stable hook for the row, so a test can scope to one job's controls
+      // rather than to whatever happens to wrap them.
+      data-job={job.id}
+      sx={{ px: 2, py: 1.25, borderBottom: 1, borderColor: "divider" }}
     >
-      <ListItemText
-        primary={job.title || job.url}
-        secondary={detail}
-        primaryTypographyProps={{ variant: "body2", noWrap: true }}
-        secondaryTypographyProps={{ variant: "caption" }}
-      />
+      <Typography variant="body2" noWrap title={job.title || job.url}>
+        {job.title || job.url}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" component="div">
+        {detail}
+      </Typography>
       {/* A listing runs for minutes with no number to show, so it is
           indeterminate by nature; a download has real bytes and says so. A
           queued or paused job shows no bar at all — there is nothing in
@@ -165,29 +136,61 @@ function JobRow({ job, kind, onAct, busy }) {
         (kind === "listing" || percent === null ? (
           <LinearProgress
             aria-label={`${job.title || job.url} progress`}
-            sx={{ mt: 0.5 }}
+            sx={{ mt: 1 }}
           />
         ) : (
           <LinearProgress
             aria-label={`${job.title || job.url} progress`}
             variant="determinate"
             value={percent}
-            sx={{ mt: 0.5 }}
+            sx={{ mt: 1 }}
           />
         ))}
       {paused && (
         <Chip
           size="small"
           label={kind === "download" ? "Kept on disk" : "Kept in index"}
-          sx={{ mt: 0.5, alignSelf: "flex-start" }}
+          sx={{ mt: 1, alignSelf: "flex-start" }}
         />
       )}
       {queued && (
-        <Typography variant="caption" sx={{ mt: 0.5 }}>
+        <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
           Nothing downloaded yet — cancelling this one costs nothing.
         </Typography>
       )}
-    </ListItem>
+      <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+        {running && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PauseIcon fontSize="small" />}
+            disabled={busy}
+            onClick={() => onAct(job.id, "pause")}
+          >
+            Pause
+          </Button>
+        )}
+        {paused && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PlayIcon fontSize="small" />}
+            disabled={busy}
+            onClick={() => onAct(job.id, "resume")}
+          >
+            Resume
+          </Button>
+        )}
+        <Button
+          size="small"
+          color="error"
+          disabled={busy}
+          onClick={() => onAct(job.id, "cancel")}
+        >
+          Cancel
+        </Button>
+      </Box>
+    </Box>
   );
 }
 
@@ -220,7 +223,7 @@ function JobGroup({ heading, Icon, jobs, kind, onAct, busyId }) {
           {jobs.length}
         </Typography>
       </Box>
-      <List dense disablePadding>
+      <Box>
         {jobs.map((job) => (
           <JobRow
             key={job.id}
@@ -230,7 +233,7 @@ function JobGroup({ heading, Icon, jobs, kind, onAct, busyId }) {
             busy={busyId === job.id}
           />
         ))}
-      </List>
+      </Box>
     </Box>
   );
 }

@@ -65,6 +65,21 @@ describe("useJobQueue", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
   });
 
+  test("sends a body the endpoint's validator will accept", async () => {
+    // `/queuestatus` rejects a request with no body at all, and "Empty
+    // Request Body" renders as an empty queue — which is indistinguishable
+    // from the server having nothing to do.
+    const { fetchMock } = queueReads();
+    mount({ enabled: true, open: false });
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(0));
+
+    const [url, init] = fetchMock.mock.calls.find(([u]) =>
+      String(u).includes("/queuestatus")
+    );
+    expect(String(url)).toContain("/queuestatus");
+    expect(init?.body).toBe("{}");
+  });
+
   test("never reads without a session", async () => {
     const { calls } = queueReads();
     mount({ enabled: false, open: false });

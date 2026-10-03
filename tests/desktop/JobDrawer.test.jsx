@@ -192,7 +192,7 @@ describe("JobDrawer", () => {
   test("offers only cancel for a queued job, and says it is free", async () => {
     await openDrawer();
 
-    const row = (await screen.findByText("Queued video")).closest("li");
+    const row = (await screen.findByText("Queued video")).closest("[data-job]");
     const controls = within(row);
     expect(controls.getByRole("button", { name: /Cancel/i })).toBeInTheDocument();
     expect(controls.queryByRole("button", { name: /Pause/i })).toBeNull();
@@ -205,7 +205,7 @@ describe("JobDrawer", () => {
   test("offers pause and cancel for a running job", async () => {
     await openDrawer();
 
-    const row = (await screen.findByText("Running video")).closest("li");
+    const row = (await screen.findByText("Running video")).closest("[data-job]");
     const controls = within(row);
     expect(controls.getByRole("button", { name: /Pause/i })).toBeInTheDocument();
     expect(controls.getByRole("button", { name: /Cancel/i })).toBeInTheDocument();
@@ -215,7 +215,7 @@ describe("JobDrawer", () => {
   test("offers resume and cancel for a paused job, and says the file is kept", async () => {
     await openDrawer();
 
-    const row = (await screen.findByText("Paused video")).closest("li");
+    const row = (await screen.findByText("Paused video")).closest("[data-job]");
     const controls = within(row);
     expect(
       controls.getByRole("button", { name: /Resume/i }),
@@ -232,7 +232,7 @@ describe("JobDrawer", () => {
   test("posts the action and reads the queue back", async () => {
     await openDrawer();
 
-    const row = (await screen.findByText("Running video")).closest("li");
+    const row = (await screen.findByText("Running video")).closest("[data-job]");
     fireEvent.click(within(row).getByRole("button", { name: /Pause/i }));
 
     await waitFor(() => {
