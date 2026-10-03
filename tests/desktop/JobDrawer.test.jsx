@@ -1,4 +1,3 @@
-import React from "react";
 import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import JobDrawer from "../../src/components/JobDrawer.jsx";
@@ -253,6 +252,42 @@ describe("JobDrawer", () => {
     expect(reads.length).toBeGreaterThan(1);
   });
 
+  test("says so when the job action is refused, instead of swallowing it", async () => {
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).includes("/jobaction")) {
+        return mockResponse(
+          { message: "That job is already paused" },
+          { ok: false, status: 400 },
+        );
+      }
+      return String(url).includes("/queuestatus")
+        ? mockResponse(QUEUE)
+        : mockResponse({});
+    });
+
+    await openDrawer();
+
+    const row = (await screen.findByText("Running video")).closest("[data-job]");
+    fireEvent.click(within(row).getByRole("button", { name: /Pause/i }));
+
+    // The server's own refusal, so the user learns which action failed on
+    // which job rather than that something somewhere failed.
+    await waitFor(() => {
+      expect(contexts.notification.setSnack).toHaveBeenCalledWith(
+        expect.stringContaining("already paused"),
+        "error",
+      );
+    });
+    expect(contexts.notification.setSnack).toHaveBeenCalledWith(
+      expect.stringContaining("pause dl_running"),
+      "error",
+    );
+    // A refused action must not leave the row spinning forever.
+    await waitFor(() =>
+      expect(within(row).getByRole("button", { name: /Pause/i })).toBeEnabled(),
+    );
+  });
+
   test("shows an empty queue plainly", async () => {
     fetchMock.mockImplementation(async (url) =>
       String(url).includes("/queuestatus") ? mockResponse(emptyQueue()) : mockResponse({})
@@ -275,5 +310,79 @@ describe("JobDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Downloads/i }));
 
     expect(await screen.findByText(/queue unavailable/i)).toBeInTheDocument();
+  });
+
+  test("orders a queue whose states and positions the drawer does not know", async () => {
+    // A server that grows a state, or a job that arrives without a position,
+    // must not make the order depend on which order the jobs happened to be
+    // sent in. So the input below is deliberately not the answer: the unknown
+    // state is first and the known running job is third.
+    fetchMock.mockImplementation(async (url) =>
+      String(url).includes("/queuestatus")
+        ? mockResponse({
+            status: "success",
+            generation: 9,
+            queue: [
+              {
+                id: "dl_mystery",
+                kind: "download",
+                url: "https://www.youtube.com/watch?v=mystery",
+                title: "Mystery video",
+                state: "stalled",
+                queuePosition: 0,
+                startedAt: 1,
+                progress: null,
+              },
+              {
+                id: "dl_unpositioned",
+                kind: "download",
+                url: "https://www.youtube.com/watch?v=unpositioned",
+                title: "Unpositioned video",
+                state: "queued",
+                startedAt: 2,
+                progress: null,
+              },
+              {
+                id: "dl_busy",
+                kind: "download",
+                url: "https://www.youtube.com/watch?v=busy",
+                title: "Busy video",
+                state: "running",
+                queuePosition: 1,
+                startedAt: 3,
+                progress: null,
+              },
+              {
+                id: "dl_held",
+                kind: "download",
+                url: "https://www.youtube.com/watch?v=held",
+                title: "Held video",
+                state: "paused",
+                queuePosition: 0,
+                startedAt: 4,
+                progress: null,
+              },
+            ],
+            listings: [],
+          })
+        : mockResponse({})
+    );
+
+    renderDrawer();
+    fireEvent.click(screen.getByRole("button", { name: /Downloads/i }));
+    await screen.findByText("Busy video");
+
+    // Running first; the queued job with no position stands in for position 0
+    // and so leads the queue; paused next; the state the drawer does not know
+    // sorts after every state it does.
+    const rendered = screen
+      .getAllByText(/(Mystery|Unpositioned|Busy|Held) video/)
+      .map((node) => node.textContent);
+    expect(rendered).toEqual([
+      "Busy video",
+      "Unpositioned video",
+      "Held video",
+      "Mystery video",
+    ]);
   });
 });

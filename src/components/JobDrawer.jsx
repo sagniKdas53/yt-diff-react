@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -15,6 +15,7 @@ import {
   PlaylistPlay as ListingIcon,
 } from "@mui/icons-material";
 import { useJobQueue } from "../hooks/useJobQueue.js";
+import { NotificationContext } from "../contexts/NotificationContext.jsx";
 
 /**
  * @typedef {"default"|"primary"|"secondary"|"error"|"info"|"success"|"warning"} BadgeColor
@@ -53,9 +54,23 @@ function formatEta(seconds) {
  */
 const STATE_ORDER = { running: 0, queued: 1, paused: 2 };
 
+/**
+ * The order given to a state this build does not know about. An unknown state
+ * gets no claim to be happening or waiting, so it sorts after every known one —
+ * past the last entry in STATE_ORDER, whose value is read rather than repeated
+ * here so that adding a state cannot quietly make this tie with it.
+ */
+const UNKNOWN_STATE_ORDER = Math.max(...Object.values(STATE_ORDER)) + 1;
+
 function byActivity(a, b) {
-  const byState = STATE_ORDER[a.state] - STATE_ORDER[b.state];
-  return byState !== 0 ? byState : a.queuePosition - b.queuePosition;
+  const byState =
+    (STATE_ORDER[a.state] ?? UNKNOWN_STATE_ORDER) -
+    (STATE_ORDER[b.state] ?? UNKNOWN_STATE_ORDER);
+  // A job the server sent without a position is as close to the front as a
+  // position of 0, so a missing number never becomes a NaN comparison.
+  return byState !== 0
+    ? byState
+    : (a.queuePosition ?? 0) - (b.queuePosition ?? 0);
 }
 
 /**
@@ -262,6 +277,7 @@ JobGroup.propTypes = {
 export default function JobDrawer({ enabled, badgeColor }) {
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const { setSnack } = useContext(NotificationContext);
   const { jobs, error, act } = useJobQueue({ enabled, open });
 
   const downloads = useMemo(
@@ -279,11 +295,25 @@ export default function JobDrawer({ enabled, badgeColor }) {
       setBusyId(id);
       try {
         await act(id, action);
+      } catch (failure) {
+        // A refused action and a dropped connection are both just a button
+        // that visibly did nothing, and the user pressed it. `api.post`
+        // throws an `ApiError` carrying the server's own message for a
+        // refusal, and something bare for anything that never reached the
+        // server — hence the fallback rather than a bare `failure.message`.
+        // A dead session is already reported by the transport itself.
+        if (failure?.sessionExpired) return;
+        const reason =
+          failure?.message ??
+          (Number.isFinite(failure?.status)
+            ? `Request failed (${failure.status})`
+            : "the server did not answer");
+        setSnack(`Failed to ${action} ${id}: ${reason}`, "error");
       } finally {
         setBusyId(null);
       }
     },
-    [act],
+    [act, setSnack],
   );
 
   if (!enabled) return null;

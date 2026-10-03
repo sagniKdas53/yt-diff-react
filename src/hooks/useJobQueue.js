@@ -16,7 +16,8 @@ export const POLL_CLOSED_MS = 10000;
 const EMPTY = { downloads: [], listings: [] };
 
 /**
- * A snapshot reader that never lets two reads overlap.
+ * A snapshot reader that never lets two reads overlap, but never drops a
+ * request either.
  *
  * The interval fires whether or not the last read finished, so without this a
  * slow response stacks a second request behind the first and the queue starts
@@ -24,12 +25,27 @@ const EMPTY = { downloads: [], listings: [] };
  */
 function useSingleFlight(read) {
   const inFlight = useRef(false);
+  const owed = useRef(false);
 
   return useCallback(async () => {
-    if (inFlight.current) return;
+    if (inFlight.current) {
+      // The open read began before whatever asked for this one, so its answer
+      // describes the queue as it was — an action's read-back landing here
+      // would be answered by state from before the action. Owe exactly one more
+      // read and run it below. Callers that pile up during a read all collapse
+      // into that single read, and a read that is itself superseded leaves the
+      // flag set for the next call instead of chasing it here, so a chain of
+      // them terminates instead of running forever.
+      owed.current = true;
+      return;
+    }
     inFlight.current = true;
     try {
       await read();
+      if (owed.current) {
+        owed.current = false;
+        await read();
+      }
     } finally {
       inFlight.current = false;
     }
@@ -89,7 +105,12 @@ export function useJobQueue({ enabled, open }) {
   // would keep pushing its next tick back and never fire. The ref is what
   // lets the timer read the current `refresh` without depending on it.
   const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  // Written after the commit rather than in the render body: React can throw a
+  // render away, and a ref it had written would outlive it. The first render
+  // leaves the initializer's value, which is this render's own `refresh`.
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
 
   useEffect(() => {
     if (!enabled) return undefined;

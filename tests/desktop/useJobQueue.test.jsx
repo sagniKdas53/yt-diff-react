@@ -1,5 +1,4 @@
 import { act, waitFor } from "@testing-library/react";
-import React from "react";
 import {
   describe,
   test,
@@ -232,5 +231,60 @@ describe("useJobQueue", () => {
     // Wiping the list on a transient failure would make a hiccup look like the
     // queue emptying.
     expect(result.current.jobs.downloads).toHaveLength(1);
+  });
+
+  test("reads back after an action even when a poll is already open", async () => {
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    let reads = 0;
+    globalThis.fetch = vi.fn(async (url) => {
+      if (!String(url).includes("/queuestatus")) return mockResponse({});
+      reads += 1;
+      // The poll that was already open answers with the queue as it was
+      // before the pause; only a second read can report it as paused.
+      if (reads === 1) await gate;
+      const paused = reads > 1;
+      return mockResponse({
+        status: "success",
+        generation: reads,
+        queue: [
+          {
+            id: "dl_1",
+            url: "https://example.test/v",
+            title: "Paused by click",
+            state: paused ? "paused" : "running",
+            queuePosition: 0,
+          },
+        ],
+        listings: [],
+      });
+    });
+    const { result } = mount({ enabled: true, open: false });
+    await waitFor(() => expect(reads).toBe(1));
+
+    // The action's read-back lands while the poll is still open, so it is
+    // owed rather than dropped: dropping it leaves the row reading "Running"
+    // until the next tick, up to 10 s away and only while the drawer is open.
+    await act(async () => {
+      await result.current.act("dl_1", "pause");
+      expect(reads).toBe(1);
+    });
+
+    await act(async () => {
+      release();
+      await gate;
+    });
+
+    // Bounded rather than the default 5 s: with the read dropped this is a
+    // missing fetch, and it should say so quickly instead of timing out.
+    await waitFor(() => expect(reads).toBe(2), { timeout: 1000 });
+    // The read that arrives last is the one held, which is the whole point:
+    // the stale poll's answer must not be what the drawer renders.
+    await waitFor(
+      () => expect(result.current.jobs.downloads[0].state).toBe("paused"),
+      { timeout: 1000 }
+    );
   });
 });
