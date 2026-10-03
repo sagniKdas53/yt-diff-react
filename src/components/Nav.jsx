@@ -41,6 +41,7 @@ import { AuthContext } from "../contexts/AuthContext";
 import { SocketContext } from "../contexts/SocketContext";
 import { NotificationContext } from "../contexts/NotificationContext";
 import { ApiError } from "../api/client.js";
+import JobDrawer from "./JobDrawer.jsx";
 import { useApiClient } from "../hooks/useApiClient.js";
 
 export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
@@ -176,6 +177,14 @@ export default function Navigation({ themeSwitcher, theme, setPlayListUrl }) {
           </Button>
           <NotificationDrawer
             connectionId={connectionId}
+            badgeColor={theme ? "success" : "secondary"}
+          />
+          {/* Beside the notification manager rather than at the far end of
+              the toolbar: both answer "what is the server doing for me right
+              now", and someone watching a long index should not have to hunt
+              for either. */}
+          <JobDrawer
+            enabled={Boolean(token)}
             badgeColor={theme ? "success" : "secondary"}
           />
           <Button

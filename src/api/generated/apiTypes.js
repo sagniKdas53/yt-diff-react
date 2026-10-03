@@ -51,6 +51,7 @@
     "title": string,
     "saveDirectory": string,
     "videoId": string,
+    "id": string,
   }>,
 }} DownloadResponse
  */
@@ -320,10 +321,36 @@
   "status": "success",
   "generation": (string | number),
   "queue": Array<{
+    "id": string,
+    "kind": ("download" | "listing"),
     "url": string,
     "title": string,
-    "status": string,
+    "state": ("queued" | "running" | "paused"),
     "queuePosition": number,
+    "progress": ({
+      "downloadedBytes": number,
+      "totalBytes": (number | null),
+      "bytesPerSecond": (number | null),
+      "etaSeconds": (number | null),
+    } | null),
+    "itemsIndexed": (number | null),
+    "startedAt": number,
+  }>,
+  "listings": Array<{
+    "id": string,
+    "kind": ("download" | "listing"),
+    "url": string,
+    "title": string,
+    "state": ("queued" | "running" | "paused"),
+    "queuePosition": number,
+    "progress": ({
+      "downloadedBytes": number,
+      "totalBytes": (number | null),
+      "bytesPerSecond": (number | null),
+      "etaSeconds": (number | null),
+    } | null),
+    "itemsIndexed": (number | null),
+    "startedAt": number,
   }>,
 }} QueuestatusResponse
  */
@@ -371,6 +398,24 @@
   "kind": ("download" | "list"),
   "outcome": ("killed" | "queued" | "not-found"),
 }} CancelResponse
+ */
+
+/**
+ * @typedef {{
+  "id": string,
+  "action": ("pause" | "resume" | "cancel"),
+}} JobactionRequest
+ */
+
+/**
+ * @typedef {{
+  "status": "success",
+  "id": string,
+  "action": ("pause" | "resume" | "cancel"),
+  "outcome": ("paused" | "resumed" | "cancelled" | "not-allowed" | "not-found"),
+  "partialDeleted": (boolean | null),
+  "detail"?: string,
+}} JobactionResponse
  */
 
 /**
@@ -462,6 +507,7 @@
 /** @typedef {{path: "/syncextras", request: SyncextrasRequest, response: SyncextrasResponse}} SyncextrasRoute */
 /** @typedef {{path: "/keepfile", request: KeepfileRequest, response: KeepfileResponse}} KeepfileRoute */
 /** @typedef {{path: "/cancel", request: CancelRequest, response: CancelResponse}} CancelRoute */
+/** @typedef {{path: "/jobaction", request: JobactionRequest, response: JobactionResponse}} JobactionRoute */
 /** @typedef {{path: "/locate", request: LocateRequest, response: LocateResponse}} LocateRoute */
 /** @typedef {{path: "/refresh", request: RefreshRequest, response: RefreshResponse}} RefreshRoute */
 /** @typedef {{path: "/register", request: RegisterRequest, response: RegisterResponse}} RegisterRoute */
@@ -489,6 +535,7 @@
  *   | SyncextrasRoute
  *   | KeepfileRoute
  *   | CancelRoute
+ *   | JobactionRoute
  *   | LocateRoute
  *   | RefreshRoute
  *   | RegisterRoute
