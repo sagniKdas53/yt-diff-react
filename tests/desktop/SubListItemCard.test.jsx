@@ -369,4 +369,188 @@ describe("SubListItemCard Component (Desktop)", () => {
       expect(screen.getByText("partial: subtitles")).toBeInTheDocument();
     });
   });
+
+  describe("files the bot will reap", () => {
+    const SECOND = 1000;
+    const MINUTE = 60 * SECOND;
+    const HOUR = 60 * MINUTE;
+    const DAY = 24 * HOUR;
+
+    /**
+     * A date that far off, as the server would send it. Every offset carries a
+     * margin past the whole unit, because the chip is written from a clock
+     * reading taken after the test picked the offset: an offset of exactly
+     * fifteen minutes can read as fourteen.
+     */
+    const inMs = (ms) => new Date(Date.now() + ms).toISOString();
+
+    const expiringRow = (botExpiresAt) => ({
+      id: "video_999",
+      isAvailable: true,
+      video_metadatum: {
+        videoUrl: "https://youtube.com/watch?v=999",
+        title: "Expiring Video",
+        downloadStatus: true,
+        fileName: "expiring.mp4",
+        saveDirectory: "/downloads",
+        botExpiresAt,
+      },
+    });
+
+    const renderExpiring = (botExpiresAt) => {
+      const contexts = makeContexts();
+      const view = renderWithContexts(
+        <SubListItemCard
+          {...defaultProps}
+          element={expiringRow(botExpiresAt)}
+        />,
+        { contexts },
+      );
+      return { ...view, contexts };
+    };
+
+    const openKeepMenu = async () => {
+      fireEvent.click(screen.getByLabelText("keep file"));
+      return screen.findByRole("menuitem", { name: "Keep" });
+    };
+
+    beforeEach(() => {
+      globalThis.fetch = vi.fn();
+    });
+
+    test("says how long is left in the largest unit that is still true", () => {
+      const { unmount } = renderExpiring(inMs(30 * SECOND));
+      expect(
+        screen.getByText("expires in under a minute"),
+      ).toBeInTheDocument();
+      unmount();
+
+      renderExpiring(inMs(15 * MINUTE + 30 * SECOND));
+      expect(screen.getByText("expires in 15 min")).toBeInTheDocument();
+    });
+
+    test("counts in hours and days above an hour", () => {
+      const { unmount } = renderExpiring(inMs(3 * HOUR + MINUTE));
+      expect(screen.getByText("expires in 3 h")).toBeInTheDocument();
+      unmount();
+
+      renderExpiring(inMs(2 * DAY + HOUR));
+      expect(screen.getByText("expires in 2 days")).toBeInTheDocument();
+    });
+
+    test("shows no chip and no Keep for a file that is not going anywhere", () => {
+      renderExpiring(null);
+
+      expect(screen.queryByText(/expires/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("keep file")).toBeNull();
+    });
+
+    test("posts the row's videoUrl to /keepfile", async () => {
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({ status: "success", kept: 1 }),
+      );
+      renderExpiring(inMs(3 * HOUR));
+
+      fireEvent.click(await openKeepMenu());
+
+      await waitFor(() =>
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+          "http://localhost:8888/ytdiff/keepfile",
+          expect.objectContaining({ method: "post" }),
+        ),
+      );
+      const [, options] = globalThis.fetch.mock.calls.at(-1);
+      expect(JSON.parse(options.body)).toEqual({
+        videoUrl: "https://youtube.com/watch?v=999",
+      });
+    });
+
+    test("does not fire a second request while one is in flight", async () => {
+      let release;
+      renderExpiring(inMs(3 * HOUR));
+      globalThis.fetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            release = () =>
+              resolve(mockResponse({ status: "success", kept: 1 }));
+          }),
+      );
+
+      const item = await openKeepMenu();
+      fireEvent.click(item);
+      // The menu closes on the first click, so the second one comes from a
+      // click landing before the request lands.
+      fireEvent.click(item);
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByRole("progressbar", { hidden: true }),
+      ).toBeInTheDocument();
+
+      release();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("progressbar", { hidden: true }),
+        ).toBeNull(),
+      );
+    });
+
+    test("takes the chip away and says what it kept", async () => {
+      const { contexts } = renderExpiring(inMs(3 * HOUR));
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({ status: "success", kept: 2 }),
+      );
+
+      fireEvent.click(await openKeepMenu());
+
+      await waitFor(() =>
+        expect(screen.queryByText(/^expires in/)).toBeNull(),
+      );
+      expect(screen.queryByLabelText("keep file")).toBeNull();
+      expect(contexts.notification.addNotification).toHaveBeenCalledWith(
+        expect.stringContaining("will not be reaped"),
+        "success",
+      );
+    });
+
+    test("says nothing was kept rather than claiming it was", async () => {
+      // The bot never fetched this file, so there was nothing for Keep to
+      // keep — and the file is still going to be reaped, so the chip stays.
+      const { contexts } = renderExpiring(inMs(3 * HOUR));
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({ status: "success", kept: 0 }),
+      );
+
+      fireEvent.click(await openKeepMenu());
+
+      await waitFor(() =>
+        expect(contexts.notification.addNotification).toHaveBeenCalledWith(
+          expect.stringContaining("Nothing to keep"),
+          "info",
+        ),
+      );
+      expect(screen.getByText("expires in 3 h")).toBeInTheDocument();
+      expect(screen.getByLabelText("keep file")).toBeInTheDocument();
+    });
+
+    test("reports a refused Keep and leaves the chip alone", async () => {
+      const { contexts } = renderExpiring(inMs(3 * HOUR));
+      globalThis.fetch.mockResolvedValue(
+        mockResponse(
+          { error: "Could not keep that file." },
+          { ok: false, status: 500 },
+        ),
+      );
+
+      fireEvent.click(await openKeepMenu());
+
+      await waitFor(() =>
+        expect(contexts.notification.addNotification).toHaveBeenCalledWith(
+          expect.stringContaining("Could not keep that file."),
+          "error",
+        ),
+      );
+      expect(screen.getByText("expires in 3 h")).toBeInTheDocument();
+    });
+  });
  });

@@ -24,10 +24,42 @@ import { DeleteForever as DeleteForeverIcon } from "@mui/icons-material";
 import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import { Queue as QueueIcon } from "@mui/icons-material";
 import { CloudSync as CloudSyncIcon } from "@mui/icons-material";
+import { Shield as ShieldIcon } from "@mui/icons-material";
 
 import { NotificationContext } from "../contexts/NotificationContext";
 import { useApiClient } from "../hooks/useApiClient.js";
 import { assetBase } from "../config.js";
+
+/**
+ * How long the reaper will leave a row alone, in the words the chip shows.
+ *
+ * A countdown chip that overstates the time left is worse than no chip: it is
+ * read as permission. So each unit is the largest one that still leaves a
+ * remainder worth naming, nothing rounds up past the truth, a row inside its
+ * last minute says so instead of claiming "0 min", and one whose time has
+ * passed says it rather than counting into negatives.
+ *
+ * Returns null for a date that does not parse, because "expires in NaN days"
+ * tells the reader nothing at all.
+ *
+ * @param {string} botExpiresAt - The ISO date `/getsub` reported.
+ * @returns {?string}
+ */
+function formatExpiry(botExpiresAt) {
+  const until = new Date(botExpiresAt).getTime() - Date.now();
+  if (Number.isNaN(until)) return null;
+  if (until <= 0) return "expiring now";
+
+  const minutes = Math.floor(until / 60_000);
+  if (minutes < 1) return "expires in under a minute";
+  if (minutes < 60) return `expires in ${minutes} min`;
+
+  const hours = Math.round(until / 3_600_000);
+  if (hours < 24) return `expires in ${hours} h`;
+
+  const days = Math.round(until / 86_400_000);
+  return `expires in ${days} ${days === 1 ? "day" : "days"}`;
+}
 
 /**
  * One row of `/getsub`, as the card renders it.
@@ -135,6 +167,21 @@ const SubListItemCard = memo(
           }`
         : null;
 
+    // When the reaper will take this file away, if it is one it will ever take.
+    const serverExpiry =
+      typeof meta.botExpiresAt === "string" && meta.botExpiresAt.length > 0
+        ? meta.botExpiresAt
+        : null;
+    // A successful "Keep" makes the chip wrong and nothing refetches the row
+    // to say so. Stamped with the expiry it answered, so a later `/getsub`
+    // reporting a different one brings the chip back — a file reaped again is
+    // a new countdown, not a chip that failed to clear.
+    const [keptExpiry, setKeptExpiry] = useState(null);
+    const expiryChip =
+      serverExpiry && serverExpiry !== keptExpiry
+        ? formatExpiry(serverExpiry)
+        : null;
+
     const [syncing, setSyncing] = useState(false);
     // `syncing` state alone does not close the gap between a click and the
     // re-render that disables the item, and two clicks in that window would
@@ -184,6 +231,51 @@ const SubListItemCard = memo(
       } finally {
         syncInFlightRef.current = false;
         setSyncing(false);
+      }
+    };
+
+    const [keeping, setKeeping] = useState(false);
+    // Same gap the sync above closes, for the same reason: a "Keep" that fires
+    // twice keeps a file the second time has nothing left to keep, and the
+    // answer the reader sees is then "nothing was kept".
+    const keepInFlightRef = useRef(false);
+
+    const keepFile = async () => {
+      if (keepInFlightRef.current) return;
+      keepInFlightRef.current = true;
+      setKeeping(true);
+      setMenuAnchor(null);
+      const label = meta.title || meta.videoUrl;
+      try {
+        const result = await api.post("/keepfile", {
+          videoUrl: meta.videoUrl,
+        });
+        const kept = Number.isInteger(result.kept) ? result.kept : 0;
+
+        if (kept > 0) {
+          setKeptExpiry(serverExpiry);
+          const message = `Kept ${label} — ${
+            kept === 1 ? "1 file" : `${kept} files`
+          } will not be reaped`;
+          setSnack(message, "success");
+          addNotification(message, "success");
+        } else {
+          // An answer, not a failure: this file was never one the bot
+          // fetched, so there was nothing to keep — and the chip stays,
+          // because a file that still expires is still expiring.
+          const message = `Nothing to keep for ${label} — the bot never fetched it`;
+          setSnack(message, "info");
+          addNotification(message, "info");
+        }
+      } catch (error) {
+        // A dead session has already been reported once, by apiFetch.
+        if (error.sessionExpired) return;
+        const message = `Failed to keep ${label}: ${error.message}`;
+        setSnack(message, "error");
+        addNotification(message, "error");
+      } finally {
+        keepInFlightRef.current = false;
+        setKeeping(false);
       }
     };
 
@@ -293,14 +385,26 @@ const SubListItemCard = memo(
               {meta.title}
             </Link>
           </Typography>
-          {partialChip && (
-            <Chip
-              color="warning"
-              size="small"
-              variant="outlined"
-              label={partialChip}
-              sx={{ mt: 0.5, maxWidth: "100%" }}
-            />
+          {(partialChip || expiryChip) && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+              {partialChip && (
+                <Chip
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                  label={partialChip}
+                  sx={{ maxWidth: "100%" }}
+                />
+              )}
+              {expiryChip && (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={expiryChip}
+                  sx={{ maxWidth: "100%" }}
+                />
+              )}
+            </Box>
           )}
         </CardContent>
         <CardActions sx={{ justifyContent: "space-between" }}>
@@ -384,6 +488,21 @@ const SubListItemCard = memo(
                 </IconButton>
               </Tooltip>
             )}
+            {expiryChip && (
+              <Tooltip title="Keep this file">
+                <IconButton
+                  onClick={(event) => setMenuAnchor(event.currentTarget)}
+                  aria-label="keep file"
+                  size="large"
+                >
+                  {keeping ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <ShieldIcon color="warning" sx={{ pt: 0.3 }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            )}
           </ButtonGroup>
         </CardActions>
         <Menu
@@ -394,6 +513,11 @@ const SubListItemCard = memo(
           <MenuItem onClick={fetchMissingExtras} disabled={syncing}>
             {syncing ? "Fetching missing extras…" : "Fetch missing extras"}
           </MenuItem>
+          {expiryChip && (
+            <MenuItem onClick={keepFile} disabled={keeping}>
+              {keeping ? "Keeping…" : "Keep"}
+            </MenuItem>
+          )}
         </Menu>
       </Card>
     );
