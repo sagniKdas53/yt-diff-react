@@ -1,4 +1,12 @@
 /**
+ * How long an echo cue can be and still be one.
+ *
+ * YouTube writes them at 10 ms; the slack is for the rounding that shows up in
+ * converted tracks, and the ceiling is far below any cue a person wrote.
+ */
+const ECHO_MAX_SECONDS = 0.05;
+
+/**
  * Formats seconds as h:mm:ss (or m:ss below an hour), matching the player
  * control bar's readout.
  *
@@ -91,5 +99,60 @@ export function parseSubtitleText(text) {
       cues.push({ start, end, text: textContent });
     }
   }
-  return cues;
+  return collapseRollingCues(cues);
+}
+
+/**
+ * Collapses the rolling cue style YouTube's auto-captions emit.
+ *
+ * An auto-generated track repeats every line three times: once with karaoke
+ * word timings, then again as the 10 ms echo that carries the plain text, then
+ * once more as the first line of the next cue with the following words
+ * appended. Read as-is, the overlay double-renders each line and the transcript
+ * repeats itself three times over.
+ *
+ * An echo is identified by what it is rather than by what it says: a cue of
+ * no more than {@link ECHO_MAX_SECONDS} that repeats the line before it. A
+ * human-authored subtitle that deliberately re-displays a line is a second or
+ * more long and is left alone. Growth is positional — a cue that *starts*
+ * with the previous one is that line gaining words, and what it gained is the
+ * next line: the echo already closed the previous cue, so the remainder
+ * becomes a cue of its own with the grown cue's timings. A real subtitle file
+ * does neither, because each of its cues starts a new thought.
+ *
+ * @param {Array<{start: number, end: number, text: string}>} cues
+ * @returns {Array<{start: number, end: number, text: string}>}
+ */
+function collapseRollingCues(cues) {
+  const collapsed = [];
+
+  for (const cue of cues) {
+    const previous = collapsed.at(-1);
+
+    if (previous && cue.text === previous.text) {
+      // The echo. Its 10 ms of screen time is what makes the hand-off to the
+      // grown cue invisible, so dropping it costs nothing. A longer cue saying
+      // the same thing is somebody repeating themselves, and that is theirs.
+      if (cue.end - cue.start <= ECHO_MAX_SECONDS) {
+        continue;
+      }
+      collapsed.push(cue);
+      continue;
+    }
+
+    if (previous && cue.text.startsWith(previous.text)) {
+      // What the line gained is the *next* line, not more of this one: the
+      // echo already ended the previous cue, so this starts a new one. It
+      // takes the grown cue's timings, which span the whole of it.
+      const grown = cue.text.slice(previous.text.length).trim();
+      if (grown) {
+        collapsed.push({ start: cue.start, end: cue.end, text: grown });
+      }
+      continue;
+    }
+
+    collapsed.push(cue);
+  }
+
+  return collapsed;
 }
