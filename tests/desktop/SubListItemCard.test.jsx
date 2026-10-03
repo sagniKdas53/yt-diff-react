@@ -1,7 +1,8 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, test, expect, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, test, expect, vi, beforeEach } from "vitest";
 import SubListItemCard from "../../src/components/SubListItemCard.jsx";
+import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 describe("SubListItemCard Component (Desktop)", () => {
@@ -176,4 +177,196 @@ describe("SubListItemCard Component (Desktop)", () => {
     fireEvent.click(downloadFileBtn);
     expect(onDownloadFile).toHaveBeenCalledWith("/downloads", "file.mp4");
   });
-});
+
+  describe("partial downloads", () => {
+    const partialRow = (missingExtras, reason) => ({
+      id: "video_789",
+      isAvailable: true,
+      video_metadatum: {
+        videoUrl: "https://youtube.com/watch?v=789",
+        title: "Partially Downloaded Video",
+        downloadStatus: true,
+        fileName: "partial.mp4",
+        saveDirectory: "/downloads",
+        missingExtras,
+        reason,
+      },
+    });
+
+    const renderPartial = (element) => {
+      const contexts = makeContexts();
+      const view = renderWithContexts(
+        <SubListItemCard {...defaultProps} element={element} />,
+        { contexts },
+      );
+      return { ...view, contexts };
+    };
+
+    const openMenu = async () => {
+      fireEvent.click(screen.getByLabelText("fetch missing extras"));
+      return screen.findByRole("menuitem", { name: /fetch missing extras/i });
+    };
+
+    beforeEach(() => {
+      globalThis.fetch = vi.fn();
+    });
+
+    test("names the missing extras and a rate-limited reason on the chip", () => {
+      renderPartial(
+        partialRow(["subtitles", "thumbnail"], "rate-limited"),
+      );
+
+      expect(
+        screen.getByText("partial: subtitles, thumbnail (rate limited)"),
+      ).toBeInTheDocument();
+    });
+
+    test("renders any other reason as given, and nothing without one", () => {
+      const { unmount } = renderPartial(partialRow(["comments"], "error"));
+      expect(screen.getByText("partial: comments (error)")).toBeInTheDocument();
+      unmount();
+
+      renderPartial(partialRow(["description"], null));
+      expect(screen.getByText("partial: description")).toBeInTheDocument();
+    });
+
+    test("shows no chip and no retry item when nothing is missing", () => {
+      renderPartial(partialRow(null, null));
+
+      expect(screen.queryByText(/^partial:/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("fetch missing extras")).toBeNull();
+    });
+
+    test("posts the row's videoUrl to /syncextras", async () => {
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({
+          url: "https://youtube.com/watch?v=789",
+          status: "recovered",
+          recovered: ["subtitles", "thumbnail"],
+          stillMissing: [],
+          reason: null,
+        }),
+      );
+      renderPartial(partialRow(["subtitles", "thumbnail"], "rate-limited"));
+
+      fireEvent.click(await openMenu());
+
+      await waitFor(() =>
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+          "http://localhost:8888/ytdiff/syncextras",
+          expect.objectContaining({ method: "post" }),
+        ),
+      );
+      const [, options] = globalThis.fetch.mock.calls.at(-1);
+      expect(JSON.parse(options.body)).toEqual({
+        videoUrl: "https://youtube.com/watch?v=789",
+      });
+    });
+
+    test("does not fire a second request while one is in flight", async () => {
+      let release;
+      renderPartial(partialRow(["subtitles"], "rate-limited"));
+      globalThis.fetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            release = () =>
+              resolve(
+                mockResponse({
+                  url: "https://youtube.com/watch?v=789",
+                  status: "recovered",
+                  recovered: ["subtitles"],
+                  stillMissing: [],
+                  reason: null,
+                }),
+              );
+          }),
+      );
+
+      const item = await openMenu();
+      fireEvent.click(item);
+      // The menu closes on the first click, so the second one comes from a
+      // click landing before the request lands.
+      fireEvent.click(item);
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByRole("progressbar", { hidden: true }),
+      ).toBeInTheDocument();
+
+      release();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("progressbar", { hidden: true }),
+        ).toBeNull(),
+      );
+    });
+
+    test("removes the chip when everything was recovered", async () => {
+      const { contexts } = renderPartial(
+        partialRow(["subtitles", "thumbnail"], "rate-limited"),
+      );
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({
+          url: "https://youtube.com/watch?v=789",
+          status: "recovered",
+          recovered: ["subtitles", "thumbnail"],
+          stillMissing: [],
+          reason: null,
+        }),
+      );
+
+      fireEvent.click(await openMenu());
+
+      await waitFor(() =>
+        expect(screen.queryByText(/^partial:/)).toBeNull(),
+      );
+      expect(screen.queryByLabelText("fetch missing extras")).toBeNull();
+      expect(contexts.notification.addNotification).toHaveBeenCalledWith(
+        expect.stringContaining("Fetched subtitles, thumbnail"),
+        "success",
+      );
+    });
+
+    test("keeps the chip and narrows it to what is still missing", async () => {
+      renderPartial(partialRow(["subtitles", "thumbnail"], "rate-limited"));
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({
+          url: "https://youtube.com/watch?v=789",
+          status: "recovered",
+          recovered: ["subtitles"],
+          stillMissing: ["thumbnail"],
+          reason: "rate-limited",
+        }),
+      );
+
+      fireEvent.click(await openMenu());
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("partial: thumbnail (rate limited)"),
+        ).toBeInTheDocument(),
+      );
+      expect(screen.getByLabelText("fetch missing extras")).toBeInTheDocument();
+    });
+
+    test("reports a refused request through the notification log", async () => {
+      const { contexts } = renderPartial(partialRow(["subtitles"], null));
+      globalThis.fetch.mockResolvedValue(
+        mockResponse({ status: "error", message: "no such video" }, {
+          ok: false,
+          status: 500,
+        }),
+      );
+
+      fireEvent.click(await openMenu());
+
+      await waitFor(() =>
+        expect(contexts.notification.addNotification).toHaveBeenCalledWith(
+          expect.stringContaining("no such video"),
+          "error",
+        ),
+      );
+      expect(screen.getByText("partial: subtitles")).toBeInTheDocument();
+    });
+  });
+ });

@@ -145,6 +145,8 @@
       "descriptionFile"?: (string | null),
       "isMetaDataSynced"?: boolean,
       "saveDirectory"?: (string | null),
+      "missingExtras"?: (Array<string> | null),
+      "lastDownloadError"?: (string | null),
     },
   }>,
   "saveDirectory": string,
@@ -320,6 +322,22 @@
  */
 
 /**
+ * @typedef {{
+  "videoUrl": string,
+}} SyncextrasRequest
+ */
+
+/**
+ * @typedef {{
+  "url": string,
+  "status": ("recovered" | "unchanged" | "failed"),
+  "recovered": Array<string>,
+  "stillMissing": Array<string>,
+  "reason": (string | null),
+}} SyncextrasResponse
+ */
+
+/**
  * @typedef {Record<string, never>} RefreshRequest
  */
 
@@ -389,6 +407,7 @@
 /** @typedef {{path: "/dedup-unlisted", request: DedupUnlistedRequest, response: DedupUnlistedResponse}} DedupUnlistedRoute */
 /** @typedef {{path: "/dedup-playlists", request: DedupPlaylistsRequest, response: DedupPlaylistsResponse}} DedupPlaylistsRoute */
 /** @typedef {{path: "/queuestatus", request: QueuestatusRequest, response: QueuestatusResponse}} QueuestatusRoute */
+/** @typedef {{path: "/syncextras", request: SyncextrasRequest, response: SyncextrasResponse}} SyncextrasRoute */
 /** @typedef {{path: "/refresh", request: RefreshRequest, response: RefreshResponse}} RefreshRoute */
 /** @typedef {{path: "/register", request: RegisterRequest, response: RegisterResponse}} RegisterRoute */
 /** @typedef {{path: "/login", request: LoginRequest, response: LoginResponse}} LoginRoute */
@@ -412,6 +431,7 @@
  *   | DedupUnlistedRoute
  *   | DedupPlaylistsRoute
  *   | QueuestatusRoute
+ *   | SyncextrasRoute
  *   | RefreshRoute
  *   | RegisterRoute
  *   | LoginRoute

@@ -64,6 +64,12 @@ const emptyBatchReindex = () => ({
  * one of them — the initializer named four of the nine, so the ref's declared
  * shape and its assigned shape disagreed from the first render.
  *
+ * The last three are the partial-download verdict: `missingExtras` is what
+ * the row's warning chip names, and `reason` is why they are missing. They
+ * ride on the ref rather than being read back from the server so the chip
+ * appears on the row the moment the download lands, instead of waiting for a
+ * `/getsub` refresh that has to agree.
+ *
  * @typedef {Object} DownloadedItem
  * @property {?string} url
  * @property {?string} title
@@ -74,6 +80,9 @@ const emptyBatchReindex = () => ({
  * @property {?string} onlineThumbnail
  * @property {?string} subTitleFile
  * @property {?string} descriptionFile
+ * @property {boolean} partial
+ * @property {Array<string> | null} missingExtras
+ * @property {?string} reason
  */
 
 export function useSocketEvents({
@@ -162,6 +171,9 @@ export function useSocketEvents({
     onlineThumbnail: null,
     subTitleFile: null,
     descriptionFile: null,
+    partial: false,
+    missingExtras: null,
+    reason: null,
   });
 
   const connectionGenerationRef = useRef(null);
@@ -252,6 +264,13 @@ export function useSocketEvents({
         onlineThumbnail: data.onlineThumbnail || null,
         subTitleFile: data.subTitleFile || null,
         descriptionFile: data.descriptionFile || null,
+        // A partial run is still a downloaded row; it is the sidecars that
+        // never turned up that the row has to keep saying out loud.
+        partial: data.partial === true,
+        missingExtras: Array.isArray(data.missingExtras)
+          ? data.missingExtras
+          : null,
+        reason: data.reason || null,
       };
       setSnack(`${data.title}`, "success");
       addNotification(`Downloaded: ${data.title}`, "success");

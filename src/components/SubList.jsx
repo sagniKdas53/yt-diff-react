@@ -477,6 +477,11 @@ function SubList({
                 saveDirectory:
                   downloadedItem.saveDirectory ??
                   item.video_metadatum.saveDirectory,
+                // The partial verdict travels with the patch, so the row's
+                // warning chip appears with the download rather than waiting
+                // for the `/getsub` refresh that would have to agree.
+                missingExtras: downloadedItem.missingExtras ?? null,
+                reason: downloadedItem.reason ?? null,
               },
             };
           }
