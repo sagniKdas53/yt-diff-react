@@ -107,6 +107,59 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(HTMLVideoElement.prototype.play).toHaveBeenCalled();
   });
 
+  test("starts at normal speed and applies a chosen rate to the element", async () => {
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
+
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    const video = document.querySelector("video");
+    expect(video.playbackRate).toBe(1);
+
+    fireEvent.click(screen.getByLabelText("playback speed"));
+    fireEvent.click(screen.getByLabelText("playback speed 1.5x"));
+
+    expect(video.playbackRate).toBe(1.5);
+    expect(localStorage.getItem("ytdiff_player_rate")).toBe("1.5");
+  });
+
+  test("restores the saved rate on the next video", async () => {
+    localStorage.setItem("ytdiff_player_rate", "0.75");
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
+
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector("video")).toBeInTheDocument();
+    });
+
+    // Applied to the element, not just remembered in state: the element is
+    // new for every track and starts at 1.
+    expect(document.querySelector("video").playbackRate).toBe(0.75);
+    expect(screen.getByLabelText("playback speed")).toHaveTextContent("0.75x");
+  });
+
+  test("falls back to normal speed for a saved rate that is not offered", async () => {
+    localStorage.setItem("ytdiff_player_rate", "3");
+    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
+
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector("video")).toBeInTheDocument();
+    });
+    expect(document.querySelector("video").playbackRate).toBe(1);
+  });
+
   test("toggles mute setting and saves in localStorage", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 

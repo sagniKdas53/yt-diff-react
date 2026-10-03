@@ -86,4 +86,20 @@ describe("VideoPlayer Component (Mobile)", () => {
     // Muted state should toggle in localStorage
     expect(localStorage.getItem("ytdiff_player_muted")).toBe("true");
   });
+
+  test("changes the playback speed from the control bar", async () => {
+    renderPlayer();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    // The rate control sits beside the volume control, which on mobile is a
+    // tap target rather than a slider — the menu itself is unchanged.
+    fireEvent.click(screen.getByLabelText("playback speed"));
+    fireEvent.click(screen.getByLabelText("playback speed 2x"));
+
+    expect(document.querySelector("video").playbackRate).toBe(2);
+    expect(localStorage.getItem("ytdiff_player_rate")).toBe("2");
+  });
 });

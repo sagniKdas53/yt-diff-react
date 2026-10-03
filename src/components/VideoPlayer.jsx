@@ -12,6 +12,8 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Slider from "@mui/material/Slider";
 import Stack from "@mui/material/Stack";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -137,6 +139,20 @@ const AutoPlaySwitch = styled(Switch)(() => ({
   },
 }));
 
+/**
+ * The speeds offered, matching what YouTube offers.
+ *
+ * A static list on purpose: the menu is a picker, not a slider, and the values
+ * are the ones people expect to find rather than a continuum.
+ */
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+/** Reads the saved rate, falling back to normal speed for anything odd. */
+function readStoredRate() {
+  const saved = Number.parseFloat(localStorage.getItem("ytdiff_player_rate"));
+  return PLAYBACK_RATES.includes(saved) ? saved : 1;
+}
+
 export default function VideoPlayer({
   saveDirectory,
   fileName,
@@ -176,6 +192,8 @@ export default function VideoPlayer({
     return saved === "true";
   });
   const [showMobileVolume, setShowMobileVolume] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(readStoredRate);
+  const [rateAnchor, setRateAnchor] = useState(null);
   const [bufferedTime, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -281,6 +299,16 @@ export default function VideoPlayer({
       setIsMuted(!isMuted);
       localStorage.setItem("ytdiff_player_muted", String(!isMuted));
     }
+  };
+
+  const changePlaybackRate = (rate) => {
+    setPlaybackRate(rate);
+    // Applied here as well as in the effect: the menu is reachable while the
+    // element is mounted, and the effect only runs again on a track change.
+    if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+    }
+    localStorage.setItem("ytdiff_player_rate", String(rate));
   };
 
   const handleVolumeChange = (_, value) => {
@@ -393,8 +421,12 @@ export default function VideoPlayer({
     if (videoRef.current) {
       videoRef.current.volume = volume;
       videoRef.current.muted = isMuted;
+      // Re-applied per track, like volume: the element is unmounted while
+      // videoUrl is null, so a new one starts at 1 and would otherwise ignore
+      // a rate chosen on the previous video.
+      videoRef.current.playbackRate = playbackRate;
     }
-  }, [videoUrl, volume, isMuted]);
+  }, [videoUrl, volume, isMuted, playbackRate]);
 
   const handleError = () => {
     const vid = videoRef.current;
@@ -781,6 +813,37 @@ export default function VideoPlayer({
                 />
               </Box>
             )}
+            <Tooltip title={`Playback speed: ${playbackRate}x`}>
+              <IconButton
+                size="small"
+                onClick={(event) => setRateAnchor(event.currentTarget)}
+                aria-label="playback speed"
+                aria-haspopup="true"
+                aria-expanded={Boolean(rateAnchor)}
+                sx={{ color: "white", fontSize: 12, px: 1 }}
+              >
+                {playbackRate}x
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={rateAnchor}
+              open={Boolean(rateAnchor)}
+              onClose={() => setRateAnchor(null)}
+            >
+              {PLAYBACK_RATES.map((rate) => (
+                <MenuItem
+                  key={rate}
+                  selected={rate === playbackRate}
+                  onClick={() => {
+                    changePlaybackRate(rate);
+                    setRateAnchor(null);
+                  }}
+                  aria-label={`playback speed ${rate}x`}
+                >
+                  {rate}x
+                </MenuItem>
+              ))}
+            </Menu>
             <IconButton
               size="small"
               onClick={handleVolumeButtonClick}
