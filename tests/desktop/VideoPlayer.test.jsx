@@ -379,6 +379,52 @@ describe("VideoPlayer Component (Desktop)", () => {
     });
   });
 
+  test("seeks when a chapter is clicked in the drawer", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post") {
+        return Promise.resolve(
+          mockResponse(
+            ({
+              status: "success",
+              signedUrlId: "signed_url_123",
+              expiry: Date.now() + 3600000,
+            }),
+          ),
+        );
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => "WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\nHello",
+        json: async () => ({ status: "success" }),
+      });
+    });
+
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        chapters={[
+          { start: 0, end: 45, title: "Opening" },
+          { start: 45, end: 132, title: "The part everyone came for" },
+        ]}
+      />,
+      { contexts },
+    );
+
+    await waitFor(() =>
+      expect(document.querySelector("video")).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByLabelText("toggle playlist drawer"));
+    fireEvent.click(screen.getByRole("tab", { name: "Chapters" }));
+    fireEvent.click(
+      screen.getByLabelText("go to chapter The part everyone came for"),
+    );
+
+    expect(document.querySelector("video").currentTime).toBe(45);
+  });
+
   test("says no chapter before the first one starts", async () => {
     globalThis.fetch.mockResolvedValueOnce(
       mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),

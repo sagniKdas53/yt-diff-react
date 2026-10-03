@@ -135,6 +135,31 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
     expect(onSeek).toHaveBeenCalledWith(5);
   });
 
+  test("the transcript can stop following the playhead", () => {
+    renderDrawer({
+      ...defaultProps,
+      rowsPerPage: 8,
+      subtitleCues: [
+        { start: 0, end: 5, text: "first line" },
+        { start: 5, end: 9, text: "second line" },
+      ],
+      currentTime: 6,
+      onSeek: vi.fn(),
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Transcript" }));
+    const cue = screen.getByLabelText("go to second line");
+    expect(cue).toHaveClass("Mui-selected");
+
+    // Reading ahead is what a transcript is for, and a list that keeps
+    // scrolling itself away while you read is worse than a static one.
+    fireEvent.click(screen.getByLabelText("sync transcript to video time"));
+
+    expect(screen.getByLabelText("go to second line")).not.toHaveClass(
+      "Mui-selected",
+    );
+  });
+
   test("renders all items in drawer list with correct states", () => {
     renderDrawer();
 

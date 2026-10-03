@@ -10,6 +10,8 @@ import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Tooltip from "@mui/material/Tooltip";
@@ -63,6 +65,10 @@ function PlayerPlaylistDrawer({
   // which is why they sit beside the playlist rather than below it: opening
   // the drawer is the gesture for finding your place.
   const [tab, setTab] = useState("playlist");
+  // YouTube lets the transcript stop following the playhead, and so does this:
+  // reading ahead is the point of a transcript, and a list that keeps
+  // scrolling itself away while you read is worse than a static one.
+  const [syncTranscript, setSyncTranscript] = useState(true);
   const showChapterTabs = chapters.length > 0 || subtitleCues.length > 0;
 
   const activeChapterIndex = useMemo(() => {
@@ -75,10 +81,12 @@ function PlayerPlaylistDrawer({
 
   const activeCueIndex = useMemo(
     () =>
-      subtitleCues.findIndex(
-        (cue) => currentTime >= cue.start && currentTime < cue.end,
-      ),
-    [subtitleCues, currentTime],
+      syncTranscript
+        ? subtitleCues.findIndex(
+          (cue) => currentTime >= cue.start && currentTime < cue.end,
+        )
+        : -1,
+    [subtitleCues, currentTime, syncTranscript],
   );
 
   const handleDownload = useCallback(
@@ -341,27 +349,46 @@ function PlayerPlaylistDrawer({
       )}
 
       {tab === "transcript" && (
-        <List sx={{ overflowY: "auto", flex: 1 }}>
-          {subtitleCues.map((cue, index) => (
-            <ListItemButton
-              key={`${cue.start}-${index}`}
-              selected={index === activeCueIndex}
-              onClick={() => onSeek?.(cue.start)}
-              aria-label={`go to ${cue.text}`}
-              sx={{ color: "white", alignItems: "flex-start" }}
-            >
-              <ListItemText
-                primary={cue.text}
-                secondary={formatTime(cue.start)}
-                primaryTypographyProps={{ variant: "body2" }}
-                secondaryTypographyProps={{
-                  variant: "caption",
-                  sx: { color: "rgba(255,255,255,0.6)" },
-                }}
-              />
-            </ListItemButton>
-          ))}
-        </List>
+        <>
+          <Box sx={{ px: 2, pt: 1, display: "flex", justifyContent: "flex-end" }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={syncTranscript}
+                  onChange={(event) => setSyncTranscript(event.target.checked)}
+                  inputProps={{ "aria-label": "sync transcript to video time" }}
+                />
+              }
+              label="Sync to video time"
+              sx={{
+                color: "rgba(255,255,255,0.7)",
+                "& .MuiFormControlLabel-label": { fontSize: 12 },
+              }}
+            />
+          </Box>
+          <List sx={{ overflowY: "auto", flex: 1 }}>
+            {subtitleCues.map((cue, index) => (
+              <ListItemButton
+                key={`${cue.start}-${index}`}
+                selected={index === activeCueIndex}
+                onClick={() => onSeek?.(cue.start)}
+                aria-label={`go to ${cue.text}`}
+                sx={{ color: "white", alignItems: "flex-start" }}
+              >
+                <ListItemText
+                  primary={cue.text}
+                  secondary={formatTime(cue.start)}
+                  primaryTypographyProps={{ variant: "body2" }}
+                  secondaryTypographyProps={{
+                    variant: "caption",
+                    sx: { color: "rgba(255,255,255,0.6)" },
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </>
       )}
 
       {/* Pagination controls */}
