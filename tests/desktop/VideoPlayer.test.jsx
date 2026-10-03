@@ -253,6 +253,80 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(screen.getByLabelText("show description")).toBeDisabled();
   });
 
+  test("seeks to the position the link named once metadata loads", async () => {
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+    );
+
+    renderWithContexts(
+      <VideoPlayer {...defaultProps} subTitleFile={null} startAt={90} />,
+      { contexts },
+    );
+
+    await waitFor(() =>
+      expect(document.querySelector("video")).toBeInTheDocument()
+    );
+    const video = document.querySelector("video");
+    fireEvent.loadedMetadata(video);
+
+    expect(video.currentTime).toBe(90);
+
+    // A recovery remint loads the metadata again; re-seeking there would
+    // throw the viewer back to the start of what they had just watched past.
+    video.currentTime = 200;
+    fireEvent.loadedMetadata(video);
+    expect(video.currentTime).toBe(200);
+  });
+
+  test("starts at the beginning when the link names no position", async () => {
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+    );
+
+    renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, {
+      contexts,
+    });
+
+    await waitFor(() =>
+      expect(document.querySelector("video")).toBeInTheDocument()
+    );
+    const video = document.querySelector("video");
+    fireEvent.loadedMetadata(video);
+
+    expect(video.currentTime).toBe(0);
+  });
+
+  test("writes the position back when playback pauses", async () => {
+    const onStartAtChange = vi.fn();
+    globalThis.fetch.mockResolvedValueOnce(
+      mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+    );
+
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        subTitleFile={null}
+        onStartAtChange={onStartAtChange}
+      />,
+      { contexts },
+    );
+
+    await waitFor(() =>
+      expect(document.querySelector("video")).toBeInTheDocument()
+    );
+    const video = document.querySelector("video");
+    fireEvent.play(video);
+    fireEvent.pause(video);
+
+    expect(onStartAtChange).toHaveBeenCalledWith(0);
+
+    // The same position again is not worth a history entry, so it is not
+    // written twice.
+    const calls = onStartAtChange.mock.calls.length;
+    fireEvent.pause(video);
+    expect(onStartAtChange.mock.calls.length).toBe(calls);
+  });
+
   test("toggles mute setting and saves in localStorage", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 

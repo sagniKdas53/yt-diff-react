@@ -12,8 +12,18 @@ import {
 // The real player pulls signed URLs and mounts a <video>; none of that is what
 // these tests are about, which is whether the location decides that it opens.
 vi.mock("../../src/components/VideoPlayer.jsx", () => ({
-  default: ({ title, fileName }) => (
-    <div data-testid="mock-player">{`playing:${title}:${fileName}`}</div>
+  default: ({ title, fileName, startAt, onStartAtChange }) => (
+    <div data-testid="mock-player">
+      {`playing:${title}:${fileName}`}
+      <button
+        type="button"
+        data-testid="mock-player-seek"
+        onClick={() => onStartAtChange && onStartAtChange(42)}
+      >
+        seek
+      </button>
+      <span data-testid="mock-player-start-at">{startAt ?? 0}</span>
+    </div>
   ),
 }));
 
@@ -54,8 +64,9 @@ const response = {
 describe("SubList — the player follows the location", () => {
   let contexts;
   let setPlayerVideoUrl;
+  let setPlayerStartAt;
 
-  const propsFor = (playerVideoUrl) => ({
+  const propsFor = (playerVideoUrl, playerStartAt = 0) => ({
     setPlayListUrl: vi.fn(),
     loadedPlayList: "https://youtube.com/playlist?list=best",
     subListIndex: 0,
@@ -68,14 +79,20 @@ describe("SubList — the player follows the location", () => {
     setRowsPerPage: vi.fn(),
     playerVideoUrl,
     setPlayerVideoUrl,
+    playerStartAt,
+    setPlayerStartAt,
   });
 
-  const renderAt = (playerVideoUrl) =>
-    renderWithContexts(<SubList {...propsFor(playerVideoUrl)} />, { contexts });
+  const renderAt = (playerVideoUrl, playerStartAt = 0) =>
+    renderWithContexts(
+      <SubList {...propsFor(playerVideoUrl, playerStartAt)} />,
+      { contexts },
+    );
 
   beforeEach(() => {
     globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(response));
     setPlayerVideoUrl = vi.fn();
+    setPlayerStartAt = vi.fn();
     contexts = makeContexts();
   });
 
@@ -91,6 +108,26 @@ describe("SubList — the player follows the location", () => {
         "playing:Video Song One:v1.mp4",
       ),
     );
+  });
+
+  test("the position in the location reaches the player", async () => {
+    renderAt(DOWNLOADED, 133);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("mock-player-start-at")).toHaveTextContent(
+        "133",
+      ),
+    );
+  });
+
+  test("the player's position is handed back to the location", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderAt(DOWNLOADED);
+
+    await waitFor(() => expect(screen.getByTestId("mock-player")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("mock-player-seek"));
+
+    expect(setPlayerStartAt).toHaveBeenCalledWith(42);
   });
 
   test("no video in the location means no player", async () => {

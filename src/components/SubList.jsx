@@ -76,6 +76,8 @@ function SubList({
   // router still plays videos, it just does not put them in the address bar.
   playerVideoUrl = null,
   setPlayerVideoUrl = NO_ROUTER,
+  playerStartAt = 0,
+  setPlayerStartAt = NO_ROUTER,
   // Where the location says this list is paged to, read once to start from.
   // After that the list owns its page and reports it back; the location
   // follows the list, not the reverse.
@@ -827,6 +829,8 @@ function SubList({
             fileName={currentPlayerFileName}
             title={currentPlayerVideoTitle}
             subTitleFile={currentPlayerSubTitleFile}
+            startAt={playerStartAt}
+            onStartAtChange={setPlayerStartAt}
             onClose={closePlayer}
             items={items}
             itemCount={itemCount}
@@ -858,6 +862,8 @@ SubList.propTypes = {
   rowsPerPage: PropTypes.number.isRequired,
   setRowsPerPage: PropTypes.func.isRequired,
   playerVideoUrl: PropTypes.string,
+  playerStartAt: PropTypes.number,
+  setPlayerStartAt: PropTypes.func,
   setPlayerVideoUrl: PropTypes.func,
   initialPage: PropTypes.number,
   onPaginationChange: PropTypes.func,

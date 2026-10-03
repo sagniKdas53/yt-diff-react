@@ -169,6 +169,8 @@ export default function VideoPlayer({
   fileName,
   title,
   subTitleFile,
+  startAt = 0,
+  onStartAtChange,
   onClose,
   items = [],
   itemCount = 0,
@@ -218,6 +220,16 @@ export default function VideoPlayer({
   const isPlayingRef = useRef(isPlaying);
   const drawerOpenRef = useRef(drawerOpen);
   const volumeTapRef = useRef(null);
+  // The position a link asked for, and the one last written back. Both are
+  // per-track: a new file starts again from wherever the link says, and a
+  // position belonging to the previous video must not be written over it.
+  const appliedStartAtRef = useRef(null);
+  const lastWrittenRef = useRef(-1);
+
+  useEffect(() => {
+    appliedStartAtRef.current = null;
+    lastWrittenRef.current = -1;
+  }, [fileName]);
 
   // Signed-URL lifecycle: minting, pre-expiry refresh, mid-stream recovery.
   const { videoUrl, loading, errorMsg, reload } = useSignedPlayback({
@@ -438,6 +450,32 @@ export default function VideoPlayer({
     }
   };
 
+  /**
+   * Hands the playhead to the location, so the link in the address bar is the
+   * link to share.
+   *
+   * Guarded against writing the value it was just given, and against writing
+   * at all when nothing asked for updates — otherwise every tick of the timer
+   * would replace a history entry that says nothing changed.
+   */
+  const writeStartAt = useCallback((seconds) => {
+    if (!onStartAtChange || !videoRef.current) return;
+    const rounded = Math.floor(seconds);
+    if (rounded === lastWrittenRef.current) return;
+    lastWrittenRef.current = rounded;
+    onStartAtChange(rounded);
+  }, [onStartAtChange]);
+
+  // While playing, roughly every ten seconds; on pause, immediately, because
+  // that is when someone is most likely to copy the link.
+  useEffect(() => {
+    if (!isPlaying) return undefined;
+    const timer = setInterval(() => {
+      if (videoRef.current) writeStartAt(videoRef.current.currentTime);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [isPlaying, writeStartAt]);
+
   useEffect(() => {
     if (videoUrl && videoRef.current) {
       videoRef.current.play().catch((e) => {
@@ -540,11 +578,27 @@ export default function VideoPlayer({
           onError={handleError}
           onProgress={handleProgress}
           onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={() =>
-            setDuration(videoRef.current ? videoRef.current.duration : 0)
-          }
+          onLoadedMetadata={() => {
+            const element = videoRef.current;
+            if (!element) return;
+            setDuration(element.duration);
+            // Once per track. A recovery remint loads the metadata again, and
+            // re-seeking there would throw the viewer back to the start of
+            // whatever they had just watched past.
+            if (startAt > 0 && appliedStartAtRef.current !== startAt) {
+              appliedStartAtRef.current = startAt;
+              lastWrittenRef.current = Math.floor(startAt);
+              element.currentTime = startAt;
+            }
+          }}
           onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPause={() => {
+            setIsPlaying(false);
+            // Written here rather than in an effect: the element's own event
+            // is the only place the final position is known before the timer
+            // is torn down.
+            writeStartAt(videoRef.current ? videoRef.current.currentTime : 0);
+          }}
           onEnded={handleVideoEnded}
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
@@ -1070,6 +1124,8 @@ VideoPlayer.propTypes = {
   fileName: PropTypes.string.isRequired,
   title: PropTypes.string,
   subTitleFile: PropTypes.string,
+  startAt: PropTypes.number,
+  onStartAtChange: PropTypes.func,
   onClose: PropTypes.func.isRequired,
   items: PropTypes.array,
   itemCount: PropTypes.number,
