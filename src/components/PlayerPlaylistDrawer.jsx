@@ -1,4 +1,4 @@
-import { useContext, useMemo, useCallback, useState } from "react";
+import { memo, useContext, useMemo, useCallback, useState } from "react";
 import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -25,7 +25,16 @@ import { DownloadContext } from "../contexts/DownloadContext";
 import { assetBase } from "../config.js";
 import { formatTime } from "../lib/subtitles.js";
 
-export default function PlayerPlaylistDrawer({
+/**
+ * The drawer's list, memoised.
+ *
+ * `timeupdate` fires about four times a second and the drawer does not care
+ * until the whole second changes — which is the only resolution its chapter
+ * and transcript highlighting moves at anyway. `currentTime` is rounded by the
+ * player before it gets here, so a tick that lands in the same second does
+ * not re-render this at all.
+ */
+function PlayerPlaylistDrawer({
   drawerOpen,
   setDrawerOpen,
   items,
@@ -425,3 +434,5 @@ PlayerPlaylistDrawer.propTypes = {
   currentTime: PropTypes.number,
   onSeek: PropTypes.func,
 };
+
+export default memo(PlayerPlaylistDrawer);

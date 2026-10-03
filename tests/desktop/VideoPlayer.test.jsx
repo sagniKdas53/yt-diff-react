@@ -399,6 +399,116 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(screen.queryByTestId("current-chapter")).toBeNull();
   });
 
+  describe("keyboard shortcuts", () => {
+    const renderForKeys = async (props = {}) => {
+      globalThis.fetch.mockResolvedValueOnce(
+        mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })),
+      );
+      const utils = renderWithContexts(
+        <VideoPlayer {...defaultProps} subTitleFile={null} {...props} />,
+        { contexts },
+      );
+      await waitFor(() =>
+        expect(document.querySelector("video")).toBeInTheDocument(),
+      );
+      return utils;
+    };
+
+    beforeEach(() => {
+      HTMLElement.prototype.requestFullscreen = vi.fn().mockResolvedValue();
+      Object.defineProperty(document, "fullscreenElement", {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    test("space and k play and pause", async () => {
+      await renderForKeys();
+      const video = document.querySelector("video");
+
+      // jsdom's `paused` is a getter, so the playing state has to be set on
+      // the instance for the second keypress to mean "pause".
+      Object.defineProperty(video, "paused", {
+        value: true,
+        configurable: true,
+      });
+      fireEvent.keyDown(document, { key: " " });
+      expect(HTMLVideoElement.prototype.play).toHaveBeenCalled();
+
+      Object.defineProperty(video, "paused", {
+        value: false,
+        configurable: true,
+      });
+      fireEvent.keyDown(document, { key: "k" });
+      expect(HTMLVideoElement.prototype.pause).toHaveBeenCalled();
+    });
+
+    test("the arrows seek and change the volume", async () => {
+      await renderForKeys();
+      const video = document.querySelector("video");
+      video.currentTime = 30;
+
+      fireEvent.keyDown(document, { key: "ArrowRight" });
+      expect(video.currentTime).toBe(40);
+
+      fireEvent.keyDown(document, { key: "ArrowLeft" });
+      expect(video.currentTime).toBe(30);
+
+      // Volume starts at full, so the first meaningful step is down.
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+      expect(localStorage.getItem("ytdiff_player_volume")).toBe("0.9");
+
+      fireEvent.keyDown(document, { key: "ArrowUp" });
+      expect(localStorage.getItem("ytdiff_player_volume")).toBe("1");
+    });
+
+    test("m mutes and f goes full screen", async () => {
+      await renderForKeys();
+
+      fireEvent.keyDown(document, { key: "m" });
+      expect(localStorage.getItem("ytdiff_player_muted")).toBe("true");
+
+      fireEvent.keyDown(document, { key: "f" });
+      expect(HTMLElement.prototype.requestFullscreen).toHaveBeenCalled();
+    });
+
+    test("angle brackets step the speed and stop at the ends", async () => {
+      await renderForKeys();
+
+      fireEvent.keyDown(document, { key: ">" });
+      expect(localStorage.getItem("ytdiff_player_rate")).toBe("1.25");
+      fireEvent.keyDown(document, { key: ">" });
+      expect(localStorage.getItem("ytdiff_player_rate")).toBe("1.5");
+      fireEvent.keyDown(document, { key: "<" });
+      fireEvent.keyDown(document, { key: "<" });
+      fireEvent.keyDown(document, { key: "<" });
+      fireEvent.keyDown(document, { key: "<" });
+      fireEvent.keyDown(document, { key: "<" });
+      // 0.5x is the slowest there is; it cannot go slower.
+      expect(localStorage.getItem("ytdiff_player_rate")).toBe("0.5");
+    });
+
+    test("c toggles subtitles only when there are any", async () => {
+      await renderForKeys({ subTitleFile: "video.vtt" });
+      fireEvent.keyDown(document, { key: "c" });
+      expect(localStorage.getItem("ytdiff_player_subtitles")).toBe("false");
+    });
+
+    test("a keystroke in a field is the field's, not the player's", async () => {
+      await renderForKeys();
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+
+      fireEvent.keyDown(input, { key: " " });
+      fireEvent.keyDown(input, { key: "ArrowRight" });
+
+      expect(HTMLVideoElement.prototype.pause).not.toHaveBeenCalled();
+      expect(localStorage.getItem("ytdiff_player_rate")).toBeNull();
+      input.remove();
+    });
+  });
+
   test("toggles mute setting and saves in localStorage", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 
