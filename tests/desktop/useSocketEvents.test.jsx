@@ -144,6 +144,34 @@ describe("useSocketEvents (Desktop)", () => {
     expect(setSubListIndex).not.toHaveBeenCalled();
   });
 
+  test("coordinates videoPage with seekSubListTo when navigating to Unlisted", () => {
+    const setPlayListUrl = vi.fn();
+    const setSubListIndex = vi.fn();
+    const setReFetchSubList = vi.fn();
+
+    render(
+      <Harness
+        playListUrlRef={{ current: "None" }}
+        videoUrlRef={{ current: null }}
+        rowsPerPageSubListRef={{ current: 10 }}
+        setPlayListUrl={setPlayListUrl}
+        setSubListIndex={setSubListIndex}
+        setReFetchSubList={setReFetchSubList}
+      />,
+    );
+
+    act(() => {
+      socket.emitTo("listing-single-item-complete", {
+        url: "https://e.com/new-bot-video",
+        title: "New Bot Video",
+        seekSubListTo: 25,
+      });
+    });
+
+    expect(setPlayListUrl).toHaveBeenCalledWith("None", { videoPage: 2 });
+    expect(setSubListIndex).toHaveBeenCalledWith(25);
+  });
+
   test("handles job-paused by removing active download and syncing queue", () => {
     const removeActiveDownload = vi.fn();
     const syncQueueFromBackend = vi.fn().mockResolvedValue(null);

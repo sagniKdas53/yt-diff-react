@@ -357,7 +357,12 @@ export default function App() {
   );
 
   useEffect(() => {
-    setSubListIndex(routeVideoPage * routeVideoPageSize);
+    setSubListIndex((prev) => {
+      if (Math.floor(prev / routeVideoPageSize) === routeVideoPage) {
+        return prev;
+      }
+      return routeVideoPage * routeVideoPageSize;
+    });
   }, [routeVideoPage, routeVideoPageSize]);
 
   useEffect(() => {
@@ -449,6 +454,7 @@ export default function App() {
   const disableProgressRef = useLatest(disableProgress);
   const toggleProgressCallBackRef = useLatest(toggleProgressCallBack);
   const isMobileRef = useLatest(isMobile);
+  const rowsPerPageSubListRef = useLatest(rowsPerPageSubList);
 
   // The socket handlers used to switch the mobile panel themselves. They no
   // longer have to: they set the playlist, the playlist is the route, and the
@@ -485,6 +491,7 @@ export default function App() {
     disableProgressRef,
     isMobileRef,
     onMobileSlideNeeded: slideInMobileVideosPanel,
+    rowsPerPageSubListRef,
   });
 
   useDependencyLogger(

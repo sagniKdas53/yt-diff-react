@@ -109,6 +109,7 @@ export function useSocketEvents({
   disableProgressRef,
   isMobileRef,
   onMobileSlideNeeded,
+  rowsPerPageSubListRef,
 }) {
   const [activeListingCount, setActiveListingCount] = useState(0);
   const activeListingCountRef = useRef(0);
@@ -306,11 +307,11 @@ export function useSocketEvents({
       if (data?.url) {
         removeActiveDownload(data.url);
       }
-      syncQueueFromBackend?.();
+      syncQueue();
     };
 
     const onJobResumed = () => {
-      syncQueueFromBackend?.();
+      syncQueue();
     };
 
     const onJobCancelled = (data) => {
@@ -318,7 +319,7 @@ export function useSocketEvents({
         removeActiveDownload(data.url);
         removeFromQueueAndRenumber(data.url);
       }
-      syncQueueFromBackend?.();
+      syncQueue();
     };
 
     const onListingStarted = () => {
@@ -438,7 +439,13 @@ export function useSocketEvents({
       const current = playListUrlRef.current;
       const isWatchingVideo = Boolean(videoUrlRef?.current);
       if ((current === "init" || current === "None") && !isWatchingVideo) {
-        setPlayListUrl("None");
+        const targetVideoPage =
+          typeof data.seekSubListTo === "number" &&
+          typeof rowsPerPageSubListRef?.current === "number" &&
+          rowsPerPageSubListRef.current > 0
+            ? Math.floor(data.seekSubListTo / rowsPerPageSubListRef.current)
+            : 0;
+        setPlayListUrl("None", { videoPage: targetVideoPage });
         setSubListIndex(data.seekSubListTo);
         triggerMobileSlideIfNeeded("Unlisted");
       }

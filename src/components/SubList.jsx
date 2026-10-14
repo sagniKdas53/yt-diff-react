@@ -195,6 +195,11 @@ function SubList({
     [setPlayerVideoUrl],
   );
 
+  const debouncedQuery = useMemo(
+    () => debounce((value) => updateQuery(value.trim()), 1000),
+    [updateQuery],
+  );
+
   /**
    * Asks `/locate` where the link's video lives, and points this list at the
    * page that holds it.
@@ -236,6 +241,7 @@ function SubList({
         }
         if (targetPage === page) {
           if (query) {
+            debouncedQuery.cancel();
             updateQuery("");
             setLocalQuery("");
             return;
@@ -252,6 +258,9 @@ function SubList({
           // anything about whether the video is on it.
           rows: itemsRef.current,
         };
+        debouncedQuery.cancel();
+        updateQuery("");
+        setLocalQuery("");
         handleChangePage(null, targetPage);
         setSubListIndex(targetPage * rowsPerPage);
       } catch (error) {
@@ -274,6 +283,7 @@ function SubList({
       query,
       updateQuery,
       setLocalQuery,
+      debouncedQuery,
     ],
   );
 
@@ -635,11 +645,6 @@ function SubList({
     updateSelected({});
     updateSort(false);
   }, [loadedPlayList]);
-
-  const debouncedQuery = useMemo(
-    () => debounce((value) => updateQuery(value.trim()), 1000),
-    [],
-  );
 
   const handleQueryChange = (event) => {
     setLocalQuery(event.target.value);

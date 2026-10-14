@@ -643,8 +643,11 @@ export default function VideoPlayer({
           top: 0,
           left: 0,
           bottom: 0,
-          right: drawerOpen ? { xs: 0, sm: "350px" } : 0,
+          right: drawerOpen ? { xs: 0, md: "350px" } : 0,
           transition: "right 0.3s ease-in-out",
+          "@media (prefers-reduced-motion: reduce)": {
+            transition: "none",
+          },
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

@@ -356,7 +356,7 @@ function PlayerPlaylistDrawer({
       variant="persistent"
       sx={{
         "& .MuiDrawer-paper": {
-          width: { xs: "100%", sm: 350 },
+          width: { xs: "100%", md: 350 },
           bgcolor: "rgba(18, 18, 18, 0.98)",
           color: "white",
           boxSizing: "border-box",
