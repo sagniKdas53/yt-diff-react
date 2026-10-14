@@ -39,7 +39,9 @@ export function areJobsEqual(prev, next) {
       p.queuePosition !== n.queuePosition ||
       p.progress?.percent !== n.progress?.percent ||
       p.progress?.downloadedBytes !== n.progress?.downloadedBytes ||
-      p.progress?.totalBytes !== n.progress?.totalBytes
+      p.progress?.totalBytes !== n.progress?.totalBytes ||
+      p.progress?.bytesPerSecond !== n.progress?.bytesPerSecond ||
+      p.progress?.etaSeconds !== n.progress?.etaSeconds
     ) {
       return false;
     }

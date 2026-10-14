@@ -248,5 +248,16 @@ describe("stripVttTags", () => {
       "Hello 'World' \"quote\"",
     );
   });
+
+  it("preserves ordinary comparison text like 1 < 2 > 0", () => {
+    expect(stripVttTags("The condition was 1 < 2 > 0 indeed")).toBe(
+      "The condition was 1 < 2 > 0 indeed",
+    );
+  });
+
+  it("decodes entities in a single pass without cascading expansion", () => {
+    expect(stripVttTags("&amp;lt;")).toBe("&lt;");
+    expect(stripVttTags("&amp;amp;")).toBe("&amp;");
+  });
 });
 

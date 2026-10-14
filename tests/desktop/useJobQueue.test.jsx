@@ -350,5 +350,27 @@ describe("areJobsEqual", () => {
       ],
     };
     expect(areJobsEqual(queueA, changedQueue)).toBe(false);
+
+    const changedSpeed = {
+      ...queueB,
+      downloads: [
+        {
+          ...queueB.downloads[0],
+          progress: { ...queueB.downloads[0].progress, bytesPerSecond: 1000 },
+        },
+      ],
+    };
+    expect(areJobsEqual(queueA, changedSpeed)).toBe(false);
+
+    const changedEta = {
+      ...queueB,
+      downloads: [
+        {
+          ...queueB.downloads[0],
+          progress: { ...queueB.downloads[0].progress, etaSeconds: 30 },
+        },
+      ],
+    };
+    expect(areJobsEqual(queueA, changedEta)).toBe(false);
   });
 });

@@ -39,22 +39,30 @@ function parseTimestamp(ts) {
   return 0;
 }
 
+const VTT_ENTITIES = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": "\"",
+  "&#39;": "'",
+  "&nbsp;": " ",
+};
+
+const VTT_TAG_REGEX =
+  /<(?:\/?(?:c(?:\.[^\s>]+)?|v(?:\s+[^>]+)?|lang(?:\s+[^>]+)?|b|i|u|ruby|rt)|\d{1,2}:(?:\d{2}:)?\d{2}[.,]\d{3})>/g;
+
+const VTT_ENTITY_REGEX = /&(?:amp|lt|gt|quot|#39|nbsp);/g;
+
 /**
- * Strips WebVTT timestamp tags, karaoke markers, inline markup, and decodes HTML entities.
+ * Strips WebVTT timestamp tags, karaoke markers, inline markup, and decodes HTML entities in a single pass.
  *
  * @param {string} text
  * @returns {string}
  */
 export function stripVttTags(text) {
   return text
-    .replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
+    .replace(VTT_TAG_REGEX, "")
+    .replace(VTT_ENTITY_REGEX, (entity) => VTT_ENTITIES[entity] ?? entity)
     .replace(/\s{2,}/g, " ")
     .trim();
 }
