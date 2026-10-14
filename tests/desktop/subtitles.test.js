@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatTime, parseSubtitleText } from "../../src/lib/subtitles.js";
+import { formatTime, parseSubtitleText, stripVttTags } from "../../src/lib/subtitles.js";
 import autoSubVtt from "../fixtures/yt-auto-subs.en.vtt?raw";
 
 /**
@@ -238,3 +238,15 @@ describe("parseSubtitleText with YouTube auto-captions", () => {
     ]);
   });
 });
+
+describe("stripVttTags", () => {
+  it("strips tags and decodes html entities cleanly", () => {
+    expect(
+      stripVttTags("<00:00:01.000><c.color>Fish &amp; Chips</c> &lt;good&gt;"),
+    ).toBe("Fish & Chips <good>");
+    expect(stripVttTags("<b>Hello</b> &#39;World&#39; &quot;quote&quot;")).toBe(
+      "Hello 'World' \"quote\"",
+    );
+  });
+});
+

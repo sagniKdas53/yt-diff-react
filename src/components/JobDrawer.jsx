@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { memo, useCallback, useContext, useMemo, useState } from "react";
 import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -87,9 +87,17 @@ function JobRow({ job, kind, onAct, busy }) {
 
   let detail = "";
   if (queued) {
-    detail = job.queuePosition > 0
-      ? `Queued · position ${job.queuePosition}`
-      : "Queued";
+    const pos = job.queuePosition > 0 ? `position ${job.queuePosition}` : "";
+    if (kind === "download" && job.progress?.downloadedBytes > 0) {
+      const bytes = job.progress.totalBytes
+        ? `${formatBytes(job.progress.downloadedBytes)} of ${formatBytes(job.progress.totalBytes)}`
+        : formatBytes(job.progress.downloadedBytes);
+      detail = pos
+        ? `Queued · ${pos} · resumed from ${bytes}`
+        : `Queued · resumed from ${bytes}`;
+    } else {
+      detail = pos ? `Queued · ${pos}` : "Queued";
+    }
   } else if (paused) {
     detail = kind === "download"
       ? "Paused · partial file kept"
@@ -170,7 +178,9 @@ function JobRow({ job, kind, onAct, busy }) {
       )}
       {queued && (
         <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
-          Nothing downloaded yet — cancelling this one costs nothing.
+          {kind === "download" && job.progress?.downloadedBytes > 0
+            ? "Resuming with partial download retained."
+            : "Nothing downloaded yet — cancelling this one costs nothing."}
         </Typography>
       )}
       <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
@@ -224,6 +234,8 @@ JobRow.propTypes = {
   busy: PropTypes.bool,
 };
 
+const MemoJobRow = memo(JobRow);
+
 /** A titled group of jobs, or nothing at all when the group is empty. */
 function JobGroup({ heading, Icon, jobs, kind, onAct, busyId }) {
   if (jobs.length === 0) return null;
@@ -240,7 +252,7 @@ function JobGroup({ heading, Icon, jobs, kind, onAct, busyId }) {
       </Box>
       <Box>
         {jobs.map((job) => (
-          <JobRow
+          <MemoJobRow
             key={job.id}
             job={job}
             kind={kind}
@@ -261,6 +273,8 @@ JobGroup.propTypes = {
   onAct: PropTypes.func.isRequired,
   busyId: PropTypes.string,
 };
+
+const MemoJobGroup = memo(JobGroup);
 
 /**
  * Every download and playlist listing the server is running or holding, and
@@ -376,7 +390,7 @@ export default function JobDrawer({ enabled, badgeColor }) {
             </Box>
           )}
           <Box sx={{ flexGrow: 1, overflowY: "auto", pb: 2 }}>
-            <JobGroup
+            <MemoJobGroup
               heading="Listings"
               Icon={ListingIcon}
               jobs={listings}
@@ -387,7 +401,7 @@ export default function JobDrawer({ enabled, badgeColor }) {
             {listings.length > 0 && downloads.length > 0 && (
               <Divider sx={{ mt: 2 }} />
             )}
-            <JobGroup
+            <MemoJobGroup
               heading="Videos"
               Icon={DownloadIcon}
               jobs={downloads}

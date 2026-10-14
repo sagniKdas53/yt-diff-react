@@ -40,6 +40,26 @@ function parseTimestamp(ts) {
 }
 
 /**
+ * Strips WebVTT timestamp tags, karaoke markers, inline markup, and decodes HTML entities.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function stripVttTags(text) {
+  return text
+    .replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Parses WebVTT subtitle text into plain-text cues.
  *
  * Strips VTT formatting along the way: timestamp tags (`<00:00:25.600>`),
@@ -56,8 +76,6 @@ export function parseSubtitleText(text) {
   const wrapped = [];
   const normalized = text.replace(/^\uFEFF/, "").replace(/\r/g, "");
   const blocks = normalized.split(/\n\n+/);
-
-  const parser = new DOMParser();
 
   for (const block of blocks) {
     const lines = block.trim().split("\n");
@@ -90,13 +108,7 @@ export function parseSubtitleText(text) {
     const rawLines = lines.slice(timingIdx + 1);
     const rawText = rawLines.join("\n").trim();
 
-    // Strip VTT formatting: timestamp tags <00:00:25.600>, karaoke <c>/</c>,
-    // and any other VTT markup tags like <b>, <i>, <u>, <ruby>, etc.
-    const noTimeTags = rawText.replace(/<\d{2}:\d{2}:\d{2}\.\d{3}>/g, "");
-    const doc = parser.parseFromString(noTimeTags, "text/html");
-    const textContent = (doc.body.textContent || "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
+    const textContent = stripVttTags(rawText);
 
     if (textContent) {
       cues.push({ start, end, text: textContent });

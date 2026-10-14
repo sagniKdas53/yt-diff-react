@@ -275,4 +275,16 @@ describe("PlayerPlaylistDrawer Component (Desktop)", () => {
     fireEvent.click(nextBtn);
     expect(defaultProps.setPage).toHaveBeenCalledWith(1);
   });
+
+  test("hides pagination controls when viewing transcript or chapters tab", () => {
+    renderDrawer({
+      ...defaultProps,
+      items: mockItems.slice(0, 2),
+      subtitleCues: [{ start: 0, end: 5, text: "cue 1" }],
+    });
+
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Transcript" }));
+    expect(screen.queryByText("1 / 2")).not.toBeInTheDocument();
+  });
 });

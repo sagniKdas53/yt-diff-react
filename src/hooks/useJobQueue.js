@@ -16,6 +16,54 @@ export const POLL_CLOSED_MS = 10000;
 const EMPTY = { downloads: [], listings: [] };
 
 /**
+ * Checks structural equality of queue jobs to prevent unnecessary state references and re-renders.
+ */
+export function areJobsEqual(prev, next) {
+  if (prev === next) return true;
+  if (!prev || !next) return false;
+  const prevDownloads = prev.downloads || [];
+  const nextDownloads = next.downloads || [];
+  if (prevDownloads.length !== nextDownloads.length) return false;
+  const prevListings = prev.listings || [];
+  const nextListings = next.listings || [];
+  if (prevListings.length !== nextListings.length) return false;
+
+  for (let i = 0; i < prevDownloads.length; i++) {
+    const p = prevDownloads[i];
+    const n = nextDownloads[i];
+    if (
+      p.id !== n.id ||
+      p.state !== n.state ||
+      p.url !== n.url ||
+      p.title !== n.title ||
+      p.queuePosition !== n.queuePosition ||
+      p.progress?.percent !== n.progress?.percent ||
+      p.progress?.downloadedBytes !== n.progress?.downloadedBytes ||
+      p.progress?.totalBytes !== n.progress?.totalBytes
+    ) {
+      return false;
+    }
+  }
+
+  for (let i = 0; i < prevListings.length; i++) {
+    const p = prevListings[i];
+    const n = nextListings[i];
+    if (
+      p.id !== n.id ||
+      p.state !== n.state ||
+      p.url !== n.url ||
+      p.title !== n.title ||
+      p.queuePosition !== n.queuePosition ||
+      p.itemsIndexed !== n.itemsIndexed
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * A snapshot reader that never lets two reads overlap, but never drops a
  * request either.
  *
@@ -73,19 +121,23 @@ export function useJobQueue({ enabled, open }) {
   const [jobs, setJobs] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const initialRef = useRef(true);
 
   const read = useCallback(async () => {
-    setLoading(true);
+    if (initialRef.current) {
+      setLoading(true);
+    }
     try {
       // An empty object, not nothing: the endpoint validates its body and
       // answers "Empty Request Body" when there is none, which the drawer
       // would then render as an empty queue — indistinguishable from the
       // server having nothing to do.
       const body = await api.post("/queuestatus", {});
-      setJobs({
+      const nextJobs = {
         downloads: Array.isArray(body.queue) ? body.queue : [],
         listings: Array.isArray(body.listings) ? body.listings : [],
-      });
+      };
+      setJobs((prev) => (areJobsEqual(prev, nextJobs) ? prev : nextJobs));
       setError(null);
     } catch (failure) {
       // A failed poll is shown and forgotten on the next tick. Holding the
@@ -93,7 +145,10 @@ export function useJobQueue({ enabled, open }) {
       // that has stopped being true.
       setError(failure?.message ?? "Could not read the queue");
     } finally {
-      setLoading(false);
+      if (initialRef.current) {
+        initialRef.current = false;
+        setLoading(false);
+      }
     }
   }, [api]);
 

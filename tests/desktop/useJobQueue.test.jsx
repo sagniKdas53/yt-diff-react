@@ -12,6 +12,7 @@ import {
   POLL_CLOSED_MS,
   POLL_OPEN_MS,
   useJobQueue,
+  areJobsEqual,
 } from "../../src/hooks/useJobQueue.js";
 import { mockResponse, makeContexts } from "../contextHarness.jsx";
 import { ContextHarness } from "../contextHarness.jsx";
@@ -286,5 +287,68 @@ describe("useJobQueue", () => {
       () => expect(result.current.jobs.downloads[0].state).toBe("paused"),
       { timeout: 1000 }
     );
+  });
+});
+
+describe("areJobsEqual", () => {
+  test("returns true for identical job lists and false for differences", () => {
+    const queueA = {
+      downloads: [
+        {
+          id: "1",
+          state: "running",
+          url: "u1",
+          title: "t1",
+          queuePosition: 0,
+          progress: { percent: 50, downloadedBytes: 500, totalBytes: 1000 },
+        },
+      ],
+      listings: [
+        {
+          id: "2",
+          state: "running",
+          url: "u2",
+          title: "t2",
+          queuePosition: 0,
+          itemsIndexed: 10,
+        },
+      ],
+    };
+
+    const queueB = {
+      downloads: [
+        {
+          id: "1",
+          state: "running",
+          url: "u1",
+          title: "t1",
+          queuePosition: 0,
+          progress: { percent: 50, downloadedBytes: 500, totalBytes: 1000 },
+        },
+      ],
+      listings: [
+        {
+          id: "2",
+          state: "running",
+          url: "u2",
+          title: "t2",
+          queuePosition: 0,
+          itemsIndexed: 10,
+        },
+      ],
+    };
+
+    expect(areJobsEqual(queueA, queueB)).toBe(true);
+
+    const changedQueue = {
+      ...queueB,
+      downloads: [
+        {
+          ...queueB.downloads[0],
+          progress: { percent: 60, downloadedBytes: 600, totalBytes: 1000 },
+        },
+      ],
+    };
+    expect(areJobsEqual(queueA, changedQueue)).toBe(false);
   });
 });

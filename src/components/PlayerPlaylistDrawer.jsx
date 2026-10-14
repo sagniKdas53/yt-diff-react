@@ -27,6 +27,80 @@ import { DownloadContext } from "../contexts/DownloadContext";
 import { assetBase } from "../config.js";
 import { formatTime } from "../lib/subtitles.js";
 
+function ChapterItem({ chapter, index, isSelected, onSeek }) {
+  const handleClick = useCallback(() => {
+    onSeek?.(chapter.start);
+  }, [onSeek, chapter.start]);
+
+  return (
+    <ListItemButton
+      selected={isSelected}
+      onClick={handleClick}
+      aria-label={`go to chapter ${chapter.title || index + 1}`}
+      sx={{ color: "white" }}
+    >
+      <ListItemText
+        primary={chapter.title || `Chapter ${index + 1}`}
+        secondary={formatTime(chapter.start)}
+        primaryTypographyProps={{ variant: "body2" }}
+        secondaryTypographyProps={{
+          variant: "caption",
+          sx: { color: "rgba(255,255,255,0.6)" },
+        }}
+      />
+    </ListItemButton>
+  );
+}
+
+ChapterItem.propTypes = {
+  chapter: PropTypes.shape({
+    start: PropTypes.number.isRequired,
+    title: PropTypes.string,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  isSelected: PropTypes.bool.isRequired,
+  onSeek: PropTypes.func,
+};
+
+const MemoChapterItem = memo(ChapterItem);
+
+function TranscriptCueItem({ cue, isSelected, onSeek }) {
+  const handleClick = useCallback(() => {
+    onSeek?.(cue.start);
+  }, [onSeek, cue.start]);
+
+  return (
+    <ListItemButton
+      selected={isSelected}
+      onClick={handleClick}
+      aria-label={`go to ${cue.text}`}
+      sx={{ color: "white", alignItems: "flex-start" }}
+    >
+      <ListItemText
+        primary={cue.text}
+        secondary={formatTime(cue.start)}
+        primaryTypographyProps={{ variant: "body2" }}
+        secondaryTypographyProps={{
+          variant: "caption",
+          sx: { color: "rgba(255,255,255,0.6)" },
+        }}
+      />
+    </ListItemButton>
+  );
+}
+
+TranscriptCueItem.propTypes = {
+  cue: PropTypes.shape({
+    start: PropTypes.number.isRequired,
+    end: PropTypes.number,
+    text: PropTypes.string.isRequired,
+  }).isRequired,
+  isSelected: PropTypes.bool.isRequired,
+  onSeek: PropTypes.func,
+};
+
+const MemoTranscriptCueItem = memo(TranscriptCueItem);
+
 /**
  * The drawer's list, memoised.
  *
@@ -271,8 +345,7 @@ function PlayerPlaylistDrawer({
       sx={{
         "& .MuiDrawer-paper": {
           width: { xs: "100%", sm: 350 },
-          bgcolor: "rgba(0, 0, 0, 0.85)",
-          backdropFilter: "blur(8px)",
+          bgcolor: "rgba(18, 18, 18, 0.98)",
           color: "white",
           boxSizing: "border-box",
           borderLeft: "1px solid rgba(255,255,255,0.1)",
@@ -337,23 +410,13 @@ function PlayerPlaylistDrawer({
       {effectiveTab === "chapters" && (
         <List sx={{ overflowY: "auto", flex: 1 }}>
           {chapters.map((chapter, index) => (
-            <ListItemButton
+            <MemoChapterItem
               key={`${chapter.start}-${index}`}
-              selected={index === activeChapterIndex}
-              onClick={() => onSeek?.(chapter.start)}
-              aria-label={`go to chapter ${chapter.title || index + 1}`}
-              sx={{ color: "white" }}
-            >
-              <ListItemText
-                primary={chapter.title || `Chapter ${index + 1}`}
-                secondary={formatTime(chapter.start)}
-                primaryTypographyProps={{ variant: "body2" }}
-                secondaryTypographyProps={{
-                  variant: "caption",
-                  sx: { color: "rgba(255,255,255,0.6)" },
-                }}
-              />
-            </ListItemButton>
+              chapter={chapter}
+              index={index}
+              isSelected={index === activeChapterIndex}
+              onSeek={onSeek}
+            />
           ))}
         </List>
       )}
@@ -379,30 +442,19 @@ function PlayerPlaylistDrawer({
           </Box>
           <List sx={{ overflowY: "auto", flex: 1 }}>
             {subtitleCues.map((cue, index) => (
-              <ListItemButton
+              <MemoTranscriptCueItem
                 key={`${cue.start}-${index}`}
-                selected={index === activeCueIndex}
-                onClick={() => onSeek?.(cue.start)}
-                aria-label={`go to ${cue.text}`}
-                sx={{ color: "white", alignItems: "flex-start" }}
-              >
-                <ListItemText
-                  primary={cue.text}
-                  secondary={formatTime(cue.start)}
-                  primaryTypographyProps={{ variant: "body2" }}
-                  secondaryTypographyProps={{
-                    variant: "caption",
-                    sx: { color: "rgba(255,255,255,0.6)" },
-                  }}
-                />
-              </ListItemButton>
+                cue={cue}
+                isSelected={index === activeCueIndex}
+                onSeek={onSeek}
+              />
             ))}
           </List>
         </>
       )}
 
       {/* Pagination controls */}
-      {totalPages > 1 && (
+      {effectiveTab === "playlist" && totalPages > 1 && (
         <Box
           sx={{
             display: "flex",
