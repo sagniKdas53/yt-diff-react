@@ -637,18 +637,32 @@ export default function VideoPlayer({
         cursor: showControls ? "default" : "none",
       }}
     >
-      {loading && !videoUrl && (
-        <CircularProgress
-          sx={{ position: "absolute", zIndex: 10, color: "white" }}
-        />
-      )}
-      {errorMsg && (
-        <Typography color="error" sx={{ position: "absolute", zIndex: 10 }}>
-          Error: {errorMsg}
-        </Typography>
-      )}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          bottom: 0,
+          right: drawerOpen ? { xs: 0, sm: "350px" } : 0,
+          transition: "right 0.3s ease-in-out",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        {loading && !videoUrl && (
+          <CircularProgress
+            sx={{ position: "absolute", zIndex: 10, color: "white" }}
+          />
+        )}
+        {errorMsg && (
+          <Typography color="error" sx={{ position: "absolute", zIndex: 10 }}>
+            Error: {errorMsg}
+          </Typography>
+        )}
 
-      {videoUrl && (
+        {videoUrl && (
         <video
           ref={videoRef}
           onError={handleError}
@@ -830,6 +844,7 @@ export default function VideoPlayer({
         descriptionAvailable={hasDescription}
         onShowDescription={showDescription}
       />
+    </Box>
 
       <Dialog
         ref={descriptionDialogRef}

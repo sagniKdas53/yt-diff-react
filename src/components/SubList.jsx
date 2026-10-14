@@ -227,10 +227,19 @@ function SubList({
         // there would fetch the same rows again and never finish.
         if (
           targetPage === null ||
-          targetPage === page ||
           (location.playlistUrl !== null &&
             location.playlistUrl !== loadedPlayList)
         ) {
+          locatedRef.current = { ...asked, status: "unplaced" };
+          dropLinkVideo();
+          return;
+        }
+        if (targetPage === page) {
+          if (query) {
+            updateQuery("");
+            setLocalQuery("");
+            return;
+          }
           locatedRef.current = { ...asked, status: "unplaced" };
           dropLinkVideo();
           return;
@@ -243,6 +252,7 @@ function SubList({
           // anything about whether the video is on it.
           rows: itemsRef.current,
         };
+        handleChangePage(null, targetPage);
         setSubListIndex(targetPage * rowsPerPage);
       } catch (error) {
         locatedRef.current = { ...asked, status: "unplaced" };
@@ -259,7 +269,11 @@ function SubList({
       page,
       loadedPlayList,
       dropLinkVideo,
+      handleChangePage,
       setSubListIndex,
+      query,
+      updateQuery,
+      setLocalQuery,
     ],
   );
 

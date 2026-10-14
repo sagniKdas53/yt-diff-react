@@ -115,4 +115,94 @@ describe("useSocketEvents (Desktop)", () => {
     expect(item.missingExtras).toBeNull();
     expect(item.reason).toBeNull();
   });
+
+  test("does not navigate away or seek when user is watching a video", () => {
+    const setPlayListUrl = vi.fn();
+    const setSubListIndex = vi.fn();
+    const setReFetchSubList = vi.fn();
+
+    render(
+      <Harness
+        playListUrlRef={{ current: "None" }}
+        videoUrlRef={{ current: "https://e.com/active-video" }}
+        setPlayListUrl={setPlayListUrl}
+        setSubListIndex={setSubListIndex}
+        setReFetchSubList={setReFetchSubList}
+      />,
+    );
+
+    act(() => {
+      socket.emitTo("listing-single-item-complete", {
+        url: "https://e.com/new-bot-video",
+        title: "New Bot Video",
+        seekSubListTo: 42,
+      });
+    });
+
+    expect(setReFetchSubList).toHaveBeenCalled();
+    expect(setPlayListUrl).not.toHaveBeenCalled();
+    expect(setSubListIndex).not.toHaveBeenCalled();
+  });
+
+  test("handles job-paused by removing active download and syncing queue", () => {
+    const removeActiveDownload = vi.fn();
+    const syncQueueFromBackend = vi.fn().mockResolvedValue(null);
+
+    render(
+      <Harness
+        removeActiveDownload={removeActiveDownload}
+        syncQueueFromBackend={syncQueueFromBackend}
+      />,
+    );
+
+    act(() => {
+      socket.emitTo("job-paused", {
+        type: "download",
+        url: "https://e.com/paused-video",
+      });
+    });
+
+    expect(removeActiveDownload).toHaveBeenCalledWith("https://e.com/paused-video");
+    expect(syncQueueFromBackend).toHaveBeenCalled();
+  });
+
+  test("handles job-resumed by syncing queue", () => {
+    const syncQueueFromBackend = vi.fn().mockResolvedValue(null);
+
+    render(<Harness syncQueueFromBackend={syncQueueFromBackend} />);
+
+    act(() => {
+      socket.emitTo("job-resumed", {
+        type: "download",
+        url: "https://e.com/resumed-video",
+      });
+    });
+
+    expect(syncQueueFromBackend).toHaveBeenCalled();
+  });
+
+  test("handles job-cancelled by removing active download, renumbering, and syncing queue", () => {
+    const removeActiveDownload = vi.fn();
+    const removeFromQueueAndRenumber = vi.fn();
+    const syncQueueFromBackend = vi.fn().mockResolvedValue(null);
+
+    render(
+      <Harness
+        removeActiveDownload={removeActiveDownload}
+        removeFromQueueAndRenumber={removeFromQueueAndRenumber}
+        syncQueueFromBackend={syncQueueFromBackend}
+      />,
+    );
+
+    act(() => {
+      socket.emitTo("job-cancelled", {
+        type: "download",
+        url: "https://e.com/cancelled-video",
+      });
+    });
+
+    expect(removeActiveDownload).toHaveBeenCalledWith("https://e.com/cancelled-video");
+    expect(removeFromQueueAndRenumber).toHaveBeenCalledWith("https://e.com/cancelled-video");
+    expect(syncQueueFromBackend).toHaveBeenCalled();
+  });
 });

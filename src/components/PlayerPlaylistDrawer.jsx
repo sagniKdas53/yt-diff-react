@@ -1,4 +1,4 @@
-import { memo, useContext, useMemo, useCallback, useState } from "react";
+import { memo, useContext, useMemo, useCallback, useState, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
@@ -65,12 +65,24 @@ ChapterItem.propTypes = {
 const MemoChapterItem = memo(ChapterItem);
 
 function TranscriptCueItem({ cue, isSelected, onSeek }) {
+  const itemRef = useRef(null);
+
+  useEffect(() => {
+    if (isSelected && typeof itemRef.current?.scrollIntoView === "function") {
+      itemRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [isSelected]);
+
   const handleClick = useCallback(() => {
     onSeek?.(cue.start);
   }, [onSeek, cue.start]);
 
   return (
     <ListItemButton
+      ref={itemRef}
       selected={isSelected}
       onClick={handleClick}
       aria-label={`go to ${cue.text}`}

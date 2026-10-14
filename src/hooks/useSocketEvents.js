@@ -38,6 +38,7 @@ const emptyBatchReindex = () => ({
  * @param {(url: string, position: number) => void} deps.setQueuePosition
  * @param {() => Promise<number | null>} deps.syncQueueFromBackend
  * @param {{current: string}} deps.playListUrlRef - Current loaded playlist.
+ * @param {{current: ?string}} [deps.videoUrlRef] - Current playing video URL, if any.
  * @param {(url: string) => void} deps.setPlayListUrl
  * @param {(index: number) => void} deps.setPlayListIndex
  * @param {(index: number) => void} deps.setSubListIndex
@@ -97,6 +98,7 @@ export function useSocketEvents({
   clearDownloadState,
   setQueuePosition,
   syncQueueFromBackend,
+  videoUrlRef,
   playListUrlRef,
   setPlayListUrl,
   setPlayListIndex,
@@ -300,6 +302,25 @@ export function useSocketEvents({
       }
     };
 
+    const onJobPaused = (data) => {
+      if (data?.url) {
+        removeActiveDownload(data.url);
+      }
+      syncQueueFromBackend?.();
+    };
+
+    const onJobResumed = () => {
+      syncQueueFromBackend?.();
+    };
+
+    const onJobCancelled = (data) => {
+      if (data?.url) {
+        removeActiveDownload(data.url);
+        removeFromQueueAndRenumber(data.url);
+      }
+      syncQueueFromBackend?.();
+    };
+
     const onListingStarted = () => {
       incrementListings();
       toggleProgressCallBackRef.current(false);
@@ -415,7 +436,8 @@ export function useSocketEvents({
       );
 
       const current = playListUrlRef.current;
-      if (current === "init" || current === "None") {
+      const isWatchingVideo = Boolean(videoUrlRef?.current);
+      if ((current === "init" || current === "None") && !isWatchingVideo) {
         setPlayListUrl("None");
         setSubListIndex(data.seekSubListTo);
         triggerMobileSlideIfNeeded("Unlisted");
@@ -544,6 +566,9 @@ export function useSocketEvents({
       ["download-done", onDownloadDone],
       ["download-failed", onDownloadFailed],
       ["downloading-percent-update", onDownloadingPercentUpdate],
+      ["job-paused", onJobPaused],
+      ["job-resumed", onJobResumed],
+      ["job-cancelled", onJobCancelled],
 
       ["listing-started", onListingStarted],
       ["listing-playlist-complete", onListingPlaylistComplete],

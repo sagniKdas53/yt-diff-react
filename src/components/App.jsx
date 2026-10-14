@@ -282,12 +282,17 @@ export default function App() {
    * an entry they have to press Back through to leave.
    */
   const replacePlayListUrl = useCallback(
-    (url) =>
+    (url, options = {}) =>
       navigate(
-        { playlistUrl: url, videoUrl: null, videoPage: 0 },
+        {
+          playlistUrl: url,
+          videoUrl: options.preserveVideo ? routeVideoUrl : null,
+          videoPage:
+            options.videoPage ?? (options.preserveVideo ? routeVideoPage : 0),
+        },
         { replace: true },
       ),
-    [navigate],
+    [navigate, routeVideoUrl, routeVideoPage],
   );
 
   /**
@@ -350,6 +355,14 @@ export default function App() {
   const [playListIndex, setPlayListIndex] = useState(
     () => routePlaylistPage * routePlaylistPageSize,
   );
+
+  useEffect(() => {
+    setSubListIndex(routeVideoPage * routeVideoPageSize);
+  }, [routeVideoPage, routeVideoPageSize]);
+
+  useEffect(() => {
+    setPlayListIndex(routePlaylistPage * routePlaylistPageSize);
+  }, [routePlaylistPage, routePlaylistPageSize]);
   const [disableProgress, toggleProgress] = useState(false);
 
   // progress bar and re-fetch state
@@ -432,6 +445,7 @@ export default function App() {
   // Only for values that actually change between renders; the callbacks the
   // providers hand out are already stable.
   const playListUrlRef = useLatest(playListUrl);
+  const videoUrlRef = useLatest(routeVideoUrl);
   const disableProgressRef = useLatest(disableProgress);
   const toggleProgressCallBackRef = useLatest(toggleProgressCallBack);
   const isMobileRef = useLatest(isMobile);
@@ -458,6 +472,7 @@ export default function App() {
     clearDownloadState,
     setQueuePosition,
     syncQueueFromBackend,
+    videoUrlRef,
     playListUrlRef,
     // Replaces: see `replacePlayListUrl`. Nothing in here is a navigation the
     // user asked for.
