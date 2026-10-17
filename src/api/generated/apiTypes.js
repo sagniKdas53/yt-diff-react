@@ -51,6 +51,7 @@
     "title": string,
     "saveDirectory": string,
     "videoId": string,
+    "id": string,
   }>,
 }} DownloadResponse
  */
@@ -142,9 +143,18 @@
       "thumbNailFile"?: (string | null),
       "onlineThumbnail"?: (string | null),
       "subTitleFile"?: (string | null),
+      "commentsFile"?: (string | null),
+      "chapters"?: (Array<{
+        "start": number,
+        "end": number,
+        "title": string,
+      }> | null),
       "descriptionFile"?: (string | null),
       "isMetaDataSynced"?: boolean,
       "saveDirectory"?: (string | null),
+      "missingExtras"?: (Array<string> | null),
+      "lastDownloadError"?: (string | null),
+      "botExpiresAt"?: (string | null),
     },
   }>,
   "saveDirectory": string,
@@ -311,12 +321,117 @@
   "status": "success",
   "generation": (string | number),
   "queue": Array<{
+    "id": string,
+    "kind": ("download" | "listing"),
     "url": string,
     "title": string,
-    "status": string,
+    "state": ("queued" | "running" | "paused"),
     "queuePosition": number,
+    "progress": ({
+      "downloadedBytes": number,
+      "totalBytes": (number | null),
+      "bytesPerSecond": (number | null),
+      "etaSeconds": (number | null),
+    } | null),
+    "itemsIndexed": (number | null),
+    "startedAt": number,
+  }>,
+  "listings": Array<{
+    "id": string,
+    "kind": ("download" | "listing"),
+    "url": string,
+    "title": string,
+    "state": ("queued" | "running" | "paused"),
+    "queuePosition": number,
+    "progress": ({
+      "downloadedBytes": number,
+      "totalBytes": (number | null),
+      "bytesPerSecond": (number | null),
+      "etaSeconds": (number | null),
+    } | null),
+    "itemsIndexed": (number | null),
+    "startedAt": number,
   }>,
 }} QueuestatusResponse
+ */
+
+/**
+ * @typedef {{
+  "videoUrl": string,
+}} SyncextrasRequest
+ */
+
+/**
+ * @typedef {{
+  "url": string,
+  "status": ("recovered" | "unchanged" | "failed"),
+  "recovered": Array<string>,
+  "stillMissing": Array<string>,
+  "reason": (string | null),
+}} SyncextrasResponse
+ */
+
+/**
+ * @typedef {{
+  "videoUrl": string,
+}} KeepfileRequest
+ */
+
+/**
+ * @typedef {{
+  "status": "success",
+  "kept": number,
+}} KeepfileResponse
+ */
+
+/**
+ * @typedef {{
+  "url": string,
+  "kind": ("download" | "list"),
+}} CancelRequest
+ */
+
+/**
+ * @typedef {{
+  "status": "success",
+  "url": string,
+  "kind": ("download" | "list"),
+  "outcome": ("killed" | "queued" | "not-found"),
+}} CancelResponse
+ */
+
+/**
+ * @typedef {{
+  "id": string,
+  "action": ("pause" | "resume" | "cancel"),
+}} JobactionRequest
+ */
+
+/**
+ * @typedef {{
+  "status": "success",
+  "id": string,
+  "action": ("pause" | "resume" | "cancel"),
+  "outcome": ("paused" | "resumed" | "cancelled" | "not-allowed" | "not-found"),
+  "partialDeleted": (boolean | null),
+  "detail"?: string,
+}} JobactionResponse
+ */
+
+/**
+ * @typedef {{
+  "videoUrl": string,
+  "pageSize"?: number,
+  "sortDownloaded"?: boolean,
+}} LocateRequest
+ */
+
+/**
+ * @typedef {{
+  "videoUrl": string,
+  "playlistUrl": (string | null),
+  "page": (number | null),
+}} LocateResponse
  */
 
 /**
@@ -389,6 +504,11 @@
 /** @typedef {{path: "/dedup-unlisted", request: DedupUnlistedRequest, response: DedupUnlistedResponse}} DedupUnlistedRoute */
 /** @typedef {{path: "/dedup-playlists", request: DedupPlaylistsRequest, response: DedupPlaylistsResponse}} DedupPlaylistsRoute */
 /** @typedef {{path: "/queuestatus", request: QueuestatusRequest, response: QueuestatusResponse}} QueuestatusRoute */
+/** @typedef {{path: "/syncextras", request: SyncextrasRequest, response: SyncextrasResponse}} SyncextrasRoute */
+/** @typedef {{path: "/keepfile", request: KeepfileRequest, response: KeepfileResponse}} KeepfileRoute */
+/** @typedef {{path: "/cancel", request: CancelRequest, response: CancelResponse}} CancelRoute */
+/** @typedef {{path: "/jobaction", request: JobactionRequest, response: JobactionResponse}} JobactionRoute */
+/** @typedef {{path: "/locate", request: LocateRequest, response: LocateResponse}} LocateRoute */
 /** @typedef {{path: "/refresh", request: RefreshRequest, response: RefreshResponse}} RefreshRoute */
 /** @typedef {{path: "/register", request: RegisterRequest, response: RegisterResponse}} RegisterRoute */
 /** @typedef {{path: "/login", request: LoginRequest, response: LoginResponse}} LoginRoute */
@@ -412,6 +532,11 @@
  *   | DedupUnlistedRoute
  *   | DedupPlaylistsRoute
  *   | QueuestatusRoute
+ *   | SyncextrasRoute
+ *   | KeepfileRoute
+ *   | CancelRoute
+ *   | JobactionRoute
+ *   | LocateRoute
  *   | RefreshRoute
  *   | RegisterRoute
  *   | LoginRoute

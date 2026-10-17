@@ -38,6 +38,7 @@ const emptyBatchReindex = () => ({
  * @param {(url: string, position: number) => void} deps.setQueuePosition
  * @param {() => Promise<number | null>} deps.syncQueueFromBackend
  * @param {{current: string}} deps.playListUrlRef - Current loaded playlist.
+ * @param {{current: ?string}} [deps.videoUrlRef] - Current playing video URL, if any.
  * @param {(url: string) => void} deps.setPlayListUrl
  * @param {(index: number) => void} deps.setPlayListIndex
  * @param {(index: number) => void} deps.setSubListIndex
@@ -64,6 +65,12 @@ const emptyBatchReindex = () => ({
  * one of them — the initializer named four of the nine, so the ref's declared
  * shape and its assigned shape disagreed from the first render.
  *
+ * The last three are the partial-download verdict: `missingExtras` is what
+ * the row's warning chip names, and `reason` is why they are missing. They
+ * ride on the ref rather than being read back from the server so the chip
+ * appears on the row the moment the download lands, instead of waiting for a
+ * `/getsub` refresh that has to agree.
+ *
  * @typedef {Object} DownloadedItem
  * @property {?string} url
  * @property {?string} title
@@ -74,6 +81,9 @@ const emptyBatchReindex = () => ({
  * @property {?string} onlineThumbnail
  * @property {?string} subTitleFile
  * @property {?string} descriptionFile
+ * @property {boolean} partial
+ * @property {Array<string> | null} missingExtras
+ * @property {?string} reason
  */
 
 export function useSocketEvents({
@@ -88,6 +98,7 @@ export function useSocketEvents({
   clearDownloadState,
   setQueuePosition,
   syncQueueFromBackend,
+  videoUrlRef,
   playListUrlRef,
   setPlayListUrl,
   setPlayListIndex,
@@ -98,6 +109,7 @@ export function useSocketEvents({
   disableProgressRef,
   isMobileRef,
   onMobileSlideNeeded,
+  rowsPerPageSubListRef,
 }) {
   const [activeListingCount, setActiveListingCount] = useState(0);
   const activeListingCountRef = useRef(0);
@@ -162,6 +174,9 @@ export function useSocketEvents({
     onlineThumbnail: null,
     subTitleFile: null,
     descriptionFile: null,
+    partial: false,
+    missingExtras: null,
+    reason: null,
   });
 
   const connectionGenerationRef = useRef(null);
@@ -252,6 +267,13 @@ export function useSocketEvents({
         onlineThumbnail: data.onlineThumbnail || null,
         subTitleFile: data.subTitleFile || null,
         descriptionFile: data.descriptionFile || null,
+        // A partial run is still a downloaded row; it is the sidecars that
+        // never turned up that the row has to keep saying out loud.
+        partial: data.partial === true,
+        missingExtras: Array.isArray(data.missingExtras)
+          ? data.missingExtras
+          : null,
+        reason: data.reason || null,
       };
       setSnack(`${data.title}`, "success");
       addNotification(`Downloaded: ${data.title}`, "success");
@@ -279,6 +301,25 @@ export function useSocketEvents({
           return { ...prev, [url]: percent };
         });
       }
+    };
+
+    const onJobPaused = (data) => {
+      if (data?.url) {
+        removeActiveDownload(data.url);
+      }
+      syncQueue();
+    };
+
+    const onJobResumed = () => {
+      syncQueue();
+    };
+
+    const onJobCancelled = (data) => {
+      if (data?.url) {
+        removeActiveDownload(data.url);
+        removeFromQueueAndRenumber(data.url);
+      }
+      syncQueue();
     };
 
     const onListingStarted = () => {
@@ -396,8 +437,15 @@ export function useSocketEvents({
       );
 
       const current = playListUrlRef.current;
-      if (current === "init" || current === "None") {
-        setPlayListUrl("None");
+      const isWatchingVideo = Boolean(videoUrlRef?.current);
+      if ((current === "init" || current === "None") && !isWatchingVideo) {
+        const targetVideoPage =
+          typeof data.seekSubListTo === "number" &&
+          typeof rowsPerPageSubListRef?.current === "number" &&
+          rowsPerPageSubListRef.current > 0
+            ? Math.floor(data.seekSubListTo / rowsPerPageSubListRef.current)
+            : 0;
+        setPlayListUrl("None", { videoPage: targetVideoPage });
         setSubListIndex(data.seekSubListTo);
         triggerMobileSlideIfNeeded("Unlisted");
       }
@@ -525,6 +573,9 @@ export function useSocketEvents({
       ["download-done", onDownloadDone],
       ["download-failed", onDownloadFailed],
       ["downloading-percent-update", onDownloadingPercentUpdate],
+      ["job-paused", onJobPaused],
+      ["job-resumed", onJobResumed],
+      ["job-cancelled", onJobCancelled],
 
       ["listing-started", onListingStarted],
       ["listing-playlist-complete", onListingPlaylistComplete],

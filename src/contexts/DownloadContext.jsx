@@ -228,13 +228,22 @@ export const DownloadProvider = ({ children }) => {
       const newQueuedItems = {};
 
       result.queue.forEach((item) => {
-        if (item.status === "downloading" || item.status === "running") {
-          // The snapshot carries no percentage — `getQueueSnapshot` returns
-          // url, title, status and position, nothing more. This read was
-          // `item.percentage ?? 0`, which looked like it recovered progress
-          // across a reload and always yielded 0. The bar starts empty and the
-          // next `downloading-percent-update` frame fills it in.
-          newActiveDownloads[item.url] = 0;
+        // The snapshot reports `state` now — queued, running or paused — where
+        // this used to read a `status` that meant something else and named a
+        // state ("downloading") the server never sent. A paused job is not
+        // active work, so it is left out here as well as in the drawer.
+        if (item.state === "running") {
+          // The snapshot reports real bytes, so a reload lands on the actual
+          // position rather than snapping back to an empty bar. It used to
+          // read `item.percentage`, which the server never sent, so recovery
+          // always produced 0 while looking as though it had worked.
+          const { downloadedBytes, totalBytes } = item.progress ?? {};
+          // No total means no fraction — a live stream, or nothing reported
+          // yet — so the bar stays empty rather than claiming a percentage of
+          // an unknown amount.
+          newActiveDownloads[item.url] = totalBytes > 0
+            ? Math.min(100, (downloadedBytes / totalBytes) * 100)
+            : 0;
         }
         newQueuedItems[item.url] = {
           // Unknown from the snapshot alone, but sufficient for the queue UI.

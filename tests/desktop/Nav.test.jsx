@@ -17,7 +17,20 @@ describe("Nav Component (Desktop)", () => {
     renderWithContexts(<Navigation {...defaultProps} />, { contexts });
 
   beforeEach(() => {
-    globalThis.fetch = vi.fn();
+    // Routed by URL rather than filled from a queue of one-off values: the
+    // toolbar's job drawer polls /queuestatus on mount, so "the next response"
+    // would be the drawer's, not the re-index the test is about.
+    globalThis.fetch = vi.fn(async (url) => {
+      if (String(url).includes("/reindexall")) {
+        return mockResponse({ message: "Batch re-index started successfully" });
+      }
+      return mockResponse({
+        status: "success",
+        generation: 1,
+        queue: [],
+        listings: [],
+      });
+    });
     localStorage.clear();
     vi.clearAllMocks();
     contexts = makeContexts({
@@ -46,6 +59,22 @@ describe("Nav Component (Desktop)", () => {
     expect(screen.getByRole("button", { name: /Connected/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Light/i })).toBeInTheDocument(); // theme false -> dark. Button says Light
     expect(screen.getByRole("button", { name: /Logout/i })).toBeInTheDocument();
+  });
+
+  test("puts the job manager beside the notification manager", () => {
+    renderNav();
+
+    const connected = screen.getByRole("button", { name: /Connected/i });
+    const jobs = screen.getByRole("button", { name: /Downloads/i });
+
+    expect(jobs).toBeInTheDocument();
+    // Adjacency is the requirement, not decoration: both answer "what is the
+    // server doing for me", so they sit together rather than at opposite ends
+    // of the toolbar.
+    expect(connected.compareDocumentPosition(jobs) &
+      Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(jobs.compareDocumentPosition(connected) &
+      Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
   test("triggers setPlayListUrl when clicking Unlisted button", () => {
@@ -85,8 +114,6 @@ describe("Nav Component (Desktop)", () => {
   });
 
   test("opens batch re-index dialog and submits config settings", async () => {
-    globalThis.fetch.mockResolvedValueOnce(mockResponse(({ message: "Batch re-index started successfully" })));
-
     renderNav();
 
     const reindexBtn = screen.getByRole("button", { name: /Re-Index/i });

@@ -57,6 +57,39 @@ Cards now have three distinct visual states with smooth `0.2s` transitions betwe
 - `PlayList` is memoized so download progress, queue, snackbar, and notification updates in `App` do not rerender it when its own props are unchanged.
 - The dependency logger compares tracked values with `Object.is`, matching React dependency semantics. It logs only actual tracked changes and no longer serializes large queue or item objects after every render.
 
+### 6. The Download Manager Drawer (`JobDrawer.jsx`)
+
+The queue above lives on the cards. The drawer is the same jobs seen from the
+other end: every download and every playlist listing the **server** is running
+or holding, read from `POST /queuestatus`, with the three things that can be
+done to each one.
+
+- **Button placement:** beside the notification manager's, not at the far end of
+  the toolbar. Both answer "what is the server doing for me right now", and
+  someone watching a long index should not have to hunt for either.
+- **Real progress:** downloads report bytes against a total, a rate and an ETA.
+  A running listing gets an indeterminate bar, because a listing that runs for
+  four minutes has no number to be a fraction of — it does report how many items
+  it has written so far, which is the thing worth watching.
+- **Three states, three sets of controls.** A queued job can only be cancelled,
+  and says so: it has no process and no bytes, so cancelling it is free. A
+  running one can be paused as well, which keeps the partial file — yt-dlp
+  resumes from a `.part` with no extra flags. Cancelling a running job deletes
+  those bytes, because "cancel" is someone saying they do not want it. A paused
+  job offers Resume and Cancel, and cancelling *that* is the case that finally
+  throws the kept bytes away.
+- **Availability is derived** from `job.state` rather than sent alongside it. A
+  `pausable` flag would be one more thing that can disagree with the state it
+  describes, and this drawer would be the only place that noticed.
+- **Polling, not events:** 2 s while open, 10 s for the badge alone, and nothing
+  at all while `document.hidden`. Reads never overlap, so a slow response cannot
+  stack requests behind it and report several intervals ago.
+
 ### Deferred Design Work
 
-Backend-authoritative queue positions and reconnect reconciliation remain intentionally deferred. Their scope and proposed direction are documented in `TODO.md`.
+The cards' queue numbers are still the frontend's own: `/queuestatus` now
+returns a backend-assigned `queuePosition` and the drawer uses it, but a card
+badge and the drawer can disagree when requests overlap. Both halves of the
+reconnect question — the queue snapshot and the `generation` counter — are now
+in the same response, so what remains is the wiring, not the mechanism. See
+`TODO.md` items 7 and 8.

@@ -15,6 +15,10 @@ export default mergeConfig(
       // measuring only the easy ones, which is how a coverage gate becomes
       // decorative. `main.jsx` is the only exclusion: it is the ReactDOM
       // bootstrap, it has no branches, and there is nothing there to cover.
+      // The per-`waitFor` ceiling lives in the project setup files
+      // (`tests/setup.desktop.js` / `tests/setup.mobile.js`), where Testing
+      // Library's `configure` actually reads it. It is not a Vitest option, so
+      // setting it here did nothing at all.
       coverage: {
         provider: "v8",
         reporter: ["text-summary", "lcov"],

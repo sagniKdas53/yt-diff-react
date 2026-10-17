@@ -258,6 +258,7 @@ export default function App() {
     playlistPageSize: routePlaylistPageSize,
     videoPage: routeVideoPage,
     videoPageSize: routeVideoPageSize,
+    startAt: routeStartAt,
   } = useRoute();
   const navigate = useNavigate();
 
@@ -281,17 +282,41 @@ export default function App() {
    * an entry they have to press Back through to leave.
    */
   const replacePlayListUrl = useCallback(
-    (url) =>
+    (url, options = {}) =>
       navigate(
-        { playlistUrl: url, videoUrl: null, videoPage: 0 },
+        {
+          playlistUrl: url,
+          videoUrl: options.preserveVideo ? routeVideoUrl : null,
+          videoPage:
+            options.videoPage ?? (options.preserveVideo ? routeVideoPage : 0),
+        },
         { replace: true },
       ),
+    [navigate, routeVideoUrl, routeVideoPage],
+  );
+
+  /**
+   * Opens or closes the player, within whatever list is currently open.
+   *
+   * The position is dropped on the way: a video reached by moving on from the
+   * previous one starts at its beginning, and a position belonging to a
+   * different video means nothing here.
+   */
+  const setRouteVideoUrl = useCallback(
+    (videoUrl, { replace = false } = {}) =>
+      navigate({ videoUrl, startAt: 0 }, { replace }),
     [navigate],
   );
 
-  /** Opens or closes the player, within whatever list is currently open. */
-  const setRouteVideoUrl = useCallback(
-    (videoUrl, { replace = false } = {}) => navigate({ videoUrl }, { replace }),
+  /**
+   * Records where playback has got to.
+   *
+   * Always a replace: the position is a property of the video you are already
+   * watching, not a place you have navigated to, and Back has to keep meaning
+   * "close the player" rather than stepping through every ten seconds.
+   */
+  const setRouteStartAt = useCallback(
+    (startAt) => navigate({ startAt }, { replace: true }),
     [navigate],
   );
 
@@ -330,6 +355,19 @@ export default function App() {
   const [playListIndex, setPlayListIndex] = useState(
     () => routePlaylistPage * routePlaylistPageSize,
   );
+
+  useEffect(() => {
+    setSubListIndex((prev) => {
+      if (Math.floor(prev / routeVideoPageSize) === routeVideoPage) {
+        return prev;
+      }
+      return routeVideoPage * routeVideoPageSize;
+    });
+  }, [routeVideoPage, routeVideoPageSize]);
+
+  useEffect(() => {
+    setPlayListIndex(routePlaylistPage * routePlaylistPageSize);
+  }, [routePlaylistPage, routePlaylistPageSize]);
   const [disableProgress, toggleProgress] = useState(false);
 
   // progress bar and re-fetch state
@@ -412,9 +450,11 @@ export default function App() {
   // Only for values that actually change between renders; the callbacks the
   // providers hand out are already stable.
   const playListUrlRef = useLatest(playListUrl);
+  const videoUrlRef = useLatest(routeVideoUrl);
   const disableProgressRef = useLatest(disableProgress);
   const toggleProgressCallBackRef = useLatest(toggleProgressCallBack);
   const isMobileRef = useLatest(isMobile);
+  const rowsPerPageSubListRef = useLatest(rowsPerPageSubList);
 
   // The socket handlers used to switch the mobile panel themselves. They no
   // longer have to: they set the playlist, the playlist is the route, and the
@@ -438,6 +478,7 @@ export default function App() {
     clearDownloadState,
     setQueuePosition,
     syncQueueFromBackend,
+    videoUrlRef,
     playListUrlRef,
     // Replaces: see `replacePlayListUrl`. Nothing in here is a navigation the
     // user asked for.
@@ -450,6 +491,7 @@ export default function App() {
     disableProgressRef,
     isMobileRef,
     onMobileSlideNeeded: slideInMobileVideosPanel,
+    rowsPerPageSubListRef,
   });
 
   useDependencyLogger(
@@ -652,6 +694,8 @@ export default function App() {
     setRowsPerPage: handleSetRowsPerPageSubList,
     playerVideoUrl: routeVideoUrl,
     setPlayerVideoUrl: setRouteVideoUrl,
+    playerStartAt: routeStartAt,
+    setPlayerStartAt: setRouteStartAt,
     initialPage: routeVideoPage,
     onPaginationChange: setVideoPagination,
   };

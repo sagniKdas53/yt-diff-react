@@ -20,6 +20,7 @@ const route = (partial) => ({
   playlistPageSize: DEFAULT_PLAYLIST_PAGE_SIZE,
   videoPage: 0,
   videoPageSize: DEFAULT_VIDEO_PAGE_SIZE,
+  startAt: 0,
   ...partial,
 });
 
@@ -130,6 +131,54 @@ describe("the URL grammar", () => {
 
     test("a fractional page is not a page", () => {
       expect(parseRoute("#/unlisted?vp=2.5").videoPage).toBe(0);
+    });
+  });
+
+  describe("resume position", () => {
+    test("a position round-trips with its video", () => {
+      const original = route({
+        playlistUrl: PLAYLIST,
+        videoUrl: VIDEO,
+        startAt: 133,
+      });
+      const link = formatRoute(original);
+      expect(link).toContain("t=133");
+      expect(parseRoute(link).startAt).toBe(133);
+    });
+
+    test("no position is no parameter", () => {
+      // The common case has to stay the link it was before this existed.
+      expect(
+        formatRoute(route({ playlistUrl: PLAYLIST, videoUrl: VIDEO })),
+      ).toBe(`#/playlist/${encodeURIComponent(PLAYLIST)}?v=${encodeURIComponent(VIDEO)}`);
+      expect(parseRoute("#/unlisted").startAt).toBe(0);
+    });
+
+    test("zero is the start, not a position", () => {
+      expect(
+        formatRoute(
+          route({ playlistUrl: UNLISTED, videoUrl: VIDEO, startAt: 0 }),
+        ),
+      ).not.toContain("t=");
+    });
+
+    test("a position with no video is dropped", () => {
+      expect(formatRoute(route({ startAt: 90 }))).toBe("#/");
+    });
+
+    test("a hand-mangled position falls back to the start", () => {
+      for (const value of ["-4", "abc", "", "2.5"]) {
+        expect(parseRoute(`#/unlisted?v=${encodeURIComponent(VIDEO)}&t=${value}`)
+          .startAt).toBe(0);
+      }
+    });
+
+    test("a fractional position is written whole", () => {
+      expect(
+        formatRoute(
+          route({ playlistUrl: UNLISTED, videoUrl: VIDEO, startAt: 12.7 }),
+        ),
+      ).toContain("t=12");
     });
   });
 

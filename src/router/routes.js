@@ -57,6 +57,7 @@ const PLAYLIST_PAGE_PARAM = "pp";
 const PLAYLIST_SIZE_PARAM = "ps";
 const VIDEO_PAGE_PARAM = "vp";
 const VIDEO_SIZE_PARAM = "vs";
+const TIME_PARAM = "t";
 
 /**
  * @typedef {Object} Route
@@ -66,6 +67,7 @@ const VIDEO_SIZE_PARAM = "vs";
  * @property {number} playlistPageSize - Rows per page in the playlist list.
  * @property {number} videoPage - Zero-based page of the video list.
  * @property {number} videoPageSize - Rows per page in the video list.
+ * @property {number} startAt - Seconds into the video the player opens at.
  */
 
 /** Where an empty, unrecognised or malformed location lands. */
@@ -76,6 +78,7 @@ export const ROOT_ROUTE = Object.freeze({
   playlistPageSize: DEFAULT_PLAYLIST_PAGE_SIZE,
   videoPage: 0,
   videoPageSize: DEFAULT_VIDEO_PAGE_SIZE,
+  startAt: 0,
 });
 
 /** `decodeURIComponent` throws on a lone `%`; a bad link is not a crash. */
@@ -106,6 +109,16 @@ function readCount(params, name, fallback) {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 1) return fallback;
   return value;
+}
+
+/**
+ * Reads the playback position a location names.
+ *
+ * `readCount` with a zero fallback, so `t=0`, `t=-4`, `t=abc` and a missing
+ * parameter all mean the same thing: the start of the video.
+ */
+function readStartAt(params) {
+  return readCount(params, TIME_PARAM, 0);
 }
 
 /** Reads the pagination half of a location's query string. */
@@ -139,7 +152,7 @@ export function parseRoute(hash) {
   const segments = path.split("/").filter(Boolean);
   const params = new URLSearchParams(search);
   const videoUrl = params.get(VIDEO_PARAM) || null;
-  const pagination = readPagination(search);
+  const pagination = { ...readPagination(search), startAt: readStartAt(params) };
 
   // The playlist list is on screen at every location, so where it is paged to
   // survives even a location that names no playlist.
@@ -199,6 +212,14 @@ export function formatRoute(route) {
   // one is dropped rather than written to a location that cannot be parsed back.
   const listIsOpen = path !== "/";
   if (videoUrl && listIsOpen) params.set(VIDEO_PARAM, videoUrl);
+
+  // The position only means anything with a video to put it on. Omitted at
+  // zero, which is also what an absent parameter parses back to, so a link
+  // shared from the first second is the same link as before this existed.
+  const startAt = route?.startAt ?? 0;
+  if (videoUrl && listIsOpen && startAt > 0) {
+    params.set(TIME_PARAM, String(Math.floor(startAt)));
+  }
 
   const playlistPage = route?.playlistPage ?? 0;
   const playlistPageSize =
