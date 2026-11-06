@@ -77,6 +77,7 @@
   "sort"?: string,
   "order"?: string,
   "query"?: string,
+  "kind"?: ("playlist" | "channel"),
 }} GetplayRequest
  */
 
@@ -93,6 +94,12 @@
     "lastUpdatedByScheduler"?: (string | null),
     "createdAt"?: string,
     "updatedAt"?: string,
+    "kind": ("playlist" | "channel"),
+    "origin": ("user" | "auto"),
+    "kindSetByFiling": boolean,
+    "videoCount": number,
+    "latestAddedAt": (string | null),
+    "channelUrl": (string | null),
   }>,
 }} GetplayResponse
  */
@@ -123,6 +130,15 @@
   "stop"?: number,
   "query"?: string,
   "sortDownloaded"?: boolean,
+  "view"?: ("inbox" | "bot" | "clips" | "archive"),
+  "filter"?: {
+    "saved"?: boolean,
+    "site"?: string,
+    "year"?: number,
+    "month"?: number,
+    "channel"?: string,
+    "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+  },
 }} GetsubRequest
  */
 
@@ -160,6 +176,79 @@
   "saveDirectory": string,
   "playlistTitle": (string | null),
 }} GetsubResponse
+ */
+
+/**
+ * @typedef {Record<string, never>} LibrarySummaryRequest
+ */
+
+/**
+ * @typedef {{
+  "inbox": number,
+  "bot": number,
+  "clips": number,
+  "archive": number,
+  "all": number,
+  "notSwept": number,
+}} LibrarySummaryResponse
+ */
+
+/**
+ * @typedef {{
+  "view"?: ("inbox" | "bot" | "clips" | "archive"),
+  "filter"?: {
+    "saved"?: boolean,
+    "site"?: string,
+    "year"?: number,
+    "month"?: number,
+    "channel"?: string,
+    "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+  },
+}} LibraryFacetsRequest
+ */
+
+/**
+ * @typedef {{
+  "saved": {
+    "saved": number,
+    "links": number,
+  },
+  "sites": Array<{
+    "site": string,
+    "name": string,
+    "count": number,
+  }>,
+  "years": Array<{
+    "year": number,
+    "count": number,
+  }>,
+  "months": Array<{
+    "month": number,
+    "count": number,
+  }>,
+  "lengths": Array<{
+    "band": ("clip" | "short" | "medium" | "long" | "unknown"),
+    "count": number,
+  }>,
+  "creators": Array<{
+    "key": string,
+    "name": string,
+    "count": number,
+  }>,
+}} LibraryFacetsResponse
+ */
+
+/**
+ * @typedef {{
+  "playlistUrl": string,
+  "monitoringType": ("Start" | "End" | "Full" | "Refresh"),
+}} ChannelsMonitorRequest
+ */
+
+/**
+ * @typedef {{
+  "playlistUrl": string,
+}} ChannelsMonitorResponse
  */
 
 /**
@@ -423,6 +512,15 @@
   "videoUrl": string,
   "pageSize"?: number,
   "sortDownloaded"?: boolean,
+  "view"?: ("inbox" | "bot" | "clips" | "archive"),
+  "filter"?: {
+    "saved"?: boolean,
+    "site"?: string,
+    "year"?: number,
+    "month"?: number,
+    "channel"?: string,
+    "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+  },
 }} LocateRequest
  */
 
@@ -495,6 +593,9 @@
 /** @typedef {{path: "/getplay", request: GetplayRequest, response: GetplayResponse}} GetplayRoute */
 /** @typedef {{path: "/delplay", request: DelplayRequest, response: DelplayResponse}} DelplayRoute */
 /** @typedef {{path: "/getsub", request: GetsubRequest, response: GetsubResponse}} GetsubRoute */
+/** @typedef {{path: "/library/summary", request: LibrarySummaryRequest, response: LibrarySummaryResponse}} LibrarySummaryRoute */
+/** @typedef {{path: "/library/facets", request: LibraryFacetsRequest, response: LibraryFacetsResponse}} LibraryFacetsRoute */
+/** @typedef {{path: "/channels/monitor", request: ChannelsMonitorRequest, response: ChannelsMonitorResponse}} ChannelsMonitorRoute */
 /** @typedef {{path: "/delsub", request: DelsubRequest, response: DelsubResponse}} DelsubRoute */
 /** @typedef {{path: "/getfile", request: GetfileRequest, response: GetfileResponse}} GetfileRoute */
 /** @typedef {{path: "/refreshfile", request: RefreshfileRequest, response: RefreshfileResponse}} RefreshfileRoute */
@@ -523,6 +624,9 @@
  *   | GetplayRoute
  *   | DelplayRoute
  *   | GetsubRoute
+ *   | LibrarySummaryRoute
+ *   | LibraryFacetsRoute
+ *   | ChannelsMonitorRoute
  *   | DelsubRoute
  *   | GetfileRoute
  *   | RefreshfileRoute
