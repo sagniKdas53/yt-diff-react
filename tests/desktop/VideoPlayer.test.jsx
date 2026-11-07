@@ -1,5 +1,5 @@
 import React from "react";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
 import { ContextHarness, makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
@@ -302,6 +302,140 @@ describe("VideoPlayer Component (Desktop)", () => {
     document.fullscreenElement = null;
     fireEvent(document, new Event("fullscreenchange"));
     expect(screen.getByLabelText("enter fullscreen")).toBeInTheDocument();
+  });
+
+  describe("lock-screen controls, track shortcuts and Up next", () => {
+    const renderTracks = async (index, openPlayer = vi.fn()) => {
+      const utils = renderWithContexts(
+        <VideoPlayer
+          {...defaultProps}
+          subTitleFile={null}
+          items={twoRows}
+          itemCount={2}
+          currentPlayerIndex={index}
+          openPlayer={openPlayer}
+        />,
+        { contexts },
+      );
+      await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+      return { ...utils, openPlayer };
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+      delete navigator.mediaSession;
+      delete globalThis.MediaMetadata;
+    });
+
+    test("Media Session actions drive the player", async () => {
+      const handlers = {};
+      navigator.mediaSession = {
+        metadata: null,
+        setActionHandler: vi.fn((action, handler) => {
+          handlers[action] = handler;
+        }),
+      };
+      globalThis.MediaMetadata = class {
+        constructor(init) {
+          Object.assign(this, init);
+        }
+      };
+      const { openPlayer } = await renderTracks(0);
+
+      expect(navigator.mediaSession.metadata.title).toBe("Testing Video Player Title");
+      handlers.nexttrack();
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+
+      handlers.pause();
+      expect(HTMLVideoElement.prototype.pause).toHaveBeenCalled();
+      handlers.play();
+      expect(HTMLVideoElement.prototype.play).toHaveBeenCalled();
+      const video = document.querySelector("video");
+      video.currentTime = 30;
+      handlers.seekforward({ seekOffset: 15 });
+      expect(video.currentTime).toBe(45);
+    });
+
+    test("Media Session lets go of its handlers on unmount", async () => {
+      const handlers = {};
+      navigator.mediaSession = {
+        metadata: null,
+        setActionHandler: vi.fn((action, handler) => {
+          handlers[action] = handler;
+        }),
+      };
+      const { unmount } = await renderTracks(0);
+      expect(handlers.nexttrack).toBeTypeOf("function");
+      unmount();
+      expect(handlers.nexttrack).toBeNull();
+      expect(handlers.play).toBeNull();
+    });
+
+    test("no Media Session support is not an error", async () => {
+      expect("mediaSession" in navigator).toBe(false);
+      await renderTracks(0);
+      expect(document.querySelector("video")).toBeInTheDocument();
+    });
+
+    test("Shift+N and Shift+P move tracks and do not change speed", async () => {
+      const { openPlayer, unmount } = await renderTracks(0);
+      fireEvent.keyDown(document, { key: "N", shiftKey: true });
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+      unmount();
+
+      const second = await renderTracks(1);
+      fireEvent.keyDown(document, { key: "P", shiftKey: true });
+      expect(second.openPlayer).toHaveBeenCalledWith("/downloads", "video.mp4", "First", 0, null);
+      expect(localStorage.getItem("ytdiff_player_rate")).toBeNull();
+    });
+
+    test("the end of a video counts down, then plays next", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      const { openPlayer } = await renderTracks(0);
+      vi.useFakeTimers({
+        toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
+      });
+
+      fireEvent.ended(document.querySelector("video"));
+      expect(screen.getByText("Up next")).toBeInTheDocument();
+      expect(
+        within(screen.getByText("Up next").parentElement).getByText("Second"),
+      ).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(openPlayer).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(openPlayer).toHaveBeenCalledTimes(1);
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+    });
+
+    test("cancelling Up next stays on this video", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      const { openPlayer } = await renderTracks(0);
+      vi.useFakeTimers({
+        toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
+      });
+
+      fireEvent.ended(document.querySelector("video"));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      act(() => {
+        vi.advanceTimersByTime(10000);
+      });
+
+      expect(openPlayer).not.toHaveBeenCalled();
+      expect(screen.queryByText("Up next")).not.toBeInTheDocument();
+    });
+
+    test("with nothing after it, the end of a video shows no countdown", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      await renderTracks(1);
+      fireEvent.ended(document.querySelector("video"));
+      expect(screen.queryByText("Up next")).not.toBeInTheDocument();
+    });
   });
 
   test("toggles play/pause states on user trigger", async () => {

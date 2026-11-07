@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 
 import { useApiClient } from "../hooks/useApiClient.js";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useMediaSession } from "../hooks/useMediaSession.js";
 import { useSignedPlayback } from "../hooks/useSignedPlayback.js";
 import { useSubtitleTrack } from "../hooks/useSubtitleTrack.js";
 import { usePlaylistNavigation } from "../hooks/usePlaylistNavigation.js";
@@ -38,6 +39,7 @@ import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { styled, useTheme } from "@mui/material/styles";
 import PlaybackFailure from "./PlaybackFailure.jsx";
 import PlayerControlBar from "./PlayerControlBar.jsx";
+import UpNextOverlay from "./UpNextOverlay.jsx";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
 /**
@@ -264,7 +266,7 @@ export default function VideoPlayer({
     close: closeDescription,
   } = useDescription({ api, saveDirectory, descriptionFile });
 
-  const { handleNext, handlePrev, hasNext } = usePlaylistNavigation({
+  const { handleNext, handlePrev, hasNext, nextTitle } = usePlaylistNavigation({
     openPlayer,
     items,
     itemCount,
@@ -520,6 +522,14 @@ export default function VideoPlayer({
         case "c":
           if (subtitleUrl) toggleSubtitles();
           return;
+        // Capital letters: plain n and p are not bound, and Shift keeps them
+        // off the speed keys (`<` and `>`) that sit beside them.
+        case "N":
+          handleNext();
+          return;
+        case "P":
+          handlePrev();
+          return;
         case "<": {
           const index = PLAYBACK_RATES.indexOf(playbackRate);
           changePlaybackRate(PLAYBACK_RATES[Math.max(0, index - 1)]);
@@ -539,6 +549,8 @@ export default function VideoPlayer({
     return () => globalThis.removeEventListener("keydown", onKeyDown);
   }, [
     changePlaybackRate,
+    handleNext,
+    handlePrev,
     handleVolumeChange,
     playbackRate,
     skip,
@@ -558,10 +570,17 @@ export default function VideoPlayer({
     localStorage.setItem("ytdiff_player_autoplay", String(newVal));
   };
 
+  // Which file the "Up next" countdown is for. Keyed to the file like `failed`:
+  // moving to another track by any route dismisses it without a reset.
+  const [upNextFile, setUpNextFile] = useState(null);
+  const showUpNext = upNextFile === fileName;
+
   const handleVideoEnded = () => {
     setIsPlaying(false);
-    if (autoPlayEnabled) {
-      handleNext();
+    // A countdown rather than an immediate jump, so autoplay never moves on
+    // past something you did not get to see or stop.
+    if (autoPlayEnabled && hasNext) {
+      setUpNextFile(fileName);
     }
   };
 
@@ -639,6 +658,16 @@ export default function VideoPlayer({
   const posterUrl =
     thumbUrls?.[items?.[currentPlayerIndex]?.video_metadatum?.thumbNailFile] ||
     undefined;
+
+  useMediaSession({
+    title,
+    posterUrl,
+    onPlay: () => videoRef.current?.play(),
+    onPause: () => videoRef.current?.pause(),
+    onPrev: openPlayer ? handlePrev : undefined,
+    onNext: hasNext ? handleNext : undefined,
+    onSeekBy: skip,
+  });
 
   const truncatedTitle =
     title && title.length > 60 ? title.substring(0, 57) + "…" : title;
@@ -747,7 +776,11 @@ export default function VideoPlayer({
               element.currentTime = startAt;
             }
           }}
-          onPlay={() => setIsPlaying(true)}
+          onPlay={() => {
+            setIsPlaying(true);
+            // Replaying the video that just ended is a "no" to what is next.
+            setUpNextFile(null);
+          }}
           onPause={() => {
             setIsPlaying(false);
             // Written here rather than in an effect: the element's own event
@@ -768,6 +801,17 @@ export default function VideoPlayer({
           hasNext={hasNext}
           onNext={handleNext}
           onClose={onClose}
+        />
+      )}
+
+      {showUpNext && (
+        <UpNextOverlay
+          title={nextTitle}
+          onPlayNow={() => {
+            setUpNextFile(null);
+            handleNext();
+          }}
+          onCancel={() => setUpNextFile(null)}
         />
       )}
 
