@@ -231,6 +231,58 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
   });
 
+  test("a stall shows a spinner and playing clears it", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+    const video = document.querySelector("video");
+
+    fireEvent.waiting(video);
+    expect(screen.getByRole("progressbar", { name: "Buffering" })).toBeInTheDocument();
+
+    fireEvent.playing(video);
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+    // A stalled network request clears the same way, and so do the other
+    // events that mean data has arrived.
+    for (const cleared of ["canPlay", "seeked"]) {
+      fireEvent.stalled(video);
+      expect(screen.getByRole("progressbar", { name: "Buffering" })).toBeInTheDocument();
+      fireEvent[cleared](video);
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    }
+  });
+
+  test("the poster is the row's signed thumbnail", async () => {
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        items={[
+          {
+            video_metadatum: {
+              fileName: "video.mp4",
+              saveDirectory: "/downloads",
+              thumbNailFile: "a.jpg",
+              downloadStatus: true,
+            },
+          },
+        ]}
+        itemCount={1}
+        currentPlayerIndex={0}
+        thumbUrls={{ "a.jpg": "http://x/thumb" }}
+      />,
+      { contexts },
+    );
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    expect(document.querySelector("video")).toHaveAttribute("poster", "http://x/thumb");
+  });
+
+  test("no thumbnail means no poster attribute", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    expect(document.querySelector("video")).not.toHaveAttribute("poster");
+  });
+
   test("toggles play/pause states on user trigger", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 

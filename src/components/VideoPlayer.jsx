@@ -23,6 +23,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import Fade from "@mui/material/Fade";
 import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
@@ -191,6 +192,12 @@ export default function VideoPlayer({
   const recoveryRef = useRef(initialRecovery());
   const [failedFile, setFailedFile] = useState(null);
   const failed = failedFile === fileName;
+  // Buffering is keyed to the file for the same reason as `failed`: a stall on
+  // the previous track must not leave the spinner up on the next one.
+  const [bufferingFile, setBufferingFile] = useState(null);
+  const isBuffering = bufferingFile === fileName;
+  const startBuffering = () => setBufferingFile(fileName);
+  const stopBuffering = () => setBufferingFile(null);
 
   useEffect(() => {
     appliedStartAtRef.current = null;
@@ -613,6 +620,12 @@ export default function VideoPlayer({
     }
   };
 
+  // The signed thumbnail of the row now playing, so the first frame is the
+  // thumbnail rather than black. Absent when the row has none.
+  const posterUrl =
+    thumbUrls?.[items?.[currentPlayerIndex]?.video_metadatum?.thumbNailFile] ||
+    undefined;
+
   const truncatedTitle =
     title && title.length > 60 ? title.substring(0, 57) + "…" : title;
 
@@ -679,10 +692,15 @@ export default function VideoPlayer({
           overflow: "hidden",
         }}
       >
-        {loading && !videoUrl && (
-          <CircularProgress
-            sx={{ position: "absolute", zIndex: 10, color: "white" }}
-          />
+        {/* The delay is the point: a stall that clears inside a quarter of a
+            second is never painted, so it does not flash. */}
+        {((loading && !videoUrl) || isBuffering) && (
+          <Fade in style={{ transitionDelay: "250ms" }}>
+            <CircularProgress
+              aria-label={isBuffering ? "Buffering" : "Loading"}
+              sx={{ position: "absolute", zIndex: 10, color: "white" }}
+            />
+          </Fade>
         )}
         {errorMsg && (
           <Typography color="error" sx={{ position: "absolute", zIndex: 10 }}>
@@ -694,6 +712,12 @@ export default function VideoPlayer({
         <video
           ref={videoRef}
           onError={handleError}
+          poster={posterUrl}
+          onWaiting={startBuffering}
+          onStalled={startBuffering}
+          onPlaying={stopBuffering}
+          onCanPlay={stopBuffering}
+          onSeeked={stopBuffering}
           onProgress={handleProgress}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={() => {
