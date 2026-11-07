@@ -315,9 +315,6 @@ export default function VideoPlayer({
     }
   }, [isPlaying, drawerOpen, hideControlsSoon]);
 
-  // `onPlay` and `onPause` already set this, so the optimistic set here was a
-  // second, redundant write on every click. The element's own events are the
-  // truth about whether it is playing.
   // Whether the controls were showing when the finger went down. Touch fires
   // `mousemove` between `pointerdown` and `click`, which shows the controls, so
   // by `click` the state always says "visible" and cannot tell a first tap
@@ -325,6 +322,9 @@ export default function VideoPlayer({
   // assistive-technology activation) plays or pauses as usual.
   const controlsShownOnPointerDownRef = useRef(true);
 
+  // `onPlay` and `onPause` already set this, so the optimistic set here was a
+  // second, redundant write on every click. The element's own events are the
+  // truth about whether it is playing.
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
@@ -662,7 +662,10 @@ export default function VideoPlayer({
   useMediaSession({
     title,
     posterUrl,
-    onPlay: () => videoRef.current?.play(),
+    onPlay: () =>
+      videoRef.current
+        ?.play()
+        .catch((e) => console.warn("Media Session play was refused", e)),
     onPause: () => videoRef.current?.pause(),
     onPrev: openPlayer ? handlePrev : undefined,
     onNext: hasNext ? handleNext : undefined,
