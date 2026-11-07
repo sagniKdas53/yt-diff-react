@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 /**
  * Previous/next navigation across a paged playlist for the player.
@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef } from "react";
  * @param {?string} deps.playlistDirectory - Fallback save directory for rows
  *   that do not carry their own.
  * @param {((newPage: number) => void) | null} deps.setPage
- * @returns {{handleNext: () => void, handlePrev: () => void}}
+ * @returns {{handleNext: () => void, handlePrev: () => void, hasNext: boolean}}
  */
 export function usePlaylistNavigation({
   openPlayer,
@@ -96,6 +96,16 @@ export function usePlaylistNavigation({
     skipToDownloaded,
   ]);
 
+  // Whether "next" can do anything: a downloaded row later on this page, or
+  // another page to turn to. Mirrors what `handleNext` will try.
+  const hasNext = useMemo(() => {
+    if (!openPlayer) return false;
+    for (let i = currentPlayerIndex + 1; i < items.length; i += 1) {
+      if (items.at(i).video_metadatum?.downloadStatus) return true;
+    }
+    return Boolean(setPage) && start + items.length < itemCount;
+  }, [currentPlayerIndex, items, itemCount, openPlayer, setPage, start]);
+
   // Auto-resume across pagination: once the requested page's rows arrive,
   // continue from its first downloaded video (next) or last (prev).
   useEffect(() => {
@@ -122,5 +132,5 @@ export function usePlaylistNavigation({
     }
   }, [items, openPlayer, skipToDownloaded]);
 
-  return { handleNext, handlePrev };
+  return { handleNext, handlePrev, hasNext };
 }

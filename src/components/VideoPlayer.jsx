@@ -10,6 +10,11 @@ import {
   parseDescriptionSegments,
   useDescription,
 } from "../hooks/useDescription.js";
+import {
+  initialRecovery,
+  onMediaError,
+  onPlaybackAdvanced,
+} from "../lib/playbackRecovery.js";
 import { PLAYBACK_RATES, readStoredRate } from "../lib/playbackRate.js";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -30,6 +35,7 @@ import { QueueMusic as QueueMusicIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
+import PlaybackFailure from "./PlaybackFailure.jsx";
 import PlayerControlBar from "./PlayerControlBar.jsx";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
@@ -177,9 +183,19 @@ export default function VideoPlayer({
   const appliedStartAtRef = useRef(null);
   const lastWrittenRef = useRef(-1);
 
+  // Media-error retry budget, and which file has used it up. Both belong to one
+  // file: the player stays mounted across tracks, so "failed" is the name of
+  // the failing file rather than a flag. A flag would need resetting, and
+  // forgetting that opens "Play next" straight onto the next file's failure
+  // screen.
+  const recoveryRef = useRef(initialRecovery());
+  const [failedFile, setFailedFile] = useState(null);
+  const failed = failedFile === fileName;
+
   useEffect(() => {
     appliedStartAtRef.current = null;
     lastWrittenRef.current = -1;
+    recoveryRef.current = initialRecovery();
   }, [fileName]);
 
   // Signed-URL lifecycle: minting, pre-expiry refresh, mid-stream recovery.
@@ -241,7 +257,7 @@ export default function VideoPlayer({
     close: closeDescription,
   } = useDescription({ api, saveDirectory, descriptionFile });
 
-  const { handleNext, handlePrev } = usePlaylistNavigation({
+  const { handleNext, handlePrev, hasNext } = usePlaylistNavigation({
     openPlayer,
     items,
     itemCount,
@@ -580,13 +596,20 @@ export default function VideoPlayer({
   const handleError = () => {
     const vid = videoRef.current;
     if (!vid) return;
-    if (
-      vid.error &&
-      (vid.error.code === 2 || vid.error.code === 3 || vid.error.code === 4)
-    ) {
+    const { action, state } = onMediaError(
+      recoveryRef.current,
+      vid.error?.code,
+      vid.currentTime,
+    );
+    recoveryRef.current = state;
+    if (action === "retry") {
       vid.pause();
-      const time = vid.currentTime;
-      void reload(true, time);
+      void reload(true, vid.currentTime);
+    } else if (action === "fail") {
+      // The file, not the URL, is the problem: re-signing again only repeats
+      // the same error. Say so instead.
+      vid.pause();
+      setFailedFile(fileName);
     }
   };
 
@@ -617,7 +640,9 @@ export default function VideoPlayer({
   }, []);
 
   const handleTimeUpdate = useCallback(() => {
-    setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0);
+    const time = videoRef.current ? videoRef.current.currentTime : 0;
+    setCurrentTime(time);
+    recoveryRef.current = onPlaybackAdvanced(recoveryRef.current, time);
     handleProgress();
   }, [handleProgress]);
 
@@ -665,7 +690,7 @@ export default function VideoPlayer({
           </Typography>
         )}
 
-        {videoUrl && (
+        {videoUrl && !failed && (
         <video
           ref={videoRef}
           onError={handleError}
@@ -695,6 +720,16 @@ export default function VideoPlayer({
           onEnded={handleVideoEnded}
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
+        />
+      )}
+
+      {failed && videoUrl && (
+        <PlaybackFailure
+          title={title}
+          videoUrl={videoUrl}
+          hasNext={hasNext}
+          onNext={handleNext}
+          onClose={onClose}
         />
       )}
 
@@ -741,7 +776,7 @@ export default function VideoPlayer({
       )}
 
       {/* Click-to-pause overlay — excludes top bar and bottom controls */}
-      {videoUrl && (
+      {videoUrl && !failed && (
         <Box
           onClick={togglePlay}
           sx={{

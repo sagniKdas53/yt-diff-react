@@ -2,7 +2,7 @@ import React from "react";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
-import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
+import { ContextHarness, makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("VideoPlayer Component (Desktop)", () => {
   const defaultProps = {
@@ -87,6 +87,148 @@ describe("VideoPlayer Component (Desktop)", () => {
     await waitFor(() => {
       expect(screen.getByText(/Unauthorized access/i)).toBeInTheDocument();
     });
+  });
+
+  // jsdom's `video.error` is a getter that always returns null, so a media
+  // error is staged by overriding it on the element before the event fires.
+  const failVideo = (video, code) => {
+    Object.defineProperty(video, "error", {
+      configurable: true,
+      get: () => ({ code }),
+    });
+    fireEvent.error(video);
+  };
+
+  // Description and subtitle fetches share `/getfile`, so count by file.
+  const mintsOfVideo = () =>
+    globalThis.fetch.mock.calls.filter(
+      ([url, options]) =>
+        String(url).endsWith("/getfile") &&
+        options?.method?.toLowerCase() === "post" &&
+        JSON.parse(options.body).fileName === "video.mp4",
+    ).length;
+
+  test("a file the browser cannot play stops at one retry and says so", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+
+    failVideo(document.querySelector("video"), 4);
+    // The first error spends the one retry: a new URL is minted.
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+
+    failVideo(document.querySelector("video"), 4);
+    expect(
+      await screen.findByText("This browser can't play this file"),
+    ).toBeInTheDocument();
+    expect(document.querySelector("video")).not.toBeInTheDocument();
+    expect(mintsOfVideo()).toBe(2);
+  });
+
+  const twoRows = [
+    {
+      video_metadatum: {
+        fileName: "video.mp4",
+        saveDirectory: "/downloads",
+        title: "First",
+        downloadStatus: true,
+      },
+    },
+    {
+      video_metadatum: {
+        fileName: "next.mp4",
+        saveDirectory: "/downloads",
+        title: "Second",
+        downloadStatus: true,
+      },
+    },
+  ];
+
+  const failTwice = async () => {
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+    failVideo(document.querySelector("video"), 4);
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+    failVideo(document.querySelector("video"), 4);
+    await screen.findByText("This browser can't play this file");
+  };
+
+  test("the failure screen offers Play next only when there is a next video", async () => {
+    const { unmount } = renderWithContexts(
+      <VideoPlayer {...defaultProps} items={twoRows} itemCount={2} currentPlayerIndex={1} openPlayer={vi.fn()} />,
+      { contexts },
+    );
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await failTwice();
+    expect(screen.queryByRole("button", { name: /play next/i })).not.toBeInTheDocument();
+    unmount();
+
+    globalThis.fetch.mockClear();
+    const openPlayer = vi.fn();
+    renderWithContexts(
+      <VideoPlayer {...defaultProps} items={twoRows} itemCount={2} currentPlayerIndex={0} openPlayer={openPlayer} />,
+      { contexts },
+    );
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await failTwice();
+    fireEvent.click(screen.getByRole("button", { name: /play next/i }));
+    expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+  });
+
+  test("the next track starts clean after a failure", async () => {
+    globalThis.fetch.mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post" && /\.mp4$/.test(body.fileName)) {
+        return Promise.resolve(
+          mockResponse({ status: "success", signedUrlId: `id_${body.fileName}`, expiry: Date.now() + 3600000 }),
+        );
+      }
+      return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+    });
+    const props = { ...defaultProps, subTitleFile: null };
+    const { rerender } = renderWithContexts(<VideoPlayer {...props} />, { contexts });
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+    failVideo(document.querySelector("video"), 4);
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+    failVideo(document.querySelector("video"), 4);
+    await screen.findByText("This browser can't play this file");
+
+    rerender(
+      <ContextHarness contexts={contexts}>
+        <VideoPlayer {...props} fileName="next.mp4" title="Second" />
+      </ContextHarness>,
+    );
+
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
+    // And its retry budget is a fresh one: the first error is retried.
+    const before = globalThis.fetch.mock.calls.length;
+    failVideo(document.querySelector("video"), 4);
+    await waitFor(() => expect(globalThis.fetch.mock.calls.length).toBeGreaterThan(before));
+    expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
+  });
+
+  test("playback that keeps going resets the budget", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+    const video = document.querySelector("video");
+    Object.defineProperty(video, "currentTime", { value: 0, writable: true });
+
+    failVideo(video, 4);
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+
+    // Fifteen seconds of real playback later, the next error is a new problem.
+    video.currentTime = 15;
+    fireEvent.timeUpdate(video);
+    failVideo(video, 4);
+
+    await waitFor(() => expect(mintsOfVideo()).toBe(3));
+    expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
   });
 
   test("toggles play/pause states on user trigger", async () => {
