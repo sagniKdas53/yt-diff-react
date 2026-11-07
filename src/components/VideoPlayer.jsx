@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 
 import { useApiClient } from "../hooks/useApiClient.js";
+import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useSignedPlayback } from "../hooks/useSignedPlayback.js";
 import { useSubtitleTrack } from "../hooks/useSubtitleTrack.js";
 import { usePlaylistNavigation } from "../hooks/usePlaylistNavigation.js";
@@ -29,7 +30,6 @@ import { QueueMusic as QueueMusicIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import PlayerControlBar from "./PlayerControlBar.jsx";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
@@ -134,7 +134,7 @@ export default function VideoPlayer({
 }) {
   const api = useApiClient();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useIsMobile(theme);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);

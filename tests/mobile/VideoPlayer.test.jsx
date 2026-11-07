@@ -25,6 +25,7 @@ describe("VideoPlayer Component (Mobile)", () => {
   };
 
   let contexts;
+  const originalMatchMedia = window.matchMedia;
 
   const renderPlayer = () =>
     renderWithContexts(<VideoPlayer {...defaultProps} />, { contexts });
@@ -47,6 +48,7 @@ describe("VideoPlayer Component (Mobile)", () => {
   });
 
   afterEach(() => {
+    window.matchMedia = originalMatchMedia;
     vi.restoreAllMocks();
   });
 
@@ -68,6 +70,48 @@ describe("VideoPlayer Component (Mobile)", () => {
     // The mobile volume slider should now be rendered
     const slider = screen.getByLabelText("mobile volume slider");
     expect(slider).toBeInTheDocument();
+  });
+
+  test("a touch tablet wider than sm gets the mobile control bar", async () => {
+    // A 900px touch screen is past the `sm` breakpoint, so a width-only check
+    // calls it a desktop. The pointer media query is what says "fingers".
+    const widePhone = (query) => {
+      const max = query.match(/\(max-width:\s*([0-9.]+)px\)/);
+      const min = query.match(/\(min-width:\s*([0-9.]+)px\)/);
+      let matches = false;
+      if (query.includes("pointer: coarse") || query.includes("hover: none")) {
+        matches = true;
+      } else if (max) {
+        matches = 900 <= parseFloat(max[1]);
+      } else if (min) {
+        matches = 900 >= parseFloat(min[1]);
+      }
+      return {
+        matches,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      };
+    };
+    window.matchMedia = vi.fn().mockImplementation(widePhone);
+
+    renderPlayer();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    // Single tap opens the overlay on mobile; on "desktop" it would mute.
+    fireEvent.click(screen.getByLabelText("mute volume"));
+    expect(screen.getByLabelText("mobile volume slider")).toBeInTheDocument();
+
+    expect(
+      window.getComputedStyle(screen.getByLabelText("play")).minWidth,
+    ).toBe("44px");
   });
 
   test("double click on volume button toggles mute state", async () => {

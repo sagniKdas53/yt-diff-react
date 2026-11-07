@@ -209,7 +209,20 @@ function PlayerControlBar({
               }}
             />
           </Box>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              mt: 1,
+              // Fingers need 44px targets. Set once here rather than on each
+              // button so a button added later gets it too.
+              ...(isMobile && {
+                flexWrap: "wrap",
+                "& .MuiIconButton-root": { minWidth: 44, minHeight: 44 },
+              }),
+            }}
+          >
             {showTrackNavigation && (
               <IconButton
                 size="small"
