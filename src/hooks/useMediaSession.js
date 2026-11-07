@@ -66,7 +66,10 @@ export function useMediaSession({
     setHandler("seekforward", (details) =>
       latest.current.onSeekBy(details?.seekOffset || 10),
     );
-    setHandler("previoustrack", hasPrev ? () => latest.current.onPrev?.() : null);
+    setHandler(
+      "previoustrack",
+      hasPrev ? () => latest.current.onPrev?.() : null,
+    );
     setHandler("nexttrack", hasNext ? () => latest.current.onNext?.() : null);
 
     return () => {
