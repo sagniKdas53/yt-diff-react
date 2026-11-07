@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 
 import { useApiClient } from "../hooks/useApiClient.js";
+import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useMediaSession } from "../hooks/useMediaSession.js";
 import { useSignedPlayback } from "../hooks/useSignedPlayback.js";
 import { useSubtitleTrack } from "../hooks/useSubtitleTrack.js";
 import { usePlaylistNavigation } from "../hooks/usePlaylistNavigation.js";
@@ -9,6 +11,11 @@ import {
   parseDescriptionSegments,
   useDescription,
 } from "../hooks/useDescription.js";
+import {
+  initialRecovery,
+  onMediaError,
+  onPlaybackAdvanced,
+} from "../lib/playbackRecovery.js";
 import { PLAYBACK_RATES, readStoredRate } from "../lib/playbackRate.js";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -17,6 +24,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import Fade from "@mui/material/Fade";
 import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
@@ -29,8 +37,9 @@ import { QueueMusic as QueueMusicIcon } from "@mui/icons-material";
 import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 import { styled, useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
+import PlaybackFailure from "./PlaybackFailure.jsx";
 import PlayerControlBar from "./PlayerControlBar.jsx";
+import UpNextOverlay from "./UpNextOverlay.jsx";
 import PlayerPlaylistDrawer from "./PlayerPlaylistDrawer.jsx";
 
 /**
@@ -134,7 +143,7 @@ export default function VideoPlayer({
 }) {
   const api = useApiClient();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useIsMobile(theme);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -177,9 +186,25 @@ export default function VideoPlayer({
   const appliedStartAtRef = useRef(null);
   const lastWrittenRef = useRef(-1);
 
+  // Media-error retry budget, and which file has used it up. Both belong to one
+  // file: the player stays mounted across tracks, so "failed" is the name of
+  // the failing file rather than a flag. A flag would need resetting, and
+  // forgetting that opens "Play next" straight onto the next file's failure
+  // screen.
+  const recoveryRef = useRef(initialRecovery());
+  const [failedFile, setFailedFile] = useState(null);
+  const failed = failedFile === fileName;
+  // Buffering is keyed to the file for the same reason as `failed`: a stall on
+  // the previous track must not leave the spinner up on the next one.
+  const [bufferingFile, setBufferingFile] = useState(null);
+  const isBuffering = bufferingFile === fileName;
+  const startBuffering = () => setBufferingFile(fileName);
+  const stopBuffering = () => setBufferingFile(null);
+
   useEffect(() => {
     appliedStartAtRef.current = null;
     lastWrittenRef.current = -1;
+    recoveryRef.current = initialRecovery();
   }, [fileName]);
 
   // Signed-URL lifecycle: minting, pre-expiry refresh, mid-stream recovery.
@@ -241,7 +266,7 @@ export default function VideoPlayer({
     close: closeDescription,
   } = useDescription({ api, saveDirectory, descriptionFile });
 
-  const { handleNext, handlePrev } = usePlaylistNavigation({
+  const { handleNext, handlePrev, hasNext, nextTitle } = usePlaylistNavigation({
     openPlayer,
     items,
     itemCount,
@@ -289,6 +314,13 @@ export default function VideoPlayer({
       hideControlsSoon();
     }
   }, [isPlaying, drawerOpen, hideControlsSoon]);
+
+  // Whether the controls were showing when the finger went down. Touch fires
+  // `mousemove` between `pointerdown` and `click`, which shows the controls, so
+  // by `click` the state always says "visible" and cannot tell a first tap
+  // from a second. Starts true so a click with no pointer-down (a keyboard or
+  // assistive-technology activation) plays or pauses as usual.
+  const controlsShownOnPointerDownRef = useRef(true);
 
   // `onPlay` and `onPause` already set this, so the optimistic set here was a
   // second, redundant write on every click. The element's own events are the
@@ -385,13 +417,20 @@ export default function VideoPlayer({
     }
   };
 
+  // The browser is the source of truth for fullscreen: Esc and system gestures
+  // end it without going through our button, so setting the flag from the
+  // button left the icon wrong afterwards.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   }, []);
 
@@ -483,6 +522,14 @@ export default function VideoPlayer({
         case "c":
           if (subtitleUrl) toggleSubtitles();
           return;
+        // Capital letters: plain n and p are not bound, and Shift keeps them
+        // off the speed keys (`<` and `>`) that sit beside them.
+        case "N":
+          handleNext();
+          return;
+        case "P":
+          handlePrev();
+          return;
         case "<": {
           const index = PLAYBACK_RATES.indexOf(playbackRate);
           changePlaybackRate(PLAYBACK_RATES[Math.max(0, index - 1)]);
@@ -502,6 +549,8 @@ export default function VideoPlayer({
     return () => globalThis.removeEventListener("keydown", onKeyDown);
   }, [
     changePlaybackRate,
+    handleNext,
+    handlePrev,
     handleVolumeChange,
     playbackRate,
     skip,
@@ -521,10 +570,17 @@ export default function VideoPlayer({
     localStorage.setItem("ytdiff_player_autoplay", String(newVal));
   };
 
+  // Which file the "Up next" countdown is for. Keyed to the file like `failed`:
+  // moving to another track by any route dismisses it without a reset.
+  const [upNextFile, setUpNextFile] = useState(null);
+  const showUpNext = upNextFile === fileName;
+
   const handleVideoEnded = () => {
     setIsPlaying(false);
-    if (autoPlayEnabled) {
-      handleNext();
+    // A countdown rather than an immediate jump, so autoplay never moves on
+    // past something you did not get to see or stop.
+    if (autoPlayEnabled && hasNext) {
+      setUpNextFile(fileName);
     }
   };
 
@@ -580,15 +636,41 @@ export default function VideoPlayer({
   const handleError = () => {
     const vid = videoRef.current;
     if (!vid) return;
-    if (
-      vid.error &&
-      (vid.error.code === 2 || vid.error.code === 3 || vid.error.code === 4)
-    ) {
+    const { action, state } = onMediaError(
+      recoveryRef.current,
+      vid.error?.code,
+      vid.currentTime,
+    );
+    recoveryRef.current = state;
+    if (action === "retry") {
       vid.pause();
-      const time = vid.currentTime;
-      void reload(true, time);
+      void reload(true, vid.currentTime);
+    } else if (action === "fail") {
+      // The file, not the URL, is the problem: re-signing again only repeats
+      // the same error. Say so instead.
+      vid.pause();
+      setFailedFile(fileName);
     }
   };
+
+  // The signed thumbnail of the row now playing, so the first frame is the
+  // thumbnail rather than black. Absent when the row has none.
+  const posterUrl =
+    thumbUrls?.[items?.[currentPlayerIndex]?.video_metadatum?.thumbNailFile] ||
+    undefined;
+
+  useMediaSession({
+    title,
+    posterUrl,
+    onPlay: () =>
+      videoRef.current
+        ?.play()
+        .catch((e) => console.warn("Media Session play was refused", e)),
+    onPause: () => videoRef.current?.pause(),
+    onPrev: openPlayer ? handlePrev : undefined,
+    onNext: hasNext ? handleNext : undefined,
+    onSeekBy: skip,
+  });
 
   const truncatedTitle =
     title && title.length > 60 ? title.substring(0, 57) + "…" : title;
@@ -617,7 +699,9 @@ export default function VideoPlayer({
   }, []);
 
   const handleTimeUpdate = useCallback(() => {
-    setCurrentTime(videoRef.current ? videoRef.current.currentTime : 0);
+    const time = videoRef.current ? videoRef.current.currentTime : 0;
+    setCurrentTime(time);
+    recoveryRef.current = onPlaybackAdvanced(recoveryRef.current, time);
     handleProgress();
   }, [handleProgress]);
 
@@ -654,10 +738,15 @@ export default function VideoPlayer({
           overflow: "hidden",
         }}
       >
-        {loading && !videoUrl && (
-          <CircularProgress
-            sx={{ position: "absolute", zIndex: 10, color: "white" }}
-          />
+        {/* The delay is the point: a stall that clears inside a quarter of a
+            second is never painted, so it does not flash. */}
+        {((loading && !videoUrl) || isBuffering) && (
+          <Fade in style={{ transitionDelay: "250ms" }}>
+            <CircularProgress
+              aria-label={isBuffering ? "Buffering" : "Loading"}
+              sx={{ position: "absolute", zIndex: 10, color: "white" }}
+            />
+          </Fade>
         )}
         {errorMsg && (
           <Typography color="error" sx={{ position: "absolute", zIndex: 10 }}>
@@ -665,10 +754,16 @@ export default function VideoPlayer({
           </Typography>
         )}
 
-        {videoUrl && (
+        {videoUrl && !failed && (
         <video
           ref={videoRef}
           onError={handleError}
+          poster={posterUrl}
+          onWaiting={startBuffering}
+          onStalled={startBuffering}
+          onPlaying={stopBuffering}
+          onCanPlay={stopBuffering}
+          onSeeked={stopBuffering}
           onProgress={handleProgress}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={() => {
@@ -684,7 +779,11 @@ export default function VideoPlayer({
               element.currentTime = startAt;
             }
           }}
-          onPlay={() => setIsPlaying(true)}
+          onPlay={() => {
+            setIsPlaying(true);
+            // Replaying the video that just ended is a "no" to what is next.
+            setUpNextFile(null);
+          }}
           onPause={() => {
             setIsPlaying(false);
             // Written here rather than in an effect: the element's own event
@@ -695,6 +794,27 @@ export default function VideoPlayer({
           onEnded={handleVideoEnded}
           src={videoUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
+        />
+      )}
+
+      {failed && videoUrl && (
+        <PlaybackFailure
+          title={title}
+          videoUrl={videoUrl}
+          hasNext={hasNext}
+          onNext={handleNext}
+          onClose={onClose}
+        />
+      )}
+
+      {showUpNext && (
+        <UpNextOverlay
+          title={nextTitle}
+          onPlayNow={() => {
+            setUpNextFile(null);
+            handleNext();
+          }}
+          onCancel={() => setUpNextFile(null)}
         />
       )}
 
@@ -741,9 +861,23 @@ export default function VideoPlayer({
       )}
 
       {/* Click-to-pause overlay — excludes top bar and bottom controls */}
-      {videoUrl && (
+      {videoUrl && !failed && (
         <Box
-          onClick={togglePlay}
+          data-testid="video-tap-area"
+          onPointerDown={() => {
+            controlsShownOnPointerDownRef.current = showControls;
+          }}
+          onClick={() => {
+            const wereShown = controlsShownOnPointerDownRef.current;
+            controlsShownOnPointerDownRef.current = true;
+            if (isMobile && !wereShown) {
+              // First tap: bring the controls back, and leave playback alone.
+              setShowControls(true);
+              hideControlsSoon();
+              return;
+            }
+            togglePlay();
+          }}
           sx={{
             position: "absolute",
             top: 64,

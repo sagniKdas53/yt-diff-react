@@ -8,7 +8,6 @@ import Paper from "@mui/material/Paper";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import Grid from "@mui/material/Unstable_Grid2";
 import PropTypes from "prop-types";
 import {
@@ -24,6 +23,7 @@ import {
 } from "react";
 import { useDependencyLogger } from "../hooks/useDependencyLogger.js";
 import { useLatest } from "../hooks/useLatest.js";
+import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useSocketEvents } from "../hooks/useSocketEvents.js";
 import { useNavigate, useRoute } from "../router/RouterProvider.jsx";
 import { NO_PLAYLIST, UNLISTED } from "../router/routes.js";
@@ -411,9 +411,7 @@ export default function App() {
 
   // Detect mobile — create the theme once and use it throughout
   const appliedTheme = useMemo(() => themeObj(theme), [theme]);
-  const isMobileViewport = useMediaQuery(appliedTheme.breakpoints.down("md"));
-  const isTouchDevice = useMediaQuery("(hover: none) and (pointer: coarse)");
-  const isMobile = isMobileViewport || isTouchDevice;
+  const isMobile = useIsMobile(appliedTheme);
 
   // 53px table top, 52 px table pagination, 48 px app bar
   // Table top is included in the table height so no need to subtract it

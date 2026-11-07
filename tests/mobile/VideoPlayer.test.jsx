@@ -1,5 +1,5 @@
 import React from "react";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
 import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
@@ -25,6 +25,7 @@ describe("VideoPlayer Component (Mobile)", () => {
   };
 
   let contexts;
+  const originalMatchMedia = window.matchMedia;
 
   const renderPlayer = () =>
     renderWithContexts(<VideoPlayer {...defaultProps} />, { contexts });
@@ -47,6 +48,7 @@ describe("VideoPlayer Component (Mobile)", () => {
   });
 
   afterEach(() => {
+    window.matchMedia = originalMatchMedia;
     vi.restoreAllMocks();
   });
 
@@ -68,6 +70,100 @@ describe("VideoPlayer Component (Mobile)", () => {
     // The mobile volume slider should now be rendered
     const slider = screen.getByLabelText("mobile volume slider");
     expect(slider).toBeInTheDocument();
+  });
+
+  test("a touch tablet wider than sm gets the mobile control bar", async () => {
+    // A 900px touch screen is past the `sm` breakpoint, so a width-only check
+    // calls it a desktop. The pointer media query is what says "fingers".
+    const widePhone = (query) => {
+      const max = query.match(/\(max-width:\s*([0-9.]+)px\)/);
+      const min = query.match(/\(min-width:\s*([0-9.]+)px\)/);
+      let matches = false;
+      if (query.includes("pointer: coarse") || query.includes("hover: none")) {
+        matches = true;
+      } else if (max) {
+        matches = 900 <= parseFloat(max[1]);
+      } else if (min) {
+        matches = 900 >= parseFloat(min[1]);
+      }
+      return {
+        matches,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      };
+    };
+    window.matchMedia = vi.fn().mockImplementation(widePhone);
+
+    renderPlayer();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    // Single tap opens the overlay on mobile; on "desktop" it would mute.
+    fireEvent.click(screen.getByLabelText("mute volume"));
+    expect(screen.getByLabelText("mobile volume slider")).toBeInTheDocument();
+
+    expect(
+      window.getComputedStyle(screen.getByLabelText("play")).minWidth,
+    ).toBe("44px");
+  });
+
+  describe("tapping the picture", () => {
+    // On touch, `pointerdown` comes first and `mousemove` follows it just
+    // before `click`, so by the time `click` runs the controls are always
+    // already showing. These stage that order.
+    const tap = (target) => {
+      fireEvent.pointerDown(target);
+      fireEvent.mouseMove(target);
+      fireEvent.click(target);
+    };
+    const topBarOpacity = () =>
+      window.getComputedStyle(screen.getByLabelText("go back").parentElement).opacity;
+
+    const playingPlayer = async () => {
+      renderPlayer();
+      await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+      const video = document.querySelector("video");
+      // jsdom starts every element paused; this one is mid-playback.
+      Object.defineProperty(video, "paused", { value: false, configurable: true });
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      fireEvent.play(video);
+      return video;
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test("a tap on hidden controls reveals them without pausing", async () => {
+      const video = await playingPlayer();
+      act(() => {
+        vi.advanceTimersByTime(3100);
+      });
+      expect(topBarOpacity()).toBe("0");
+
+      tap(screen.getByTestId("video-tap-area"));
+
+      expect(HTMLVideoElement.prototype.pause).not.toHaveBeenCalled();
+      expect(topBarOpacity()).toBe("1");
+      expect(video.paused).toBe(false);
+    });
+
+    test("a tap on visible controls pauses", async () => {
+      await playingPlayer();
+      expect(topBarOpacity()).toBe("1");
+
+      tap(screen.getByTestId("video-tap-area"));
+
+      expect(HTMLVideoElement.prototype.pause).toHaveBeenCalledTimes(1);
+    });
   });
 
   test("double click on volume button toggles mute state", async () => {
