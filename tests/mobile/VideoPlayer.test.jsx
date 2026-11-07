@@ -1,5 +1,5 @@
 import React from "react";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
 import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
@@ -112,6 +112,58 @@ describe("VideoPlayer Component (Mobile)", () => {
     expect(
       window.getComputedStyle(screen.getByLabelText("play")).minWidth,
     ).toBe("44px");
+  });
+
+  describe("tapping the picture", () => {
+    // On touch, `pointerdown` comes first and `mousemove` follows it just
+    // before `click`, so by the time `click` runs the controls are always
+    // already showing. These stage that order.
+    const tap = (target) => {
+      fireEvent.pointerDown(target);
+      fireEvent.mouseMove(target);
+      fireEvent.click(target);
+    };
+    const topBarOpacity = () =>
+      window.getComputedStyle(screen.getByLabelText("go back").parentElement).opacity;
+
+    const playingPlayer = async () => {
+      renderPlayer();
+      await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+      const video = document.querySelector("video");
+      // jsdom starts every element paused; this one is mid-playback.
+      Object.defineProperty(video, "paused", { value: false, configurable: true });
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      fireEvent.play(video);
+      return video;
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test("a tap on hidden controls reveals them without pausing", async () => {
+      const video = await playingPlayer();
+      act(() => {
+        vi.advanceTimersByTime(3100);
+      });
+      expect(topBarOpacity()).toBe("0");
+
+      tap(screen.getByTestId("video-tap-area"));
+
+      expect(HTMLVideoElement.prototype.pause).not.toHaveBeenCalled();
+      expect(topBarOpacity()).toBe("1");
+      expect(video.paused).toBe(false);
+    });
+
+    test("a tap on visible controls pauses", async () => {
+      await playingPlayer();
+      expect(topBarOpacity()).toBe("1");
+
+      tap(screen.getByTestId("video-tap-area"));
+
+      expect(HTMLVideoElement.prototype.pause).toHaveBeenCalledTimes(1);
+    });
   });
 
   test("double click on volume button toggles mute state", async () => {

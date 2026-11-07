@@ -316,6 +316,13 @@ export default function VideoPlayer({
   // `onPlay` and `onPause` already set this, so the optimistic set here was a
   // second, redundant write on every click. The element's own events are the
   // truth about whether it is playing.
+  // Whether the controls were showing when the finger went down. Touch fires
+  // `mousemove` between `pointerdown` and `click`, which shows the controls, so
+  // by `click` the state always says "visible" and cannot tell a first tap
+  // from a second. Starts true so a click with no pointer-down (a keyboard or
+  // assistive-technology activation) plays or pauses as usual.
+  const controlsShownOnPointerDownRef = useRef(true);
+
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
@@ -408,13 +415,20 @@ export default function VideoPlayer({
     }
   };
 
+  // The browser is the source of truth for fullscreen: Esc and system gestures
+  // end it without going through our button, so setting the flag from the
+  // button left the icon wrong afterwards.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   }, []);
 
@@ -802,7 +816,21 @@ export default function VideoPlayer({
       {/* Click-to-pause overlay — excludes top bar and bottom controls */}
       {videoUrl && !failed && (
         <Box
-          onClick={togglePlay}
+          data-testid="video-tap-area"
+          onPointerDown={() => {
+            controlsShownOnPointerDownRef.current = showControls;
+          }}
+          onClick={() => {
+            const wereShown = controlsShownOnPointerDownRef.current;
+            controlsShownOnPointerDownRef.current = true;
+            if (isMobile && !wereShown) {
+              // First tap: bring the controls back, and leave playback alone.
+              setShowControls(true);
+              hideControlsSoon();
+              return;
+            }
+            togglePlay();
+          }}
           sx={{
             position: "absolute",
             top: 64,

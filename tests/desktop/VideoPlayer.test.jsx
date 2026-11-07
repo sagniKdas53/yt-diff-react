@@ -283,6 +283,27 @@ describe("VideoPlayer Component (Desktop)", () => {
     expect(document.querySelector("video")).not.toHaveAttribute("poster");
   });
 
+  test("leaving fullscreen outside the app updates the icon", async () => {
+    // Esc, or a system gesture, ends fullscreen without touching our button.
+    HTMLElement.prototype.requestFullscreen = vi.fn().mockResolvedValue();
+    Object.defineProperty(document, "fullscreenElement", {
+      value: null,
+      writable: true,
+      configurable: true,
+    });
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("enter fullscreen"));
+    document.fullscreenElement = document.body;
+    fireEvent(document, new Event("fullscreenchange"));
+    expect(screen.getByLabelText("exit fullscreen")).toBeInTheDocument();
+
+    document.fullscreenElement = null;
+    fireEvent(document, new Event("fullscreenchange"));
+    expect(screen.getByLabelText("enter fullscreen")).toBeInTheDocument();
+  });
+
   test("toggles play/pause states on user trigger", async () => {
     globalThis.fetch.mockResolvedValueOnce(mockResponse(({ status: "success", signedUrlId: "signed_url_123", expiry: Date.now() + 3600000 })));
 
