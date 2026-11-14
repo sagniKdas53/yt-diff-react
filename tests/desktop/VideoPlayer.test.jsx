@@ -477,12 +477,34 @@ describe("VideoPlayer Component (Desktop)", () => {
       expect(upNextBottom()).toBe("126px");
     });
 
+    test("Up next keeps its standard buttons on a desktop", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      await renderTracks(0);
+      fireEvent.ended(document.querySelector("video"));
+
+      const button = screen.getByRole("button", { name: "Play now" });
+      expect(parseFloat(window.getComputedStyle(button).minHeight) || 0).toBeLessThan(44);
+    });
+
     test("with nothing after it, the end of a video shows no countdown", async () => {
       localStorage.setItem("ytdiff_player_autoplay", "true");
       await renderTracks(1);
       fireEvent.ended(document.querySelector("video"));
       expect(screen.queryByText("Up next")).not.toBeInTheDocument();
     });
+  });
+
+  test("the top bar keeps its standard buttons on a desktop", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+
+    for (const name of ["go back", "toggle playlist drawer"]) {
+      const style = window.getComputedStyle(screen.getByRole("button", { name }));
+      expect(parseFloat(style.minWidth) || 0).toBeLessThan(44);
+      expect(parseFloat(style.minHeight) || 0).toBeLessThan(44);
+    }
+    const label = screen.getByRole("checkbox").closest("label");
+    expect(parseFloat(window.getComputedStyle(label).minHeight) || 0).toBeLessThan(44);
   });
 
   test("toggles play/pause states on user trigger", async () => {

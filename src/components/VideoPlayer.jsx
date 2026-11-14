@@ -144,6 +144,9 @@ export default function VideoPlayer({
   const api = useApiClient();
   const theme = useTheme();
   const isMobile = useIsMobile(theme);
+  // Fingers need 44px. The icon buttons are 40px, and the autoplay switch's
+  // hit area is its own 24px height, so the label around it is what grows.
+  const tapTarget = isMobile ? { minWidth: 44, minHeight: 44 } : null;
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -896,7 +899,7 @@ export default function VideoPlayer({
         <IconButton
           onClick={onClose}
           aria-label="go back"
-          sx={{ color: "white", mr: 2 }}
+          sx={{ color: "white", mr: 2, ...tapTarget }}
         >
           <ArrowBackIcon />
         </IconButton>
@@ -918,14 +921,18 @@ export default function VideoPlayer({
               />
             }
             label=""
-            sx={{ margin: 0 }}
+            sx={{ margin: 0, ...tapTarget }}
           />
         </Tooltip>
         <Tooltip title="Playlist">
           <IconButton
             onClick={() => setDrawerOpen((prev) => !prev)}
             aria-label="toggle playlist drawer"
-            sx={{ color: drawerOpen ? "#1976d2" : "white", ml: 1 }}
+            sx={{
+              color: drawerOpen ? "#1976d2" : "white",
+              ml: 1,
+              ...tapTarget,
+            }}
           >
             <QueueMusicIcon />
           </IconButton>

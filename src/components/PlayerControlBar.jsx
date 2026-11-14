@@ -348,6 +348,11 @@ function PlayerControlBar({
                     sx={{
                       color: "white",
                       height: "100%",
+                      // The grab area is the slider's own box, 42px wide by
+                      // default. The 2px bar stays centred in the wider box.
+                      boxSizing: "border-box",
+                      width: 44,
+                      padding: "0 21px",
                       "& .MuiSlider-thumb": {
                         width: 12,
                         height: 12,

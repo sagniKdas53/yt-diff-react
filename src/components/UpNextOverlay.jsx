@@ -5,6 +5,7 @@ import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
+import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useLatest } from "../hooks/useLatest.js";
 
 /** Space between the overlay and the edge it keeps clear of, in px. */
@@ -40,6 +41,8 @@ export default function UpNextOverlay({
   const [remaining, setRemaining] = useState(seconds);
   const playNow = useLatest(onPlayNow);
   const boxRef = useRef(null);
+  // Fingers need 44px; a small button is 31px tall.
+  const tapTarget = useIsMobile() ? { minHeight: 44 } : undefined;
 
   // Written to the element rather than held in state, so a resize does not
   // render the overlay again and it is in place before the first paint.
@@ -98,10 +101,20 @@ export default function UpNextOverlay({
         Playing in {remaining}s
       </Typography>
       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-        <Button size="small" variant="contained" onClick={onPlayNow}>
+        <Button
+          size="small"
+          variant="contained"
+          onClick={onPlayNow}
+          sx={tapTarget}
+        >
           Play now
         </Button>
-        <Button size="small" color="inherit" onClick={onCancel}>
+        <Button
+          size="small"
+          color="inherit"
+          onClick={onCancel}
+          sx={tapTarget}
+        >
           Cancel
         </Button>
       </Stack>

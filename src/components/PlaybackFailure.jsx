@@ -6,6 +6,8 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
+import { useIsMobile } from "../hooks/useIsMobile.js";
+
 /** The stream URL as an absolute address, which is what other apps need. */
 const toAbsolute = (videoUrl) =>
   new URL(videoUrl, window.location.href).toString();
@@ -41,6 +43,8 @@ export default function PlaybackFailure({
   // link is shown in a field instead, so there is always a way to get it.
   const [showField, setShowField] = useState(false);
   const streamUrl = toAbsolute(videoUrl);
+  // Fingers need 44px; a default button is 37px tall.
+  const tapTarget = useIsMobile() ? { minHeight: 44 } : undefined;
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   const copyLink = async () => {
@@ -92,10 +96,11 @@ export default function PlaybackFailure({
           component="a"
           href={toDownload(videoUrl)}
           download
+          sx={tapTarget}
         >
           Download file
         </Button>
-        <Button variant="outlined" onClick={copyLink}>
+        <Button variant="outlined" onClick={copyLink} sx={tapTarget}>
           Copy stream link
         </Button>
         {copied && (
@@ -113,16 +118,23 @@ export default function PlaybackFailure({
           />
         )}
         {isAndroid && (
-          <Button variant="outlined" component="a" href={`vlc://${streamUrl}`}>
+          <Button
+            variant="outlined"
+            component="a"
+            href={`vlc://${streamUrl}`}
+            sx={tapTarget}
+          >
             Open in VLC
           </Button>
         )}
         {hasNext && (
-          <Button variant="outlined" onClick={onNext}>
+          <Button variant="outlined" onClick={onNext} sx={tapTarget}>
             Play next
           </Button>
         )}
-        <Button onClick={onClose}>Go back</Button>
+        <Button onClick={onClose} sx={tapTarget}>
+          Go back
+        </Button>
       </Stack>
     </Box>
   );

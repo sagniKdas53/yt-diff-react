@@ -34,6 +34,13 @@ describe("PlaybackFailure", () => {
     expect(screen.getByText("A Test Video")).toBeInTheDocument();
   });
 
+  test("keeps the standard button height off a touch screen", () => {
+    renderFailure({ hasNext: true });
+    for (const button of screen.getAllByRole("button")) {
+      expect(parseFloat(window.getComputedStyle(button).minHeight) || 0).toBeLessThan(44);
+    }
+  });
+
   test("Download file links to the stream without inline", () => {
     renderFailure();
     const link = screen.getByRole("link", { name: /download file/i });
