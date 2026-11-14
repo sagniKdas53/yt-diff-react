@@ -69,6 +69,8 @@ const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
  *
  * @typedef {Object} PlayerControlBarProps
  * @property {boolean} show - Whether the controls are visible.
+ * @property {{current: HTMLElement | null}} [barRef] - Set to the bar's
+ *   element, so the Up next overlay can sit above it.
  * @property {number} currentTime - Playhead, in seconds.
  * @property {number} duration - Length of the file, in seconds.
  * @property {number} bufferedTime - End of the buffered range being played.
@@ -104,6 +106,7 @@ const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
  */
 function PlayerControlBar({
   show,
+  barRef,
   currentTime,
   duration,
   bufferedTime,
@@ -142,7 +145,12 @@ function PlayerControlBar({
   // tick for no reader.
 
   return (
-    <ControlBar show={show} onClick={(e) => e.stopPropagation()}>
+    <ControlBar
+      ref={barRef}
+      data-testid="player-control-bar"
+      show={show}
+      onClick={(e) => e.stopPropagation()}
+    >
           <Box
             sx={{
               position: "relative",
@@ -503,6 +511,7 @@ function PlayerControlBar({
 
 PlayerControlBar.propTypes = {
   show: PropTypes.bool.isRequired,
+  barRef: PropTypes.shape({ current: PropTypes.any }),
   currentTime: PropTypes.number.isRequired,
   duration: PropTypes.number.isRequired,
   bufferedTime: PropTypes.number.isRequired,

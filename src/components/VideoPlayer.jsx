@@ -171,6 +171,7 @@ export default function VideoPlayer({
 
   const videoRef = useRef(null);
   const containerRef = useRef(null);
+  const controlBarRef = useRef(null);
   const timerRef_controlsTimeout = useRef(null);
   const mobileVolumeTimeoutRef = useRef(null);
   const isPlayingRef = useRef(isPlaying);
@@ -809,6 +810,7 @@ export default function VideoPlayer({
 
       {showUpNext && (
         <UpNextOverlay
+          anchorRef={controlBarRef}
           title={nextTitle}
           onPlayNow={() => {
             setUpNextFile(null);
@@ -948,6 +950,7 @@ export default function VideoPlayer({
       )}
 
       <PlayerControlBar
+        barRef={controlBarRef}
         show={showControls}
         currentTime={currentTime}
         duration={duration}

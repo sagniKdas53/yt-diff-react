@@ -325,6 +325,7 @@ describe("VideoPlayer Component (Desktop)", () => {
       vi.useRealTimers();
       delete navigator.mediaSession;
       delete globalThis.MediaMetadata;
+      delete globalThis.ResizeObserver;
     });
 
     test("Media Session actions drive the player", async () => {
@@ -428,6 +429,52 @@ describe("VideoPlayer Component (Desktop)", () => {
 
       expect(openPlayer).not.toHaveBeenCalled();
       expect(screen.queryByText("Up next")).not.toBeInTheDocument();
+    });
+
+    // jsdom does no layout, so how tall the control bar is gets said outright.
+    const barHeight = (initial) => {
+      let height = initial;
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+        function offsetHeight() {
+          return this.dataset.testid === "player-control-bar" ? height : 0;
+        },
+      );
+      return (next) => {
+        height = next;
+      };
+    };
+    const upNextBottom = () => screen.getByText("Up next").parentElement.style.bottom;
+
+    test("Up next sits above the control bar, however tall that is", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      await renderTracks(0);
+      // A phone's bar wraps to two rows and is far taller than a desktop's.
+      barHeight(172);
+
+      fireEvent.ended(document.querySelector("video"));
+
+      expect(upNextBottom()).toBe("188px");
+    });
+
+    test("Up next follows the control bar when it changes height", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      let notify;
+      globalThis.ResizeObserver = class {
+        constructor(callback) {
+          notify = callback;
+        }
+        observe() {}
+        disconnect() {}
+      };
+      await renderTracks(0);
+      const setHeight = barHeight(172);
+      fireEvent.ended(document.querySelector("video"));
+      expect(upNextBottom()).toBe("188px");
+
+      setHeight(110);
+      act(() => notify());
+
+      expect(upNextBottom()).toBe("126px");
     });
 
     test("with nothing after it, the end of a video shows no countdown", async () => {
