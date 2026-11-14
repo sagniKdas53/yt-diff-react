@@ -97,6 +97,7 @@
     "kind": ("playlist" | "channel"),
     "origin": ("user" | "auto"),
     "kindSetByFiling": boolean,
+    "kindLocked": boolean,
     "videoCount": number,
     "latestAddedAt": (string | null),
     "channelUrl": (string | null),
@@ -138,6 +139,7 @@
     "month"?: number,
     "channel"?: string,
     "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+    "dateField"?: ("added" | "uploaded"),
   },
 }} GetsubRequest
  */
@@ -203,7 +205,9 @@
     "month"?: number,
     "channel"?: string,
     "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+    "dateField"?: ("added" | "uploaded"),
   },
+  "creatorQuery"?: string,
 }} LibraryFacetsRequest
  */
 
@@ -249,6 +253,20 @@
  * @typedef {{
   "playlistUrl": string,
 }} ChannelsMonitorResponse
+ */
+
+/**
+ * @typedef {{
+  "playlistUrl": string,
+  "kind": ("playlist" | "channel"),
+}} PlaylistsKindRequest
+ */
+
+/**
+ * @typedef {{
+  "playlistUrl": string,
+  "kind": ("playlist" | "channel"),
+}} PlaylistsKindResponse
  */
 
 /**
@@ -520,6 +538,7 @@
     "month"?: number,
     "channel"?: string,
     "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+    "dateField"?: ("added" | "uploaded"),
   },
 }} LocateRequest
  */
@@ -596,6 +615,7 @@
 /** @typedef {{path: "/library/summary", request: LibrarySummaryRequest, response: LibrarySummaryResponse}} LibrarySummaryRoute */
 /** @typedef {{path: "/library/facets", request: LibraryFacetsRequest, response: LibraryFacetsResponse}} LibraryFacetsRoute */
 /** @typedef {{path: "/channels/monitor", request: ChannelsMonitorRequest, response: ChannelsMonitorResponse}} ChannelsMonitorRoute */
+/** @typedef {{path: "/playlists/kind", request: PlaylistsKindRequest, response: PlaylistsKindResponse}} PlaylistsKindRoute */
 /** @typedef {{path: "/delsub", request: DelsubRequest, response: DelsubResponse}} DelsubRoute */
 /** @typedef {{path: "/getfile", request: GetfileRequest, response: GetfileResponse}} GetfileRoute */
 /** @typedef {{path: "/refreshfile", request: RefreshfileRequest, response: RefreshfileResponse}} RefreshfileRoute */
@@ -627,6 +647,7 @@
  *   | LibrarySummaryRoute
  *   | LibraryFacetsRoute
  *   | ChannelsMonitorRoute
+ *   | PlaylistsKindRoute
  *   | DelsubRoute
  *   | GetfileRoute
  *   | RefreshfileRoute
