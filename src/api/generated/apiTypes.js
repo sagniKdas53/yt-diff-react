@@ -138,6 +138,7 @@
     "month"?: number,
     "channel"?: string,
     "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+    "dateField"?: ("added" | "uploaded"),
   },
 }} GetsubRequest
  */
@@ -203,7 +204,9 @@
     "month"?: number,
     "channel"?: string,
     "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+    "dateField"?: ("added" | "uploaded"),
   },
+  "creatorQuery"?: string,
 }} LibraryFacetsRequest
  */
 
@@ -520,6 +523,7 @@
     "month"?: number,
     "channel"?: string,
     "length"?: ("clip" | "short" | "medium" | "long" | "unknown"),
+    "dateField"?: ("added" | "uploaded"),
   },
 }} LocateRequest
  */
