@@ -1,8 +1,8 @@
 import React from "react";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import VideoPlayer from "../../src/components/VideoPlayer.jsx";
-import { makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
+import { ContextHarness, makeContexts, mockResponse, renderWithContexts } from "../contextHarness.jsx";
 
 describe("VideoPlayer Component (Desktop)", () => {
   const defaultProps = {
@@ -87,6 +87,496 @@ describe("VideoPlayer Component (Desktop)", () => {
     await waitFor(() => {
       expect(screen.getByText(/Unauthorized access/i)).toBeInTheDocument();
     });
+  });
+
+  // jsdom's `video.error` is a getter that always returns null, so a media
+  // error is staged by overriding it on the element before the event fires.
+  const failVideo = (video, code) => {
+    Object.defineProperty(video, "error", {
+      configurable: true,
+      get: () => ({ code }),
+    });
+    fireEvent.error(video);
+  };
+
+  // Description and subtitle fetches share `/getfile`, so count by file.
+  const mintsOfVideo = () =>
+    globalThis.fetch.mock.calls.filter(
+      ([url, options]) =>
+        String(url).endsWith("/getfile") &&
+        options?.method?.toLowerCase() === "post" &&
+        JSON.parse(options.body).fileName === "video.mp4",
+    ).length;
+
+  test("a file the browser cannot play stops at one retry and says so", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+
+    failVideo(document.querySelector("video"), 4);
+    // The first error spends the one retry: a new URL is minted.
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+
+    failVideo(document.querySelector("video"), 4);
+    expect(
+      await screen.findByText("This browser can't play this file"),
+    ).toBeInTheDocument();
+    expect(document.querySelector("video")).not.toBeInTheDocument();
+    expect(mintsOfVideo()).toBe(2);
+  });
+
+  const twoRows = [
+    {
+      video_metadatum: {
+        fileName: "video.mp4",
+        saveDirectory: "/downloads",
+        title: "First",
+        downloadStatus: true,
+      },
+    },
+    {
+      video_metadatum: {
+        fileName: "next.mp4",
+        saveDirectory: "/downloads",
+        title: "Second",
+        downloadStatus: true,
+      },
+    },
+  ];
+
+  const failTwice = async () => {
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+    failVideo(document.querySelector("video"), 4);
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+    failVideo(document.querySelector("video"), 4);
+    await screen.findByText("This browser can't play this file");
+  };
+
+  describe("a file that is not on the server", () => {
+    // What `/getfile` answers for a row whose file is gone from the disk.
+    const refuseMint = (status, message) => {
+      globalThis.fetch.mockImplementation((url, options) => {
+        if (options?.method?.toLowerCase() === "post") {
+          return Promise.resolve(
+            mockResponse({ status: "error", message }, { ok: false, status }),
+          );
+        }
+        return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+      });
+    };
+
+    test("gets the failure screen, with one request and nothing that needs a file", async () => {
+      refuseMint(400, "File could not be found");
+      const openPlayer = vi.fn();
+      renderWithContexts(
+        <VideoPlayer
+          {...defaultProps}
+          subTitleFile={null}
+          items={twoRows}
+          itemCount={2}
+          currentPlayerIndex={0}
+          openPlayer={openPlayer}
+        />,
+        { contexts },
+      );
+
+      expect(await screen.findByText("This file isn't on the server")).toBeInTheDocument();
+      expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.queryByText(/copy stream link/i)).not.toBeInTheDocument();
+      expect(document.querySelector("video")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /play next/i }));
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+      fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+      expect(defaultProps.onClose).toHaveBeenCalled();
+
+      // It is an answer, not a stumble: no retry follows it.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(mintsOfVideo()).toBe(1);
+    });
+
+    test("offers no Play next on the last track", async () => {
+      refuseMint(400, "File could not be found");
+      renderWithContexts(
+        <VideoPlayer
+          {...defaultProps}
+          subTitleFile={null}
+          items={twoRows}
+          itemCount={2}
+          currentPlayerIndex={1}
+          openPlayer={vi.fn()}
+        />,
+        { contexts },
+      );
+
+      await screen.findByText("This file isn't on the server");
+      expect(screen.queryByRole("button", { name: /play next/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Go back" })).toBeInTheDocument();
+    });
+
+    test("any other refusal still shows its own message", async () => {
+      refuseMint(400, "Invalid request");
+      renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, { contexts });
+
+      expect(await screen.findByText(/Invalid request/)).toBeInTheDocument();
+      expect(screen.queryByText("This file isn't on the server")).not.toBeInTheDocument();
+    });
+  });
+
+  test("the failure screen offers Play next only when there is a next video", async () => {
+    const { unmount } = renderWithContexts(
+      <VideoPlayer {...defaultProps} items={twoRows} itemCount={2} currentPlayerIndex={1} openPlayer={vi.fn()} />,
+      { contexts },
+    );
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await failTwice();
+    expect(screen.queryByRole("button", { name: /play next/i })).not.toBeInTheDocument();
+    unmount();
+
+    globalThis.fetch.mockClear();
+    const openPlayer = vi.fn();
+    renderWithContexts(
+      <VideoPlayer {...defaultProps} items={twoRows} itemCount={2} currentPlayerIndex={0} openPlayer={openPlayer} />,
+      { contexts },
+    );
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await failTwice();
+    fireEvent.click(screen.getByRole("button", { name: /play next/i }));
+    expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+  });
+
+  test("the next track starts clean after a failure", async () => {
+    globalThis.fetch.mockImplementation((url, options) => {
+      const body = options?.body ? JSON.parse(options.body) : {};
+      if (options?.method?.toLowerCase() === "post" && /\.mp4$/.test(body.fileName)) {
+        return Promise.resolve(
+          mockResponse({ status: "success", signedUrlId: `id_${body.fileName}`, expiry: Date.now() + 3600000 }),
+        );
+      }
+      return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+    });
+    const props = { ...defaultProps, subTitleFile: null };
+    const { rerender } = renderWithContexts(<VideoPlayer {...props} />, { contexts });
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+    failVideo(document.querySelector("video"), 4);
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+    failVideo(document.querySelector("video"), 4);
+    await screen.findByText("This browser can't play this file");
+
+    rerender(
+      <ContextHarness contexts={contexts}>
+        <VideoPlayer {...props} fileName="next.mp4" title="Second" />
+      </ContextHarness>,
+    );
+
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
+    // And its retry budget is a fresh one: the first error is retried.
+    const before = globalThis.fetch.mock.calls.length;
+    failVideo(document.querySelector("video"), 4);
+    await waitFor(() => expect(globalThis.fetch.mock.calls.length).toBeGreaterThan(before));
+    expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
+  });
+
+  test("playback that keeps going resets the budget", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(mintsOfVideo()).toBe(1));
+    const video = document.querySelector("video");
+    Object.defineProperty(video, "currentTime", { value: 0, writable: true });
+
+    failVideo(video, 4);
+    await waitFor(() => expect(mintsOfVideo()).toBe(2));
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+
+    // Fifteen seconds of real playback later, the next error is a new problem.
+    video.currentTime = 15;
+    fireEvent.timeUpdate(video);
+    failVideo(video, 4);
+
+    await waitFor(() => expect(mintsOfVideo()).toBe(3));
+    expect(screen.queryByText("This browser can't play this file")).not.toBeInTheDocument();
+  });
+
+  test("a stall shows a spinner and playing clears it", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
+    const video = document.querySelector("video");
+
+    fireEvent.waiting(video);
+    expect(screen.getByRole("progressbar", { name: "Buffering" })).toBeInTheDocument();
+
+    fireEvent.playing(video);
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+    // A stalled network request clears the same way, and so do the other
+    // events that mean data has arrived.
+    for (const cleared of ["canPlay", "seeked"]) {
+      fireEvent.stalled(video);
+      expect(screen.getByRole("progressbar", { name: "Buffering" })).toBeInTheDocument();
+      fireEvent[cleared](video);
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    }
+  });
+
+  test("the poster is the row's signed thumbnail", async () => {
+    renderWithContexts(
+      <VideoPlayer
+        {...defaultProps}
+        items={[
+          {
+            video_metadatum: {
+              fileName: "video.mp4",
+              saveDirectory: "/downloads",
+              thumbNailFile: "a.jpg",
+              downloadStatus: true,
+            },
+          },
+        ]}
+        itemCount={1}
+        currentPlayerIndex={0}
+        thumbUrls={{ "a.jpg": "http://x/thumb" }}
+      />,
+      { contexts },
+    );
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    expect(document.querySelector("video")).toHaveAttribute("poster", "http://x/thumb");
+  });
+
+  test("no thumbnail means no poster attribute", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+    expect(document.querySelector("video")).not.toHaveAttribute("poster");
+  });
+
+  test("leaving fullscreen outside the app updates the icon", async () => {
+    // Esc, or a system gesture, ends fullscreen without touching our button.
+    HTMLElement.prototype.requestFullscreen = vi.fn().mockResolvedValue();
+    Object.defineProperty(document, "fullscreenElement", {
+      value: null,
+      writable: true,
+      configurable: true,
+    });
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("enter fullscreen"));
+    document.fullscreenElement = document.body;
+    fireEvent(document, new Event("fullscreenchange"));
+    expect(screen.getByLabelText("exit fullscreen")).toBeInTheDocument();
+
+    document.fullscreenElement = null;
+    fireEvent(document, new Event("fullscreenchange"));
+    expect(screen.getByLabelText("enter fullscreen")).toBeInTheDocument();
+  });
+
+  describe("lock-screen controls, track shortcuts and Up next", () => {
+    const renderTracks = async (index, openPlayer = vi.fn()) => {
+      const utils = renderWithContexts(
+        <VideoPlayer
+          {...defaultProps}
+          subTitleFile={null}
+          items={twoRows}
+          itemCount={2}
+          currentPlayerIndex={index}
+          openPlayer={openPlayer}
+        />,
+        { contexts },
+      );
+      await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+      return { ...utils, openPlayer };
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+      delete navigator.mediaSession;
+      delete globalThis.MediaMetadata;
+      delete globalThis.ResizeObserver;
+    });
+
+    test("Media Session actions drive the player", async () => {
+      const handlers = {};
+      navigator.mediaSession = {
+        metadata: null,
+        setActionHandler: vi.fn((action, handler) => {
+          handlers[action] = handler;
+        }),
+      };
+      globalThis.MediaMetadata = class {
+        constructor(init) {
+          Object.assign(this, init);
+        }
+      };
+      const { openPlayer } = await renderTracks(0);
+
+      expect(navigator.mediaSession.metadata.title).toBe("Testing Video Player Title");
+      handlers.nexttrack();
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+
+      handlers.pause();
+      expect(HTMLVideoElement.prototype.pause).toHaveBeenCalled();
+      handlers.play();
+      expect(HTMLVideoElement.prototype.play).toHaveBeenCalled();
+      const video = document.querySelector("video");
+      video.currentTime = 30;
+      handlers.seekforward({ seekOffset: 15 });
+      expect(video.currentTime).toBe(45);
+    });
+
+    test("Media Session lets go of its handlers on unmount", async () => {
+      const handlers = {};
+      navigator.mediaSession = {
+        metadata: null,
+        setActionHandler: vi.fn((action, handler) => {
+          handlers[action] = handler;
+        }),
+      };
+      const { unmount } = await renderTracks(0);
+      expect(handlers.nexttrack).toBeTypeOf("function");
+      unmount();
+      expect(handlers.nexttrack).toBeNull();
+      expect(handlers.play).toBeNull();
+    });
+
+    test("no Media Session support is not an error", async () => {
+      expect("mediaSession" in navigator).toBe(false);
+      await renderTracks(0);
+      expect(document.querySelector("video")).toBeInTheDocument();
+    });
+
+    test("Shift+N and Shift+P move tracks and do not change speed", async () => {
+      const { openPlayer, unmount } = await renderTracks(0);
+      fireEvent.keyDown(document, { key: "N", shiftKey: true });
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+      unmount();
+
+      const second = await renderTracks(1);
+      fireEvent.keyDown(document, { key: "P", shiftKey: true });
+      expect(second.openPlayer).toHaveBeenCalledWith("/downloads", "video.mp4", "First", 0, null);
+      expect(localStorage.getItem("ytdiff_player_rate")).toBeNull();
+    });
+
+    test("the end of a video counts down, then plays next", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      const { openPlayer } = await renderTracks(0);
+      vi.useFakeTimers({
+        toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
+      });
+
+      fireEvent.ended(document.querySelector("video"));
+      expect(screen.getByText("Up next")).toBeInTheDocument();
+      expect(
+        within(screen.getByText("Up next").parentElement).getByText("Second"),
+      ).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(openPlayer).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(openPlayer).toHaveBeenCalledTimes(1);
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+    });
+
+    test("cancelling Up next stays on this video", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      const { openPlayer } = await renderTracks(0);
+      vi.useFakeTimers({
+        toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
+      });
+
+      fireEvent.ended(document.querySelector("video"));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      act(() => {
+        vi.advanceTimersByTime(10000);
+      });
+
+      expect(openPlayer).not.toHaveBeenCalled();
+      expect(screen.queryByText("Up next")).not.toBeInTheDocument();
+    });
+
+    // jsdom does no layout, so how tall the control bar is gets said outright.
+    const barHeight = (initial) => {
+      let height = initial;
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+        function offsetHeight() {
+          return this.dataset.testid === "player-control-bar" ? height : 0;
+        },
+      );
+      return (next) => {
+        height = next;
+      };
+    };
+    const upNextBottom = () => screen.getByText("Up next").parentElement.style.bottom;
+
+    test("Up next sits above the control bar, however tall that is", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      await renderTracks(0);
+      // A phone's bar wraps to two rows and is far taller than a desktop's.
+      barHeight(172);
+
+      fireEvent.ended(document.querySelector("video"));
+
+      expect(upNextBottom()).toBe("188px");
+    });
+
+    test("Up next follows the control bar when it changes height", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      let notify;
+      globalThis.ResizeObserver = class {
+        constructor(callback) {
+          notify = callback;
+        }
+        observe() {}
+        disconnect() {}
+      };
+      await renderTracks(0);
+      const setHeight = barHeight(172);
+      fireEvent.ended(document.querySelector("video"));
+      expect(upNextBottom()).toBe("188px");
+
+      setHeight(110);
+      act(() => notify());
+
+      expect(upNextBottom()).toBe("126px");
+    });
+
+    test("Up next keeps its standard buttons on a desktop", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      await renderTracks(0);
+      fireEvent.ended(document.querySelector("video"));
+
+      const button = screen.getByRole("button", { name: "Play now" });
+      expect(parseFloat(window.getComputedStyle(button).minHeight) || 0).toBeLessThan(44);
+    });
+
+    test("with nothing after it, the end of a video shows no countdown", async () => {
+      localStorage.setItem("ytdiff_player_autoplay", "true");
+      await renderTracks(1);
+      fireEvent.ended(document.querySelector("video"));
+      expect(screen.queryByText("Up next")).not.toBeInTheDocument();
+    });
+  });
+
+  test("the top bar keeps its standard buttons on a desktop", async () => {
+    renderPlayer();
+    await waitFor(() => expect(document.querySelector("video")).toBeInTheDocument());
+
+    for (const name of ["go back", "toggle playlist drawer"]) {
+      const style = window.getComputedStyle(screen.getByRole("button", { name }));
+      expect(parseFloat(style.minWidth) || 0).toBeLessThan(44);
+      expect(parseFloat(style.minHeight) || 0).toBeLessThan(44);
+    }
+    const label = screen.getByRole("checkbox").closest("label");
+    expect(parseFloat(window.getComputedStyle(label).minHeight) || 0).toBeLessThan(44);
   });
 
   test("toggles play/pause states on user trigger", async () => {

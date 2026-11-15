@@ -69,6 +69,8 @@ const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
  *
  * @typedef {Object} PlayerControlBarProps
  * @property {boolean} show - Whether the controls are visible.
+ * @property {{current: HTMLElement | null}} [barRef] - Set to the bar's
+ *   element, so the Up next overlay can sit above it.
  * @property {number} currentTime - Playhead, in seconds.
  * @property {number} duration - Length of the file, in seconds.
  * @property {number} bufferedTime - End of the buffered range being played.
@@ -104,6 +106,7 @@ const ControlBar = /** @type {import("react").ComponentType<BarProps>} */ (
  */
 function PlayerControlBar({
   show,
+  barRef,
   currentTime,
   duration,
   bufferedTime,
@@ -142,7 +145,12 @@ function PlayerControlBar({
   // tick for no reader.
 
   return (
-    <ControlBar show={show} onClick={(e) => e.stopPropagation()}>
+    <ControlBar
+      ref={barRef}
+      data-testid="player-control-bar"
+      show={show}
+      onClick={(e) => e.stopPropagation()}
+    >
           <Box
             sx={{
               position: "relative",
@@ -209,7 +217,20 @@ function PlayerControlBar({
               }}
             />
           </Box>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              mt: 1,
+              // Fingers need 44px targets. Set once here rather than on each
+              // button so a button added later gets it too.
+              ...(isMobile && {
+                flexWrap: "wrap",
+                "& .MuiIconButton-root": { minWidth: 44, minHeight: 44 },
+              }),
+            }}
+          >
             {showTrackNavigation && (
               <IconButton
                 size="small"
@@ -327,6 +348,11 @@ function PlayerControlBar({
                     sx={{
                       color: "white",
                       height: "100%",
+                      // The grab area is the slider's own box, 42px wide by
+                      // default. The 2px bar stays centred in the wider box.
+                      boxSizing: "border-box",
+                      width: 44,
+                      padding: "0 21px",
                       "& .MuiSlider-thumb": {
                         width: 12,
                         height: 12,
@@ -490,6 +516,7 @@ function PlayerControlBar({
 
 PlayerControlBar.propTypes = {
   show: PropTypes.bool.isRequired,
+  barRef: PropTypes.shape({ current: PropTypes.any }),
   currentTime: PropTypes.number.isRequired,
   duration: PropTypes.number.isRequired,
   bufferedTime: PropTypes.number.isRequired,

@@ -2,6 +2,7 @@ import React from "react";
 import { render, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+import { ApiError } from "../../src/api/client.js";
 import { useSignedPlayback } from "../../src/hooks/useSignedPlayback.js";
 
 /**
@@ -140,6 +141,42 @@ describe("useSignedPlayback", () => {
     render(<Harness />);
     await waitFor(() => expect(latest.errorMsg).toBe("no such file"));
     expect(latest.videoUrl).toBeNull();
+  });
+
+  it("tells a file that is not on the server from any other refusal", async () => {
+    api.post.mockRejectedValueOnce(
+      new ApiError(400, "File could not be found", null),
+    );
+    const { rerender } = render(<Harness />);
+    await waitFor(() => expect(latest.fileMissing).toBe(true));
+    expect(latest.videoUrl).toBeNull();
+
+    // A 400 for some other reason, and a refusal that is not a 400 at all.
+    api.post.mockRejectedValueOnce(new ApiError(400, "Invalid request", null));
+    rerender(<Harness fileName="second.mp4" />);
+    await waitFor(() => expect(latest.errorMsg).toBe("Invalid request"));
+    expect(latest.fileMissing).toBe(false);
+
+    api.post.mockRejectedValueOnce(
+      new ApiError(500, "File could not be found", null),
+    );
+    rerender(<Harness fileName="third.mp4" />);
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(latest.errorMsg).toBe("File could not be found"));
+    expect(latest.fileMissing).toBe(false);
+  });
+
+  it("does not carry a missing file over to the next track", async () => {
+    api.post.mockRejectedValueOnce(
+      new ApiError(400, "File could not be found", null),
+    );
+    const { rerender } = render(<Harness />);
+    await waitFor(() => expect(latest.fileMissing).toBe(true));
+
+    // The very first render for the new file, before its mint has answered.
+    api.post.mockReturnValueOnce(new Promise(() => {}));
+    rerender(<Harness fileName="other.mp4" />);
+    expect(latest.fileMissing).toBe(false);
   });
 
   it("drops a pending refresh when the track changes", async () => {
