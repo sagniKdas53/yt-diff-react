@@ -212,7 +212,7 @@ export default function VideoPlayer({
   }, [fileName]);
 
   // Signed-URL lifecycle: minting, pre-expiry refresh, mid-stream recovery.
-  const { videoUrl, loading, errorMsg, reload } = useSignedPlayback({
+  const { videoUrl, loading, errorMsg, fileMissing, reload } = useSignedPlayback({
     api,
     saveDirectory,
     fileName,
@@ -752,7 +752,7 @@ export default function VideoPlayer({
             />
           </Fade>
         )}
-        {errorMsg && (
+        {errorMsg && !fileMissing && (
           <Typography color="error" sx={{ position: "absolute", zIndex: 10 }}>
             Error: {errorMsg}
           </Typography>
@@ -801,10 +801,11 @@ export default function VideoPlayer({
         />
       )}
 
-      {failed && videoUrl && (
+      {((failed && videoUrl) || fileMissing) && (
         <PlaybackFailure
           title={title}
-          videoUrl={videoUrl}
+          videoUrl={videoUrl ?? undefined}
+          missing={fileMissing}
           hasNext={hasNext}
           onNext={handleNext}
           onClose={onClose}

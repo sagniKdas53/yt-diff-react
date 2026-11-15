@@ -154,6 +154,78 @@ describe("VideoPlayer Component (Desktop)", () => {
     await screen.findByText("This browser can't play this file");
   };
 
+  describe("a file that is not on the server", () => {
+    // What `/getfile` answers for a row whose file is gone from the disk.
+    const refuseMint = (status, message) => {
+      globalThis.fetch.mockImplementation((url, options) => {
+        if (options?.method?.toLowerCase() === "post") {
+          return Promise.resolve(
+            mockResponse({ status: "error", message }, { ok: false, status }),
+          );
+        }
+        return Promise.reject(new Error(`Unhandled mock fetch: ${url}`));
+      });
+    };
+
+    test("gets the failure screen, with one request and nothing that needs a file", async () => {
+      refuseMint(400, "File could not be found");
+      const openPlayer = vi.fn();
+      renderWithContexts(
+        <VideoPlayer
+          {...defaultProps}
+          subTitleFile={null}
+          items={twoRows}
+          itemCount={2}
+          currentPlayerIndex={0}
+          openPlayer={openPlayer}
+        />,
+        { contexts },
+      );
+
+      expect(await screen.findByText("This file isn't on the server")).toBeInTheDocument();
+      expect(screen.queryByText(/^Error:/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.queryByText(/copy stream link/i)).not.toBeInTheDocument();
+      expect(document.querySelector("video")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /play next/i }));
+      expect(openPlayer).toHaveBeenCalledWith("/downloads", "next.mp4", "Second", 1, null);
+      fireEvent.click(screen.getByRole("button", { name: "Go back" }));
+      expect(defaultProps.onClose).toHaveBeenCalled();
+
+      // It is an answer, not a stumble: no retry follows it.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(mintsOfVideo()).toBe(1);
+    });
+
+    test("offers no Play next on the last track", async () => {
+      refuseMint(400, "File could not be found");
+      renderWithContexts(
+        <VideoPlayer
+          {...defaultProps}
+          subTitleFile={null}
+          items={twoRows}
+          itemCount={2}
+          currentPlayerIndex={1}
+          openPlayer={vi.fn()}
+        />,
+        { contexts },
+      );
+
+      await screen.findByText("This file isn't on the server");
+      expect(screen.queryByRole("button", { name: /play next/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Go back" })).toBeInTheDocument();
+    });
+
+    test("any other refusal still shows its own message", async () => {
+      refuseMint(400, "Invalid request");
+      renderWithContexts(<VideoPlayer {...defaultProps} subTitleFile={null} />, { contexts });
+
+      expect(await screen.findByText(/Invalid request/)).toBeInTheDocument();
+      expect(screen.queryByText("This file isn't on the server")).not.toBeInTheDocument();
+    });
+  });
+
   test("the failure screen offers Play next only when there is a next video", async () => {
     const { unmount } = renderWithContexts(
       <VideoPlayer {...defaultProps} items={twoRows} itemCount={2} currentPlayerIndex={1} openPlayer={vi.fn()} />,

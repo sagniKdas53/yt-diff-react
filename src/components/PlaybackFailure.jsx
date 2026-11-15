@@ -20,13 +20,20 @@ const toDownload = (videoUrl) => {
 };
 
 /**
- * Shown in place of the video when the browser has said, twice, that it
- * cannot play this file. The file is fine on disk; the answer is another
- * player, so this offers a download, the stream link and, on Android, VLC.
+ * Shown in place of the video when it cannot be played.
+ *
+ * Usually that is because the browser has said, twice, that it cannot play
+ * this file. The file is fine on disk; the answer is another player, so this
+ * offers a download, the stream link and, on Android, VLC.
+ *
+ * With `missing` there is no file on the server at all, so nothing on this
+ * screen can use one: it only offers the next video and the way back.
  *
  * @param {Object} props
  * @param {string} props.title - Title of the video that failed.
- * @param {string} props.videoUrl - The signed stream URL that failed.
+ * @param {string} [props.videoUrl] - The signed stream URL that failed. Not
+ *   needed, and not used, when `missing`.
+ * @param {boolean} [props.missing] - The file is not on the server.
  * @param {boolean} props.hasNext - Whether "Play next" can do anything.
  * @param {() => void} props.onNext
  * @param {() => void} props.onClose
@@ -34,6 +41,7 @@ const toDownload = (videoUrl) => {
 export default function PlaybackFailure({
   title,
   videoUrl,
+  missing = false,
   hasNext,
   onNext,
   onClose,
@@ -42,7 +50,7 @@ export default function PlaybackFailure({
   // Plain HTTP has no clipboard API, and a copy can be refused. Either way the
   // link is shown in a field instead, so there is always a way to get it.
   const [showField, setShowField] = useState(false);
-  const streamUrl = toAbsolute(videoUrl);
+  const streamUrl = missing ? "" : toAbsolute(videoUrl);
   // Fingers need 44px; a default button is 37px tall.
   const tapTarget = useIsMobile() ? { minHeight: 44 } : undefined;
   const isAndroid = /Android/i.test(navigator.userAgent);
@@ -83,7 +91,9 @@ export default function PlaybackFailure({
       >
         <Box>
           <Typography variant="h6" component="h2">
-            This browser can&apos;t play this file
+            {missing
+              ? "This file isn't on the server"
+              : "This browser can't play this file"}
           </Typography>
           {title && (
             <Typography variant="body2" sx={{ color: "grey.400", mt: 0.5 }}>
@@ -91,41 +101,45 @@ export default function PlaybackFailure({
             </Typography>
           )}
         </Box>
-        <Button
-          variant="contained"
-          component="a"
-          href={toDownload(videoUrl)}
-          download
-          sx={tapTarget}
-        >
-          Download file
-        </Button>
-        <Button variant="outlined" onClick={copyLink} sx={tapTarget}>
-          Copy stream link
-        </Button>
-        {copied && (
-          <Typography variant="caption" role="status">
-            Copied
-          </Typography>
-        )}
-        {showField && (
-          <TextField
-            size="small"
-            value={streamUrl}
-            inputProps={{ "aria-label": "stream link", readOnly: true }}
-            onFocus={(event) => event.target.select()}
-            autoFocus
-          />
-        )}
-        {isAndroid && (
-          <Button
-            variant="outlined"
-            component="a"
-            href={`vlc://${streamUrl}`}
-            sx={tapTarget}
-          >
-            Open in VLC
-          </Button>
+        {!missing && (
+          <>
+            <Button
+              variant="contained"
+              component="a"
+              href={toDownload(videoUrl)}
+              download
+              sx={tapTarget}
+            >
+              Download file
+            </Button>
+            <Button variant="outlined" onClick={copyLink} sx={tapTarget}>
+              Copy stream link
+            </Button>
+            {copied && (
+              <Typography variant="caption" role="status">
+                Copied
+              </Typography>
+            )}
+            {showField && (
+              <TextField
+                size="small"
+                value={streamUrl}
+                inputProps={{ "aria-label": "stream link", readOnly: true }}
+                onFocus={(event) => event.target.select()}
+                autoFocus
+              />
+            )}
+            {isAndroid && (
+              <Button
+                variant="outlined"
+                component="a"
+                href={`vlc://${streamUrl}`}
+                sx={tapTarget}
+              >
+                Open in VLC
+              </Button>
+            )}
+          </>
         )}
         {hasNext && (
           <Button variant="outlined" onClick={onNext} sx={tapTarget}>
@@ -142,7 +156,8 @@ export default function PlaybackFailure({
 
 PlaybackFailure.propTypes = {
   title: PropTypes.string,
-  videoUrl: PropTypes.string.isRequired,
+  videoUrl: PropTypes.string,
+  missing: PropTypes.bool,
   hasNext: PropTypes.bool.isRequired,
   onNext: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,

@@ -102,4 +102,32 @@ describe("PlaybackFailure", () => {
     fireEvent.click(screen.getByRole("button", { name: /go back/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  describe("when the file is not on the server", () => {
+    test("says so, and offers none of the things that need a file", () => {
+      Object.defineProperty(navigator, "userAgent", {
+        value: "Mozilla/5.0 (Linux; Android 13)",
+        configurable: true,
+      });
+      renderFailure({ missing: true, videoUrl: undefined });
+
+      expect(screen.getByText("This file isn't on the server")).toBeInTheDocument();
+      expect(screen.getByText("A Test Video")).toBeInTheDocument();
+      expect(screen.queryByText(/can't play this file/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /copy stream link/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument();
+    });
+
+    test("offers Play next only when there is a next video", () => {
+      const onNext = vi.fn();
+      const { unmount } = renderFailure({ missing: true, hasNext: false });
+      expect(screen.queryByRole("button", { name: /play next/i })).not.toBeInTheDocument();
+      unmount();
+
+      renderFailure({ missing: true, hasNext: true, onNext });
+      fireEvent.click(screen.getByRole("button", { name: /play next/i }));
+      expect(onNext).toHaveBeenCalledTimes(1);
+    });
+  });
 });

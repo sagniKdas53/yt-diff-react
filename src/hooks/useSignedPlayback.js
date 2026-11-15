@@ -6,6 +6,13 @@ import { nextBackoffDelay } from "../lib/refreshBackoff.js";
 const REFRESH_MARGIN_MS = 300000; // refresh 5 mins before expiry
 
 /**
+ * What `/getfile` answers, with a 400, for a row whose file is not on the
+ * disk. It is the one refusal that is about the file rather than the request,
+ * and retrying it cannot help.
+ */
+const FILE_MISSING_MESSAGE = "File could not be found";
+
+/**
  * Signed-URL playback for one downloaded file.
  *
  * Owns the whole life of the video URL: minting it from `/getfile`,
@@ -28,6 +35,7 @@ const REFRESH_MARGIN_MS = 300000; // refresh 5 mins before expiry
  *   videoUrl: string | null,
  *   loading: boolean,
  *   errorMsg: string | null,
+ *   fileMissing: boolean,
  *   reload: (isRecovery?: boolean, resumeTime?: number) => Promise<void>,
  * }}
  */
@@ -35,6 +43,9 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
   const [videoUrl, setVideoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  // Named by file, not a flag, so that moving to another track cannot show the
+  // last one's answer for the render before its own request starts.
+  const [missingFile, setMissingFile] = useState(null);
 
   const fileIdRef = useRef(null);
   const expiryRef = useRef(null);
@@ -142,6 +153,7 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
       try {
         setLoading(true);
         setErrorMsg(null);
+        setMissingFile(null);
         if (!isRecovery) {
           if (videoRef.current) {
             videoRef.current.pause();
@@ -194,6 +206,11 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
           return;
         }
         setErrorMsg(error.message);
+        setMissingFile(
+          error.status === 400 && error.message === FILE_MISSING_MESSAGE
+            ? fileName
+            : null,
+        );
         setVideoUrl(null);
       } finally {
         if (isMountedRef.current && playerSessionRef.current === sessionId) {
@@ -243,5 +260,11 @@ export function useSignedPlayback({ api, saveDirectory, fileName, videoRef }) {
     };
   }, [clearRecoveryTimer, clearRefreshTimer, reload, videoRef]);
 
-  return { videoUrl, loading, errorMsg, reload };
+  return {
+    videoUrl,
+    loading,
+    errorMsg,
+    fileMissing: missingFile === fileName,
+    reload,
+  };
 }
